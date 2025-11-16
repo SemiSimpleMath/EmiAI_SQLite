@@ -1,0 +1,98 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# Database files (created by application)
+*.db
+*.sqlite
+*.sqlite3
+instance/
+chroma_db/
+
+# Log files
+*.log
+*.log.*
+logs/
+
+# User-specific files (created on first run)
+user_settings.json
+app/personal_info/*.json
+
+# Uploads and temporary files
+uploads/
+temp/
+tmp/
+
+# IDE files
+.vscode/
+.idea/
+*.iml
+.DS_Store
+
+# Environment variables
+.env
+.env.local
+
+# Credentials (NEVER commit these!)
+app/assistant/lib/credentials/*.json
+app/assistant/lib/credentials/*.pickle
+app/certs/*.pem
+
+# Node modules and frontend builds
+node_modules/
+app/graph_visualizer/frontend/node_modules/
+app/graph_visualizer/frontend/build/
+app/agent_flow/node_modules/
+
+# Development and testing
+tests/
+_archive/
+*.bak
+*.backup
+*.tmp
+*.swp
+
+# Migration scripts (historical, not needed in production)
+postgresql_to_sqlite_migration/
+migration_scripts/
+
+# Utilities (for development only)
+sqlite_utilities/
+tools/
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Coverage reports
+htmlcov/
+.coverage
+.pytest_cache/
+/.idea/
+/_archive/
+/app/auth/
+/app/certs/
+/app/daily_summaries/
+/app/routes/kg_visualizer.py
+/resources/resource_*.json
+/uploads/
+/app/static/temp_audio/
+
+# temp audio
+temp_audio/
+*.wav
+*.mp3
+*.flac
+*.m4a
+
+app/assistant/lib/core_tools/credentials/
+*.pickle
