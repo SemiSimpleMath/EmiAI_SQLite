@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-11-02T22:44:02.969459+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 1,
+  "nodes_questioned": 1,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "59841c2c-1de1-4a4a-8a9a-d07bf7b8a4dd",
+      "label": "Standing Desk",
+      "status": "validated",
+      "problem_description": "The 'Standing Desk' node is of type Concept and lacks a description. Concept nodes should always have a clear, informative description to ensure their meaning is unambiguous and useful in the knowledge graph.",
+      "resolution_notes": "Add a concise and informative description to the 'Standing Desk' node, such as: 'A desk designed to be used while standing, often adjustable to allow both sitting and standing positions.' Also, consider adding common aliases (e.g., 'stand-up desk') if applicable."
+    }
+  ]
+}

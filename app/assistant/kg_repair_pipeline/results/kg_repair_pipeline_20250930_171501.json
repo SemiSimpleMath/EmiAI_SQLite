@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-09-30T17:15:01.408331+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 1,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "38ece277-d9b9-4938-b4db-9f2309fe8859",
+      "label": "To-do list",
+      "status": "validated",
+      "problem_description": "The node describes a specific personal document but uses a generic label that could collide with other to-do lists. The description is clear and non-contradictory. No temporal data is required for this node type. Minor schema specificity issue: Type may be too generic compared to the document category.",
+      "resolution_notes": "- Disambiguate label: rename to a unique, owner-qualified form, e.g., \"Jukka's to-do list\" or \"To-do list (Jukka)\" (align with your naming convention). If applicable, include platform, e.g., \"Jukka's to-do list (Notion)\".\n- Update Type to a more specific schema type that aligns with category, e.g., Document or PersonalDocument/List (keep category=document). If schema cannot change Type, add a subtype attribute reflecting Document.\n- Add aliases for findability and disambiguation: [\"Jukka's to-do list\", \"Todo list\", \"Task list\", \"Personal to-do list\"]. Keep the generic \"To-do list\" only as an alias, not the primary label.\n- Strengthen connectivity: add edges to Person:Jukka (owned_by/maintained_by), to the storage system/tool (e.g., Notion/Obsidian/Reminders) if known (stored_in/implemented_on), and to relevant concepts (tracks->Tasks, relates_to->Personal productivity/GTD if applicable). If there is a node for Jukka's planning method, link implements_method.\n- Audit the existing edge: resolve the \"unknown -> unknown\" connection or remove/fix any broken edge references.\n- Metadata improvements: specify a concrete source (e.g., user_input:<id> or doc URL), add sensitivity/privacy classification (e.g., personal), and consider raising importance to ~0.7 given it is a central reference. Optionally add last_verified date.\n- Style consistency: standardize capitalization per style guide (e.g., \"to-do list\" vs \"To-Do List\"). Ensure a stable unique ID/namespace."
+    }
+  ]
+}

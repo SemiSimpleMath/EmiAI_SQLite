@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-10-03T01:27:09.401674+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 0,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 1,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "f08c8b01-3cc8-4d0c-b054-026c52488223",
+      "label": "Preference-questioning process",
+      "status": "skipped",
+      "problem_description": "The node 'Preference-questioning process' is problematic due to missing semantic_label, empty description, and a label that is both awkward and potentially too verbose for a concept. The lack of description makes it difficult to understand the node's purpose or scope, and the label does not clearly indicate a well-established concept.",
+      "resolution_notes": "User requested to skip"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+Please analyze the following Knowledge Graph entity and decide whether to create an entity card for it:
+
+ENTITY INFORMATION:
+- Name: {{ entity_name }}
+- Type: {{ entity_type }}
+- Description: {{ entity_description }}
+- Aliases: {{ entity_aliases }}
+
+RELATIONSHIPS:
+{{ relationships_data }}
+
+**FIRST**: Decide whether this entity should have a card created. Consider:
+- Would this entity name be useful for prompt injection? (e.g., "Katy" - yes, "dad" - no)
+- Is it a specific, identifiable entity or a generic term?
+- Would injecting this entity's information enhance conversation context?
+
+**IF YOU DECIDE TO CREATE A CARD**, please generate:
+1. A comprehensive summary of this entity
+2. Key facts about the entity
+3. A structured summary of important relationships
+4. Relevant metadata
+
+**IF YOU DECIDE NOT TO CREATE A CARD**, set should_create_card to false and provide a brief explanation in the summary field.
+
+Focus on creating entity cards that would be highly useful when injected into prompts about this entity, avoiding noise from generic terms.

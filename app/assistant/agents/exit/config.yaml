@@ -1,0 +1,24 @@
+name: exit
+class_name: Agent
+color: "red"
+llm_provider: "openai"
+llm_params:
+  engine: "gpt-4o-mini"
+  temperature: 0.1
+
+allowed_tools: []
+
+user_context_items:
+  task: "task"
+  summary: "summary"
+  final_answer: "final_answer_content"
+  information: "information"
+  recent_history: "history"
+  checklist: "checklist"
+  progress: "progress"
+  important_links: "links"
+  discovered_info: "discovered_info"
+  plan: "plan"
+
+system_context_items:
+  task: "task"

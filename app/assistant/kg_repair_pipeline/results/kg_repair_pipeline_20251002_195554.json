@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-10-02T19:55:54.500870+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 0,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 1,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "494fd3e9-1c65-4028-847a-4a4440b928bb",
+      "label": "Prank email to Jouko without reveal",
+      "status": "skipped",
+      "problem_description": "The node is correctly typed as Goal and has a clear, specific description. Temporal data is incomplete because end_date is absent. Label could be clearer. No contradictions detected.",
+      "resolution_notes": "User requested to skip"
+    }
+  ]
+}

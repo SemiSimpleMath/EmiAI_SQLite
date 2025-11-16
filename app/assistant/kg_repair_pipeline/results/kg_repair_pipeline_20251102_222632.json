@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-11-02T22:26:32.203511+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 1,
+  "nodes_questioned": 1,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "bacef44f-9364-4810-a77a-9e63a6a0a2b4",
+      "label": "Therapy",
+      "status": "validated",
+      "problem_description": "The 'Therapy' node is problematic due to missing description and overly generic labeling. Without a description, users cannot discern what kind of therapy is meant (e.g., physical, psychological, etc.), and the node lacks the specificity needed for a useful Concept node.",
+      "resolution_notes": "Add a clear, concise description to the node that defines what is meant by 'Therapy' in this context. If the node is intended to represent a specific type of therapy, update the label and category to reflect that specificity (e.g., 'Psychotherapy', 'Physical Therapy'). If it is meant to be a general concept, provide a description that encompasses the broad meaning and consider linking to or creating more specific sub-nodes for different therapy types."
+    }
+  ]
+}

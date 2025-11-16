@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-10-01T03:02:02.158808+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 0,
+  "nodes_questioned": 0,
+  "nodes_resolved": 1,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "38ece277-d9b9-4938-b4db-9f2309fe8859",
+      "label": "To-do list",
+      "status": "resolved",
+      "problem_description": "The node represents a specific personal document (Jukka's task tracker). Current label 'To-do list' is overly generic and conflicts with the specific description, risking confusion with the general concept of a to-do list or with other individuals' lists. Description is generally informative but contains subjective language. As an Entity (category: document), no temporal fields are required.",
+      "resolution_notes": "Successfully delegated to kg_team: "
+    }
+  ]
+}

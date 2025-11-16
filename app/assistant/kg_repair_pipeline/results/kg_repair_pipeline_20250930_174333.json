@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-09-30T17:43:33.660614+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 1,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "38ece277-d9b9-4938-b4db-9f2309fe8859",
+      "label": "To-do list",
+      "status": "validated",
+      "problem_description": "The node likely represents a specific personal document but uses a generic label that could be confused with the general concept of a to-do list. Content is mostly clear but slightly subjective; aliases are missing. No temporal fields are required for an Entity. Overall, the main issue is ambiguous naming and missing disambiguation support.",
+      "resolution_notes": "- Disambiguate the label: rename to something specific, e.g., \"Jukka's to-do list\" or \"Jukka's to-do list (document)\" (use schema-compliant casing and apostrophe rules; if apostrophes are disallowed: \"Jukka to-do list\").\n- Add aliases to cover common variants: [\"Jukka todo list\", \"Jukka to do list\", \"Jukka task list\", \"Jukka task tracker\", \"Jukka's personal to-do list\"]. Avoid generic aliases that would collide with the concept.\n- Revise description to be neutral and specific, e.g.: \"A personal task-tracking document maintained by Jukka to organize and prioritize work and personal commitments.\"\n- Improve structure/connectivity: add edges such as maintained_by/owned_by -> Person:Jukka; instance_of -> Concept: To-do list; part_of -> Jukka's productivity system (if exists); used_with/stored_in -> the actual app or repository (e.g., Notion, Trello, Apple Reminders) if known.\n- Check for and resolve label collisions/duplicates: if a Concept node \"To-do list\" exists, ensure this node is marked as an instance and does not share the generic label; add relatedTo/sameAs links as appropriate.\n- Verify category/type conformity: ensure category matches controlled vocabulary (e.g., Document) and that type is correct; if a \"Document\" type exists, use it instead of generic \"Entity\".\n- Metadata: add a short disambiguation note, refine source to a more specific provenance (e.g., user self-report, app export), and add privacy/sensitivity tags (personal/private) if supported.\n- Aim for at least 3-4 meaningful edges to anchor the node in the graph."
+    }
+  ]
+}

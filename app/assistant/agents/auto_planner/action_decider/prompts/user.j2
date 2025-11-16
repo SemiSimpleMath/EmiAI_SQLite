@@ -1,0 +1,26 @@
+Today is {{ date_time }}.
+
+{% if entity_summary %}
+**Entity Context**:
+{{ entity_info }}
+
+{% endif %}
+{% if current_state %}
+Before you determine new action is needed, below is the system state.
+**Begin system state**:
+{{ current_state }}
+**End system state**
+
+{% if already_done %}
+Here are the actions we have already done today. Please do not repeat actions taken unless there is a very good reason.
+There certainly is no need to send an email twice, set reminders multiple times, or create duplicate to-do tasks.
+{{ already_done }}
+{% endif %}
+
+-Below this line is the new item we are considering. We are only considering if this information with relation to the current system state warrants some action.
+The new information may resemble items from the current state, but treat it as potentially new unless context proves otherwise. Do not assume something changed unless it clearly did.
+
+**Begin Item we are considering**:
+{{ new_info }}
+**End Item we are considering**
+{% endif %}

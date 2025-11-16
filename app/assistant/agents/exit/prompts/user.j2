@@ -1,0 +1,63 @@
+{% if task %}
+**Task:** {{ task }}
+{% endif %}
+
+{% if info %}
+Additional information:
+{{ info }}
+{% endif %}
+
+{% if final_answer_content %}
+**Final Answer Information:**
+{% for info in final_answer_content %}
+- {{ info }}
+{% endfor %}
+{% endif %}
+
+{% if summary %}
+**Summary:** {{ summary }}
+{% endif %}
+
+{% if recent_history %}
+**Messages since last plan:**
+{% for msg in recent_history %}
+- **{{ msg.sender }}:** {{ msg.content }}
+{% endfor %}
+{% endif %}
+
+{% if important_links %}
+Important Links:
+{% for url, link_sum in important_links.items() %}
+  - [{{ url }}]({{ link_sum }})
+{% endfor %}
+{% endif %}
+
+{% if checklist %}
+**Current Checklist:**
+{% for item in checklist %}
+- {{ item }}
+{% endfor %}
+{% endif %}
+
+{% if progress %}
+**Current Progress:**
+{% for progress_item in progress %}
+- {{ progress_item }}
+{% endfor %}
+{% endif %}
+
+{% if discovered_info %}
+**Discovered Information:**
+{% for info in discovered_info %}
+- {{ info }}
+{% endfor %}
+{% endif %}
+
+{% if plan %}
+**Current Plan:**
+{{ plan }}
+{% endif %}
+
+
+
+

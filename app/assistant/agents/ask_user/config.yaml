@@ -1,0 +1,14 @@
+name: ask_user
+class_name: AskUser
+color: "white"
+llm_params:
+  llm_provider: "openai"
+  engine: "gpt-5-mini"
+  temperature: 1
+
+user_context_items:
+  - date_time
+  - question
+
+events:
+  - ask_user_request

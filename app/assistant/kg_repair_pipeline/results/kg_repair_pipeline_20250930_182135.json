@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-09-30T18:21:35.128479+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 1,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "38ece277-d9b9-4938-b4db-9f2309fe8859",
+      "label": "To-do list",
+      "status": "validated",
+      "problem_description": "The node likely represents a specific personal document but is labeled as the generic concept 'To-do list'. This creates ambiguity between an instance and a concept. Type is very broad (Entity) for something categorized as a document. Description is clear enough but includes a non-ASCII apostrophe. No temporal fields are required for this node type.",
+      "resolution_notes": "- Relabel the node to clearly indicate it is an instance, e.g., \"Jukka's to-do list\" (ASCII apostrophe) or your graph's preferred instance naming convention.\n- Update Type from \"Entity\" to a more specific class consistent with taxonomy, e.g., \"Document\" (or \"List/Document\" if available).\n- Replace the curly apostrophe in the description with an ASCII apostrophe.\n- Improve connectivity:\n  - Link to the Person node for Jukka via maintained_by/owned_by/created_by (per schema).\n  - If a concept node for \"To-do list\" exists (or create one), connect via instance_of / type.\n  - Add contains edges to Task/Goal items if modeled, or stored_in/hosted_on to the system where the list lives.\n- Consider adding helpful aliases that do not collide with the generic concept, e.g., \"Jukka to-do list\", \"Jukka todo list\" (avoid plain \"To-do list\" as an alias).\n- Optionally review importance; if this serves as a central reference for planning, consider raising importance above 0.5."
+    }
+  ]
+}

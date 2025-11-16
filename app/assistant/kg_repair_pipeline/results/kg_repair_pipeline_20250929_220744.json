@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-09-29T22:07:44.855566+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 1,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "38ece277-d9b9-4938-b4db-9f2309fe8859",
+      "status": "validated",
+      "problem_description": "The node appears under-specified for a document: it has an empty attribute set, no description, and only one connection, making its purpose unclear. The sole neighbor has the same label and type, suggesting a duplicate or self-referential structure that should be deduplicated or clarified. Quality metrics (confidence, importance, source) are present; temporal fields are not required for this Entity type.",
+      "priority": "medium",
+      "resolution_notes": "- Verify orphan status: run a full-degree check (both in/out, across all shards/partitions) to confirm zero edges.\n- If confirmed orphan and no ingestion plan references it, delete the node to reduce noise.\n- If it was intended as a placeholder, enrich before keeping: populate minimum required fields (name/title, subtype/class, description/summary, source/provenance, confidence, external_id(s), created_at/updated_at) and attach at least one meaningful relation.\n- Run a duplicate scan using normalized keys (external IDs, hashes) and fuzzy match on prospective name/aliases; if a duplicate exists, merge into the surviving node and rewire edges, then deprecate/remove this node.\n- Tighten schema/ingestion rules to prevent creation of nodes with zero attributes and zero degree (require at least name and source at creation, or auto-quarantine such nodes).\n- Correct the classification if too generic: map from generic Entity to a more specific class per ontology, if known from source.\n- Add quality metrics and audit fields once kept (source, confidence, provenance link, timestamps)."
+    }
+  ]
+}

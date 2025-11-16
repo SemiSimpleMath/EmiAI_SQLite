@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-09-30T21:44:52.052094+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 1,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "38ece277-d9b9-4938-b4db-9f2309fe8859",
+      "label": "To-do list",
+      "status": "validated",
+      "problem_description": "The node describes a specific personal document but is labeled with a generic term. This is a naming/ambiguity issue, not a temporal or classification error. Content is clear and non-contradictory; category 'document' and type 'Entity' are appropriate if the intent is a specific item.",
+      "resolution_notes": "- Rename label to a specific, disambiguated form, e.g., \"Jukka's to-do list\" or \"To-do list (Jukka)\".\n- Add aliases to capture common variants: [\"To-do list\", \"Jukka to-do list\", \"Jukka's task list\", \"task list\", \"todo list\", \"to do list\"].\n- Refine description for neutrality and disambiguation, e.g.: \"Jukka's personal to-do list (task tracker) used to organize and prioritize his work and personal commitments. This node refers to the specific document, not the general concept of to-do lists.\" \n- Keep type=Entity and category=document unchanged."
+    }
+  ]
+}

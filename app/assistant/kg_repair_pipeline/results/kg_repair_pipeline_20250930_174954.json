@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-09-30T17:49:54.681849+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 1,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "38ece277-d9b9-4938-b4db-9f2309fe8859",
+      "label": "To-do list",
+      "status": "validated",
+      "problem_description": "The node describes a specific personal document (Jukka's to-do list) but uses a generic, class-like label, creating ambiguity and potential collisions with other to-do lists or the general concept. Temporal fields are not required for this Entity/document, and the description is clear enough. Main issues: generic label and missing helpful aliases; potential need to refine the node type per ontology.",
+      "resolution_notes": "Recommended repairs:\n- Rename label for disambiguation: use a specific instance-style name such as \"Jukka's to-do list\" or \"To-do list (Jukka)\" following your naming convention (e.g., <Owner> - <Document Type>).\n- Add aliases to capture common references: [\"Jukka to-do list\", \"Jukka's task list\", \"Jukka's task tracker\", \"personal to-do list\", \"todo list (Jukka)\"] and include spelling variants (\"todo\", capitalization) as per style guide.\n- Refine type/category per ontology: if available, set Type=Document or DigitalDocument and Category=personal_document or productivity_document. If not supported, keep Entity but ensure Category is the most specific allowed.\n- Strengthen connectivity (target at least 3–4 meaningful edges):\n  - owned_by/maintained_by -> Person:Jukka\n  - instance_of -> Concept: To-do list (generic concept node)\n  - stored_in/hosted_on -> the application or system used (e.g., Todoist/Notion/Obsidian) if known\n  - part_of/central_to -> Jukka's planning workflow or productivity system (if such a node exists)\n  - optional: has_access_controls/privacy_level if modeled\n- Clarify and tighten the description to emphasize instance specificity (e.g., \"A personal task-tracking document maintained by Jukka for organizing work and personal commitments; serves as the primary reference for planning and prioritization.\").\n- Metadata adjustments: keep confidence=0.9; consider raising importance to ~0.7 as it is described as a central reference; ensure source is accurate (e.g., personal knowledge base import) and add provenance details if available.\n- Disambiguation aids: if the ontology supports, add a unique identifier and/or created_on field for this document; link or note prior/superseded lists if a newer version exists.\n- Validate that there is a separate concept node for \"To-do list\"; if not, create one and link via instance_of to avoid conflation."
+    }
+  ]
+}

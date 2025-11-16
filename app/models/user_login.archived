@@ -1,0 +1,22 @@
+#user_login.py
+from app.assistant.database.db_instance import db
+from werkzeug.security import check_password_hash
+
+from flask_login import UserMixin
+
+class UserLogin(db.Model, UserMixin):
+    __tablename__ = 'user_login'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(50), unique=True, nullable=False)
+    email = db.Column(db.String(255), unique=False, nullable=True)
+    password_hash = db.Column(db.String(255), nullable=False)
+    created_at = db.Column(db.DateTime, server_default=db.func.current_timestamp())
+    updated_at = db.Column(db.DateTime, server_default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
+    last_login = db.Column(db.DateTime)
+    status = db.Column(db.String(50), nullable=False, default='active')
+
+    # your other methods, like password hashing and verification
+    def verify_password(self, pw):
+        print(pw)
+        print(self.password_hash)
+        return check_password_hash(self.password_hash, pw)

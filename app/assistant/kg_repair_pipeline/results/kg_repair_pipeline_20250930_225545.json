@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-09-30T22:55:45.810816+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 1,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "38ece277-d9b9-4938-b4db-9f2309fe8859",
+      "label": "To-do list",
+      "status": "validated",
+      "problem_description": "The node likely represents a specific document owned by Jukka, but its label is generic. This creates an inconsistent naming problem. Other fields look reasonable and not misclassified.",
+      "resolution_notes": "Recommended repairs:\n1) Relabel to a specific, disambiguated title using Title Case and ASCII punctuation, e.g., \"Jukka's To-Do List\" (preferred) or \"Jukka - To-Do List\". If multiple lists exist, add a disambiguator such as platform or year, e.g., \"Jukka's To-Do List (Notion)\".\n2) Add aliases to preserve findability and accommodate variants: [\"To-do list\" (previous label), \"Todo list\", \"Task list\", \"Jukka todo list\", \"Jukka task list\"].\n3) Tweak the description for clarity and objectivity and to use ASCII apostrophes: \"Jukka's personal task tracker used to organize and prioritize work and personal tasks; serves as his central reference for planning.\" Avoid speculative details about platform unless known.\n4) Keep Type: Entity and Category: document as-is.\n5) Ensure hyphenation/casing consistency for 'To-Do' across label and aliases per project style guide."
+    }
+  ]
+}

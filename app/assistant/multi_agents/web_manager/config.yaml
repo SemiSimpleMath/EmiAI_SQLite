@@ -1,0 +1,51 @@
+name: web_manager
+class_name: MultiAgentManager
+description: "A team manager that controls team of web agents."
+max_cycles: 120
+role_bindings:
+  delegator: web::delegator
+  tool_selector: shared::tool_selector
+
+agents:
+  - name: web::delegator
+    class: Delegator
+  - name: web::planner
+    class: Planner
+  - name: shared::tool_arguments
+    class: Agent
+  - name: shared::final_answer
+    class: FinalAnswer
+  - name: shared::writer
+    class: Agent
+  - name: shared::mathematician
+    class: Agent
+
+control_nodes:
+  - name: tool_caller
+    class: ToolCaller
+  - name: tool_result_handler
+    class: ToolResultHandler
+  - name: exit_node
+    class: ExitNode
+  - name: flow_exit_node
+    class: FlowExitNode
+  - name: manager_exit_node
+    class: ManagerExitNode
+  - name: graceful_exit_control_node
+    class: GracefulExitControlNode
+
+tools:
+  allowed_tools:
+    - search_web
+    - scrape_url
+  except_tools: []
+
+flow_config:
+  state_map:
+    "web::delegator": "web::planner"
+    "shared::tool_arguments": "tool_caller"
+    "tool_caller": "tool_result_handler"
+    "web::planner_flow_exit_node": "shared::final_answer"
+    "shared::final_answer": "manager_exit_node"
+    "graceful_exit": "graceful_exit_control_node"
+    "graceful_exit_control_node": "shared::final_answer"

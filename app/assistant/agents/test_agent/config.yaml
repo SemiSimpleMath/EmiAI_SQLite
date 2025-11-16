@@ -1,0 +1,14 @@
+name: test_agent
+class_name: Agent
+color: "red"
+llm_params:
+  llm_provider: "openai"
+  engine: "gpt-4o-mini"
+  temperature: 0.1
+
+user_context_items:
+  - date_time
+  - agent_input
+  - entity_summary
+  - entity_metadata
+  - entity_key_facts

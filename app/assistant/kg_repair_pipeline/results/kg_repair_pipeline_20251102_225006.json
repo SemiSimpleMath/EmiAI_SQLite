@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-11-02T22:50:06.722712+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 1,
+  "nodes_questioned": 1,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "09f2ceef-e5ae-42e2-85b9-1c661b4fcd19",
+      "label": "Owns Desk",
+      "status": "validated",
+      "problem_description": "The node 'Owns Desk' is a State node representing an ownership relationship. While it has a 'valid during' field indicating it is true as of 2025-03-01, it lacks explicit start_date and end_date fields, which are required for State nodes to define the temporal scope of the state. The rest of the content is clear and specific, and the node is correctly classified as a State.",
+      "resolution_notes": "Add explicit start_date and, if possible, end_date fields to the node to clearly define the period during which Jukka owns the desk. If the ownership is ongoing, set end_date as null or leave it open-ended, but start_date should be specified. Retain the 'valid during' field if it provides additional context, but it should not substitute for start_date/end_date."
+    }
+  ]
+}

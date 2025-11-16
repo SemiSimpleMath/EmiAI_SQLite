@@ -1,0 +1,167 @@
+    /* Reset default margins and paddings */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    /* Box Container */
+    .weather-box {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(to bottom, #FFDAB9, #FFEBCD); /* Start with dawn colors */
+      position: relative;
+      overflow: hidden; /* Ensures content like the ground doesn't spill out */
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+    }
+
+
+
+    /* Sun Styles */
+
+    .sun {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  background: radial-gradient(circle at 30% 30%, #FFD700, #FFA500);
+  border-radius: 50%;
+  box-shadow:
+    0 0 15px 3px rgba(255, 215, 0, 0.5),
+    0 0 30px 10px rgba(255, 215, 0, 0.3),
+    0 0 45px 20px rgba(255, 215, 0, 0.1);
+  pointer-events: none;
+  transition: transform 1s linear, opacity 1s linear;
+  opacity: 0;
+  display: none; /* Initially hidden */
+}
+
+
+    /* Moon Styles */
+    .moon {
+      position: absolute;
+      width: 25px;
+      height: 25px;
+      background: radial-gradient(circle at 30% 30%, #f0e68c, #d3d3d3);
+      border-radius: 50%;
+      box-shadow: 0 0 10px 2px rgba(240, 230, 140, 0.5);
+      pointer-events: none;
+      transition: transform 1s linear, opacity 1s linear;
+      opacity: 0;
+      display: none; /* Initially hidden */
+    }
+
+    /* Stars Container */
+    .stars {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      pointer-events: none;
+      overflow: hidden;
+      opacity: 0;
+      transition: opacity 1s linear;
+    }
+
+    /* Star Styles */
+    .star {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      background: white;
+      border-radius: 50%;
+      opacity: 0;
+      animation: twinkle 2s infinite;
+    }
+
+    @keyframes twinkle {
+      0%, 100% { opacity: 0; }
+      50% { opacity: 1; }
+    }
+
+    /* Ground Styles */
+    .ground1, .ground2 {
+      position: absolute;
+      border-top-left-radius: 100px;
+      border-top-right-radius: 100px;
+      z-index: 1;
+    }
+
+    .ground1 {
+      width: 270px;
+      height: 100px;
+      bottom: -30px; /* Place inside the box */
+      left: -35px;
+      transform: rotate(20deg);
+      background: linear-gradient(#2f2b3c, #091B21); /* Initial night ground */
+      transition: background 1s linear;
+    }
+
+    .ground2 {
+      width: 500px;
+      height: 100px;
+      bottom: -50px; /* Place inside the box */
+      right: -80px;
+      transform: rotate(-10deg);
+      background: linear-gradient(#2f2b3c, #091B21); /* Initial night ground */
+      transition: background 1s linear;
+    }
+
+    .text_container {
+  font-family: Arial, Helvetica, sans-serif;
+  text-align: center;
+}
+
+#weather_degrees-box {
+    display: flex;        /* Use flexbox for precise alignment */
+    justify-content: center; /* Center horizontally */
+    align-items: baseline;   /* Align the baseline to avoid visual misalignment */
+    font-size: 5rem;      /* Adjust overall font size */
+    position: relative;
+    left: 20px;
+}
+
+#temp-number {
+  color: #4F787D;
+  font-size: 100px;
+  font-weight: bold;
+  text-indent: -5px;
+  position: relative;
+}
+
+#temp-degree{
+  font-size: 28px;
+  position: absolute;
+  top: 0;
+}
+
+
+.place {
+  text-transform: uppercase;
+  color: #694c6d;
+}
+
+.weather {
+  color: #FFF;
+}
+
+.high-low-corner {
+  position: absolute;
+  bottom: 20px; /* Distance from the bottom */
+  right: 20px; /* Distance from the right */
+  font-family: Arial, Helvetica, sans-serif;
+  text-align: right; /* Aligns text to the right */
+  color: #FFFFFF; /* White font */
+  font-size: 14px; /* Smaller, subtle font size */
+  line-height: 1.2; /* Compact spacing between lines */
+  opacity: 0.8; /* Slight transparency for subtlety */
+  z-index: 99; /* Ensures it's above other elements */
+}
+
+.high-low-corner .high,
+.high-low-corner .low {
+  display: block; /* Ensures stacking vertically */
+  font-weight: normal; /* Keeps it light */
+  margin: 0; /* Resets any default margins */
+}

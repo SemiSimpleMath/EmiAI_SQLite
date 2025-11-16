@@ -1,0 +1,24 @@
+name: shared::final_answer
+class_name: FinalAnswer
+color: "blue"
+llm_params:
+  llm_provider: "openai"
+  engine: "gpt-4o-mini"
+  temperature: 0.1
+
+allowed_tools: []  # No tools needed for this agent
+except_tools: []
+
+user_context_items:
+  - date_time
+  - task
+  - information
+  - recent_history
+  - checklist
+  - accomplishments
+  - final_answer_content
+
+
+rag_fields:
+  task: ["chat"]
+  information: ["chat"]

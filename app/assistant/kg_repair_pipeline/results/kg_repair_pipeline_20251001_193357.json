@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-10-01T19:33:57.477309+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 0,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 1,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "46d1579c-6701-461e-81f3-4f056909d837",
+      "label": "Email signature preference for Emi",
+      "status": "skipped",
+      "problem_description": "The node is correctly typed as a State and the category fits. However, it lacks structured temporal bounds (missing start_date and explicit handling of an open end) and uses a free-text valid_during. The label is ambiguous and does not clearly indicate the owner of the preference (Jukka), which can cause confusion and retrieval issues.",
+      "resolution_notes": "User requested to skip"
+    }
+  ]
+}

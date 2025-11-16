@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-09-30T18:04:59.134983+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 1,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "38ece277-d9b9-4938-b4db-9f2309fe8859",
+      "label": "To-do list",
+      "status": "validated",
+      "problem_description": "The node likely conflates a general concept ('To-do list') with a specific instance (Jukka's personal list). The label is too generic for the described instance, creating ambiguity and inconsistent modeling. Other fields (type=Entity, category=document, description) are otherwise reasonable for an instance.",
+      "resolution_notes": "- Rename the node to a specific instance label following your naming convention, e.g., 'Jukka's to-do list' (preferred) or 'To-do list (Jukka)'.\n- Do not keep 'To-do list' as the primary label; if needed, use it only for a concept node.\n- Create or link to a separate concept node 'To-do list' (type: Concept, category: concept/practice) and connect this entity via instance_of or implements_method.\n- Add aliases for the instance: ['Jukka to-do list', 'Jukka todo list', 'Personal to-do list', 'Task tracker (Jukka)'] while standardizing hyphenation (use 'to-do' as canonical; include 'todo' as alias).\n- Strengthen connectivity: add maintained_by/owned_by -> Jukka (Person); stored_in/implemented_with -> the actual tool or location if known (e.g., Obsidian note, Notion database, Apple Reminders, Todoist); related_to -> Personal planning system; optionally contains -> Task nodes or collection node representing tasks.\n- Refine description to include where it lives, the tool, scope (work/personal/both), and review cadence (e.g., weekly review) to disambiguate from the general concept.\n- Review importance: given it is a central reference for prioritizing work and personal tasks, increase importance from 0.5 to ~0.7-0.8.\n- Check for duplicates (any existing nodes named 'To-do list', 'Task list', 'Jukka's task tracker') and merge or link appropriately.\n- Ensure minimum connectivity of 3+ meaningful edges after repair."
+    }
+  ]
+}

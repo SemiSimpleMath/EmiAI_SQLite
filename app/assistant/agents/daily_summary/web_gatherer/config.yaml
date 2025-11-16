@@ -1,0 +1,44 @@
+name: daily_summary::web_gatherer
+class_name: Agent
+color: "cyan"
+llm_params:
+  llm_provider: "openai"
+  engine: "gpt-4o-mini"
+  temperature: 0.1
+  api_key: "dummy_api_key"
+
+allowed_tools:
+  - search_web
+  - scrape_url
+  - rag_query
+except_tools: []
+
+user_context_items:
+  - date_time
+  - task
+  - information
+  - recent_history
+  - web_content
+
+rag_fields:
+  task: ["chat"]
+  information: ["chat"]
+
+system_context_items:
+  - tool_descriptions
+
+append_fields: [web_analysis, relevant_info, news_highlights]
+
+
+
+
+
+
+
+
+
+
+
+
+
+

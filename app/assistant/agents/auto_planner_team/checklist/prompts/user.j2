@@ -1,0 +1,58 @@
+Today is {{ date_time }}
+{% if task %}
+Task: {{ task }}
+{% endif %}
+
+{% if information %}
+Additional information:
+{{ information }}
+{% endif %}
+
+{% if summary %}
+These are things that happened while ago, listed in order oldest to newest:
+{{ summary }}
+{% endif %}
+
+{% if plan %}
+Overall plan to solve the task:
+    {{ plan }}
+{% endif %}
+
+{% if current_step %}
+### Current Step of the plan we tried to do:
+{{ current_step }}
+{% endif %}
+
+{% if important_links %}
+Found Links:
+{% for link in important_links %}
+  - [{{ link.url }}]({{ link.url }}) - {{ link.description }}
+{% endfor %}
+{% endif %}
+
+{% if checklist %}
+Current Checklist:
+{{ checklist }}
+{% endif %}
+
+{% if accomplishments %}
+Accomplishments:
+{% for accomplishment_item in accomplishments %}
+  - {{ accomplishment_item }}
+{% endfor %}
+{% endif %}
+
+
+---
+Identify any progress that has been made based on the messages below. For each completed step, provide a one-sentence summary including any relevant details or links.
+If new information has been discovered since the last plan step towards solving the problem **'{{ task }}'**, write one sentence about this information in the **Accomplishment** section.
+---
+
+{% if recent_history %}
+This is what has happened since last plan was made.  These are tool results (or agent results).  Look over carefully and see what was done or attempted.:
+{{ recent_history }}
+{% endif %}
+
+For each tool result success you should see clear evidence.  Either a success message or direct tool results.
+
+Be careful not to credit things that were not yet completed. eg. did we send an email or did we merely compose it.

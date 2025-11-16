@@ -1,0 +1,185 @@
+/* CSS Variables for Theming with Refined Color Palette */
+:root {
+    /* Dark Theme Variables */
+    --background-color: #0f1424;
+    --header-footer-color: #1a2138;
+    --widget-background: #1e2642;
+    --widget-background-hover: #273050;
+    --text-color: #e6e6e6;
+    --heading-color: #4a90e2; /* Softer Blue */
+    --accent-color: #6a5acd; /* Soft Slate Blue */
+    --border-color: #2c3347;
+    --input-background: #253042;
+    --button-text-color: #ffffff;
+    --hover-accent-color: #7b68ee; /* Medium Slate Blue */
+    --font-family: 'Inter', 'Roboto', sans-serif;
+    --font-size-base: 15px;
+    --transition-speed: 0.25s;
+    --border-radius: 12px;
+
+    /* Soft Shadow Variables */
+    --shadow-subtle: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --shadow-medium: 0 10px 20px rgba(0, 0, 0, 0.15);
+    --shadow-hover: 0 15px 30px rgba(0, 0, 0, 0.2);
+}
+
+/* Light Theme Variables with Softer Palette */
+[data-theme="light"] {
+    --background-color: #f7f9fc;
+    --header-footer-color: #ffffff;
+    --widget-background: #ffffff;
+    --widget-background-hover: #f5f7fa;
+    --text-color: #333d4b;
+    --heading-color: #3a7ca5; /* Muted Blue */
+    --accent-color: #6a7fdb; /* Soft Periwinkle */
+    --border-color: #e1e6ed;
+    --input-background: #f0f4f9;
+    --button-text-color: #ffffff;
+    --hover-accent-color: #5a6fca;
+}
+
+/* Global Reset with Smoother Defaults */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: var(--font-family);
+    font-size: var(--font-size-base);
+    background-color: var(--background-color);
+    color: var(--text-color);
+    line-height: 1.6;
+    transition:
+        background-color var(--transition-speed) ease-in-out,
+        color var(--transition-speed) ease-in-out;
+    padding-top: var(--header-height);
+    padding-bottom: var(--footer-height);
+}
+
+header {
+    background-color: var(--header-footer-color);
+    color: var(--text-color);
+    padding: 0 20px;
+    text-align: center;
+    border-bottom: 1px solid var(--border-color);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    transition:
+        height var(--transition-speed) ease,
+        background-color var(--transition-speed) ease;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: var(--header-height);
+    box-shadow: var(--shadow-subtle);
+    border-radius: 0 0 var(--border-radius) var(--border-radius);
+}
+
+.dashboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 24px;
+    padding: 24px;
+}
+
+.widget {
+    background-color: var(--widget-background);
+    padding: 24px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-subtle);
+    transition:
+        transform var(--transition-speed) ease-in-out,
+        box-shadow var(--transition-speed) ease-in-out,
+        background-color var(--transition-speed) ease-in-out;
+    will-change: transform, box-shadow;
+    max-height: 420px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+}
+
+.widget:hover {
+    transform: translateY(-10px);
+    box-shadow: var(--shadow-medium);
+    background-color: var(--widget-background-hover);
+}
+
+.widget h2 {
+    color: var(--heading-color);
+    font-size: 1.4em;
+    margin-bottom: 16px;
+    border-bottom: 2px solid var(--accent-color);
+    padding-bottom: 8px;
+    font-weight: 600;
+}
+
+/* Chat Bubble Enhancements */
+.bot-bubble, .user-bubble {
+    border-radius: 16px;
+    max-width: 80%;
+    padding: 12px 16px;
+    margin-bottom: 12px;
+    box-shadow: var(--shadow-subtle);
+    transition: transform var(--transition-speed) ease;
+}
+
+.bot-bubble:hover, .user-bubble:hover {
+    transform: scale(1.02);
+}
+
+/* Theme Toggle with Softer Styling */
+#theme-toggle {
+    background-color: var(--accent-color);
+    color: var(--button-text-color);
+    border: none;
+    border-radius: 24px;
+    padding: 10px 16px;
+    transition:
+        background-color var(--transition-speed) ease,
+        transform var(--transition-speed) ease;
+}
+
+#theme-toggle:hover {
+    background-color: var(--hover-accent-color);
+    transform: scale(1.05) rotate(3deg);
+}
+
+/* Enhanced Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--input-background);
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: var(--accent-color);
+    border-radius: 10px;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .dashboard {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .widget {
+        padding: 16px;
+    }
+}
+
+/* Reduced Motion Preference */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        transition: none !important;
+        animation: none !important;
+    }
+}

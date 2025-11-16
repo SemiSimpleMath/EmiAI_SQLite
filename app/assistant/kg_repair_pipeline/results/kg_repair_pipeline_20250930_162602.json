@@ -1,0 +1,21 @@
+{
+  "timestamp": "2025-09-30T16:26:02.781556+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 1,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [
+    "Questioning failed: 'ProblematicNode' object has no attribute 'node_id'",
+    "'list' object has no attribute 'get'"
+  ],
+  "processed_nodes": [
+    {
+      "node_id": "38ece277-d9b9-4938-b4db-9f2309fe8859",
+      "label": "To-do list",
+      "status": "validated",
+      "problem_description": "The node likely represents a specific document (Jukka's personal to-do list) but uses a generic label, causing ambiguity. Type Entity with category document is plausible if it is an instance. No temporal data is required since it is not an Event/State/Goal. Content is generally clear but could be more specific and normalized.",
+      "resolution_notes": "Recommended repairs:\n- Disambiguate label: rename to a unique, owner-specific title, e.g., \"Jukka To-Do List\" or \"To-do list (Jukka)\"; avoid curly apostrophes; keep consistent capitalization.\n- Add aliases: [\"Jukka’s to-do list\", \"Jukka task list\", \"Personal to-do list (Jukka)\"] for lookup.\n- Ontology typing: if available, set Type to a more specific class (e.g., Document or List/PersonalDocument) rather than generic Entity; keep category=document.\n- Ownership/author edges: add maintained_by/owned_by -> Person:Jukka; optionally created_by.\n- Storage/source metadata: add source/system (e.g., Notion, Trello, local file), canonical identifier/URL, created_at, updated_at, format, language.\n- Access/sensitivity: add confidentiality tag (e.g., personal/private) and access policy.\n- Neutralize description: remove subjective phrasing (\"reflects his methodical style\") or add provenance/confidence; keep description concise and factual (purpose and scope).\n- Relationships: if tasks exist as nodes, link via includes/tracks/organizes edges; otherwise, at least link to relevant projects or domains.\n- Normalization: ensure consistent hyphenation/spelling (\"to-do\"), ASCII punctuation in label, and casing per naming conventions."
+    }
+  ]
+}

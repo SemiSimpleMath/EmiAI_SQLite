@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-10-02T19:07:00.830370+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 0,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 1,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "d616183b-93a7-488c-9e12-8eb40a281786",
+      "label": "Worry about brain damage",
+      "status": "skipped",
+      "problem_description": "The node captures an ongoing emotional state with a clear narrative, correct node_type (State), and appropriate category. However, it lacks an explicit end_date or a clear open-ended/ongoing encoding, the label is generic and does not identify the subject (Seija), and there is a mismatch between approximate wording and precise timestamp. Valid_during adds little beyond the start date.",
+      "resolution_notes": "User requested to skip"
+    }
+  ]
+}

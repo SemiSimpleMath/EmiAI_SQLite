@@ -1,0 +1,20 @@
+name: shared::writer
+class_name: Agent
+color: "red"
+llm_params:
+  llm_provider: "openai"
+  engine: "gpt-4o-mini"
+  temperature: 0.1
+
+allowed_nodes: [exit_node]
+
+user_context_items:
+  - date_time
+  - writer_task
+  - writer_context
+  - purpose
+  - audience
+  - tone
+  - length
+  - format_constraints
+

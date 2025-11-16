@@ -1,0 +1,31 @@
+{
+  "timestamp": "20250911_113212",
+  "table": "node_types_new",
+  "total_records": 6,
+  "data": [
+    {
+      "type_name": "Concept",
+      "json_schema": {}
+    },
+    {
+      "type_name": "Entity",
+      "json_schema": {}
+    },
+    {
+      "type_name": "Event",
+      "json_schema": {}
+    },
+    {
+      "type_name": "Goal",
+      "json_schema": {}
+    },
+    {
+      "type_name": "Property",
+      "json_schema": {}
+    },
+    {
+      "type_name": "State",
+      "json_schema": {}
+    }
+  ]
+}

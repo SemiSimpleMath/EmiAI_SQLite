@@ -1,0 +1,11 @@
+Today is {{ date_time }}
+{{ entity_info }}
+{% if information %}
+Old messages from oldest to newest:
+{{ information }}
+{% endif %}
+
+{% if task %}
+Most recent messages from oldest to newest:
+{{ task }}
+{% endif %}

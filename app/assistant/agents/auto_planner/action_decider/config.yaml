@@ -1,0 +1,24 @@
+name: auto_planner::action_decider
+class_name: Agent
+color: red
+llm_params:
+  llm_provider: "openai"
+  engine: "gpt-4o-mini"
+  temperature: 0.1
+allowed_tools: []
+except_tools: []
+allowed_nodes:
+- exit_node
+- auto_planner::supervisor
+system_context_items:
+- resource_user_data
+- resource_action_decider_instructions
+user_context_items:
+- date_time
+- current_state
+- new_info
+- already_done
+- entity_summary
+- entity_metadata
+type: agent
+

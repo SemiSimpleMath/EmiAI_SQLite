@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-09-30T02:07:28.000384+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 1,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "38ece277-d9b9-4938-b4db-9f2309fe8859",
+      "status": "validated",
+      "problem_description": "The node 'To-do list' (Entity, document) is under-specified: no attributes or description and only one edge, making it weakly connected and generic. Its only neighbor has the exact same label and appears to describe the same real-world object (Jukka’s to-do list), indicating a likely duplicate that should be merged. The current node is missing expected attributes and relationships (e.g., owner/person linkage, task items). The neighbor also lacks quality metadata. Overall, this is a structural/content quality issue rather than missing critical metadata on the current node.",
+      "priority": "critical",
+      "resolution_notes": "1) Verify identity and scope:\n- Check whether '38ece277-d9b9-4938-b4db-9f2309fe8859' is intended as node ID rather than label; correct the label to a human-readable title if available.\n- Search for potential duplicates by title/aliases (e.g., 'To-do list', 'Jukka’s to-do list') and by normalized keys. Do not assume a neighbor exists since this node has 0 edges.\n2) If a duplicate exists:\n- Merge into the richest node using a defined merge policy: pick canonical title, union attributes, reassign all edges to canonical, preserve provenance, record merged_from, and deprecate the duplicate with redirect.\n3) If no duplicate exists and the node is valid:\n- Reclassify type/category to the correct schema (e.g., Document, TaskList).\n- Populate essential attributes: title, description, owner_id/person_ref, created_at, updated_at, source_uri, provenance/source_system, language, status, confidence, items_count.\n- Create expected relationships: owned_by -> Person (e.g., Jukka), contains -> Task items, part_of -> Project/Workspace, referenced_in -> relevant documents.\n4) If the node cannot be substantiated (no source, no content):\n- Mark as stub with retention window or delete to reduce graph noise; log the action.\n5) Process/ETL hardening:\n- Audit the ingestion that produced nodes with empty attributes and no edges; enforce constraints requiring minimal metadata and class assignment; add dedup checks on create.\n6) Quality controls:\n- Add validation rules to prevent orphaned 'Entity' nodes; require human-readable labels; add quality_score and last_reviewed fields."
+    }
+  ]
+}

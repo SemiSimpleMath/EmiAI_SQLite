@@ -1,0 +1,65 @@
+agents:
+- class: FinalAnswer
+  name: context_generator::final_answer
+- class: Agent
+  name: shared::tool_selector
+- class: Delegator
+  name: context_generator::delegator
+- class: Agent
+  name: shared::writer
+- class: Agent
+  name: context_generator::context_topic_generator
+- class: Agent
+  name: shared::mathematician
+- class: Planner
+  name: context_generator::planner
+- class: ToolArguments
+  name: shared::tool_arguments
+
+control_nodes:
+- class: GracefulExitControlNode
+  name: graceful_exit_control_node
+- class: ExitNode
+  name: exit_node
+- class: ToolCaller
+  name: tool_caller
+- class: ToolResultHandler
+  name: tool_result_handler
+- class: DoneNode
+  name: done_node
+
+class_name: MultiAgentManager
+description: A team manager that orchestrates agent execution for task completion.
+flow_config:
+  state_map:
+    context_generator::delegator: context_generator::context_topic_generator
+    context_generator::final_answer: exit_node
+    graceful_exit_control_node: context_generator::final_answer
+    shared::tool_arguments: tool_caller
+    shared::tool_selector: shared::tool_arguments
+    tool_caller: tool_result_handler
+    context_generator::planner_done: done_node
+max_cycles: 30
+name: context_generator
+role_bindings:
+  delegator: context_generator::delegator
+  tool_selector: shared::tool_selector
+tools:
+  allowed_tools:
+  - rag_query
+  - get_email
+  - send_email
+  - get_calendar_events
+  - create_calendar_event
+  - create_repeating_calendar_event
+  - delete_calendar_event
+  - update_calendar_event
+  - get_todo_tasks
+  - create_todo_task
+  - delete_todo_task
+  - update_todo_task
+  - web_manager
+  - event_manager
+  - ask_user
+  - notify_user
+  except_tools: []

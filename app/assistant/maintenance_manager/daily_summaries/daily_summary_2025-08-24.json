@@ -1,0 +1,202 @@
+{
+  "metadata": {
+    "generated_at": "2025-08-24T16:16:33.179421+00:00",
+    "date": "2025-08-24",
+    "version": "1.0"
+  },
+  "summary": {
+    "day_date": "2025-08-24",
+    "narrative": "Today is a light, low-stress Sunday with only routine obligations: morning and evening dog care, and ongoing health maintenance. There are no fixed work or social events, leaving the majority of the day open for rest, personal projects, or light admin. The only actionable task is to complete timesheets, which is best handled early to clear your mind for the rest of the day. An important school email arrived overnight with details about next week's schedule and traffic disruptions—reviewing this today will help you prepare for a busier Monday. If you want a restful day, you can focus on self-care and light chores. If you want to get ahead, use the ample free time to tackle the timesheets and review upcoming school logistics. Dial the day down by skipping admin and focusing on relaxation; dial it up by clustering admin and prep tasks in the late morning or early afternoon.",
+    "schedule": [
+      {
+        "start": "2025-08-24T00:01:00-07:00",
+        "end": "2025-08-24T23:59:59-07:00",
+        "type": "fixed_event",
+        "title": "Ongoing: Maintain mouth hygiene and reflux precautions",
+        "source_event_id": "m82602locranjikfrptfnu30b4_20250824T070100Z",
+        "task_id": null,
+        "location": null,
+        "travel_required": false,
+        "travel_minutes": null,
+        "priority": "medium",
+        "notes": "Daily health maintenance"
+      },
+      {
+        "start": "2025-08-24T08:00:00-07:00",
+        "end": "2025-08-24T08:30:00-07:00",
+        "type": "fixed_event",
+        "title": "Take out the dogs",
+        "source_event_id": "2t6qm6gd0lcr1l3dlgsk86ijo8_20250824T150000Z",
+        "task_id": null,
+        "location": null,
+        "travel_required": false,
+        "travel_minutes": null,
+        "priority": "medium",
+        "notes": "Daily pet care"
+      },
+      {
+        "start": "2025-08-24T09:30:00-07:00",
+        "end": "2025-08-24T10:00:00-07:00",
+        "type": "task_block",
+        "title": "Do timesheets",
+        "source_event_id": null,
+        "task_id": "MGczZFVHZDc5TmRKYWhXVw",
+        "location": null,
+        "travel_required": false,
+        "travel_minutes": null,
+        "priority": "high",
+        "notes": "Administrative task; best done with moderate focus"
+      },
+      {
+        "start": "2025-08-24T10:00:00-07:00",
+        "end": "2025-08-24T10:15:00-07:00",
+        "type": "break",
+        "title": "Short break",
+        "source_event_id": null,
+        "task_id": null,
+        "location": null,
+        "travel_required": false,
+        "travel_minutes": null,
+        "priority": "low",
+        "notes": "Reset after admin work"
+      },
+      {
+        "start": "2025-08-24T10:15:00-07:00",
+        "end": "2025-08-24T21:00:00-07:00",
+        "type": "free_time",
+        "title": "Free time",
+        "source_event_id": null,
+        "task_id": null,
+        "location": null,
+        "travel_required": false,
+        "travel_minutes": null,
+        "priority": "low",
+        "notes": "Open for rest, personal projects, or prep for the week"
+      },
+      {
+        "start": "2025-08-24T21:00:00-07:00",
+        "end": "2025-08-24T21:30:00-07:00",
+        "type": "fixed_event",
+        "title": "Walk the dogs",
+        "source_event_id": "a0l74e33ahq88uupo3agakn96g_20250825T040000Z",
+        "task_id": null,
+        "location": null,
+        "travel_required": false,
+        "travel_minutes": null,
+        "priority": "medium",
+        "notes": "Daily pet care"
+      }
+    ],
+    "free_time_windows": [
+      {
+        "start": "2025-08-24T10:15:00-07:00",
+        "end": "2025-08-24T21:00:00-07:00",
+        "length_minutes": 645,
+        "suggestions": [
+          "Rest: Take a nap, read, or enjoy a walk.",
+          "Push: Review the school email and prep for Monday (school supplies, traffic plan)."
+        ]
+      }
+    ],
+    "upcoming_events": [
+      {
+        "event_id": "esbeflvn3ujgfcg1a8kfkskl60",
+        "title": "First Day of School - Woodbridge HS",
+        "date": "2025-08-25",
+        "days_until": 1,
+        "importance": "high",
+        "lead_actions": [
+          "Review school bell schedule and Spirit Week themes.",
+          "Check traffic notice and plan drop-off/pick-up routes.",
+          "Prepare school supplies tonight."
+        ],
+        "watch_flag": true,
+        "notes": "Significant milestone; expect early start and possible traffic delays."
+      },
+      {
+        "event_id": "mp5j898vbhhphs49alcjmjlbn4_20250825T161500Z",
+        "title": "Analytics Team Meeting",
+        "date": "2025-08-25",
+        "days_until": 1,
+        "importance": "medium",
+        "lead_actions": [
+          "Review analytics reports before meeting."
+        ],
+        "watch_flag": false,
+        "notes": "Weekly work meeting, 9:15 AM - 10:15 AM."
+      },
+      {
+        "event_id": "7u3t8l3v7364sqqu9e2efgfhos_20250830T030000Z",
+        "title": "Friday Night Meats (Zoom)",
+        "date": "2025-08-29",
+        "days_until": 5,
+        "importance": "medium",
+        "lead_actions": [
+          "Optional: Prepare food or drinks for the call."
+        ],
+        "watch_flag": false,
+        "notes": "Weekly social/family Zoom, 8:00 PM - 10:00 PM."
+      }
+    ],
+    "task_plan": {
+      "load_recommendation": "rest",
+      "load_rationale": "Today is very light, with only one admin task and no fixed work or social events. Prioritize rest and light prep for a busy Monday.",
+      "tasks": [
+        {
+          "task_id": "MGczZFVHZDc5TmRKYWhXVw",
+          "title": "Do timesheets",
+          "urgency_score": 7,
+          "effort_minutes": 30,
+          "due": null,
+          "suggested_time_window": {
+            "start": "2025-08-24T09:30:00-07:00",
+            "end": "2025-08-24T10:00:00-07:00"
+          },
+          "rationale": "Quick admin task; best done early to clear the day."
+        }
+      ]
+    },
+    "email_triage": {
+      "urgent": [],
+      "time_sensitive": [
+        {
+          "email_id": "65351",
+          "thread_id": null,
+          "subject": "Copy of 8/25-8/29 Bell Schedule, Fall Spirit Week, and Community News",
+          "from_": "Woodbridge High School via ParentSquare",
+          "received_at": "2025-08-24T09:00:00-07:00",
+          "triage_label": "time_sensitive",
+          "action_recommended": "Review the schedule and traffic notice today; check attachment for details.",
+          "reason": "Contains next week's school schedule and notice of major traffic delays; needs review before Monday."
+        }
+      ],
+      "fyi": [
+        {
+          "email_id": "65350",
+          "thread_id": null,
+          "subject": "“machine learning intern”: Elite Bricks - Artificial Intelligence Intern and more",
+          "from_": "LinkedIn Job Alerts",
+          "received_at": "2025-08-24T08:30:00-07:00",
+          "triage_label": "fyi",
+          "action_recommended": "Skim if interested in new job opportunities.",
+          "reason": "Job alert; no immediate action required."
+        }
+      ],
+      "ignore": []
+    },
+    "metrics": {
+      "workload_score": 2,
+      "total_free_minutes": 645,
+      "total_task_minutes": 30,
+      "buffers_added_minutes": 0
+    },
+    "assumptions": [
+      "No additional tasks or urgent events are expected today.",
+      "Timesheets are assumed to be a recurring weekly/monthly admin task.",
+      "No travel or location changes are required for today's events.",
+      "User is available for admin work in the morning."
+    ],
+    "conflicts": [],
+    "summary": "Today is wide open, with only routine dog care and a single admin task (timesheets). The main actionable item is to review the school email about next week's schedule and traffic. If you want a restful day, focus on self-care and light chores. If you want to push, complete timesheets and prep for Monday in the late morning. No conflicts or urgent deadlines detected."
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-09-30T17:38:11.179198+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 1,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "38ece277-d9b9-4938-b4db-9f2309fe8859",
+      "label": "To-do list",
+      "status": "validated",
+      "problem_description": "The node describes a specific personal document but uses a generic label (\"To-do list\"), which can be confused with the general concept of a to-do list or with other users' lists. Lack of aliases reduces discoverability. Description is largely fine but includes non-ascii punctuation and mild subjectivity.",
+      "resolution_notes": "- Rename the label to be specific and disambiguated, e.g., \"Jukka's to-do list\" or \"To-do list (Jukka)\" (use ASCII apostrophe and hyphen).\n- Add aliases to improve search/discovery, e.g., [\"Jukka's todo list\", \"Jukka todo list\", \"Personal to-do list (Jukka)\", \"Task list (Jukka)\", \"Jukka to-do\"]\n- Normalize punctuation to ASCII (replace curly apostrophe with ').\n- Tighten the description to be neutral and concise. Suggested: \"Jukka's to-do list is a personal task tracker used to organize and prioritize work and personal tasks.\" Consider moving characterizations like \"methodical, long-term planning style\" to a person trait node if needed.\n- Improve structure/connectivity (edge_count=1 is weak):\n  - Add owned_by -> Jukka (Person) and instance_of -> To-do list (concept) if available.\n  - Link stored_in/maintained_in -> [app or location] if known (e.g., Obsidian, Notion, Apple Reminders).\n  - Link related tasks or collections (contains -> [task nodes]) if those exist.\n- Metadata/typing: If your ontology supports a Document node type, set Type to Document (keep Category: document). Otherwise retain Type: Entity.\n- Optional: If this document is frequently referenced, consider raising importance slightly (e.g., 0.6-0.7) after review.\n- Ensure relationship predicates are typed and not left as unknown (replace any placeholder/unknown relations with the correct relation types)."
+    }
+  ]
+}

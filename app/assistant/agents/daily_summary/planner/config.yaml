@@ -1,0 +1,24 @@
+name: daily_summary::planner
+class_name: Planner
+color: "green"
+llm_params:
+  llm_provider: "openai"
+  engine: "gpt-5"
+  temperature: 1
+  api_key: "dummy_api_key"
+
+
+except_tools: [daily_summary_manager]
+allowed_nodes: [shared::writer, shared::mathematician, daily_summary::email_analyzer::email_analyze, daily_summary::calendar_analyzer, daily_summary::todo_analyzer, flow_exit_node]
+
+user_context_items:
+  - date_time
+  - task
+  - information
+  - entity_context
+  - recent_history
+  - checklist
+  - action_count
+
+system_context_items:
+  - allowed_nodes

@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-09-30T17:33:27.148256+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 1,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "38ece277-d9b9-4938-b4db-9f2309fe8859",
+      "label": "To-do list",
+      "status": "validated",
+      "problem_description": "Represents a specific document but uses a generic label that can be confused with the general concept. No temporal fields are required for an Entity. Description is clear but a bit narrative; aliases are missing, reducing discoverability and deduping.",
+      "resolution_notes": "- Rename label to a specific, disambiguated form, e.g., \"Jukka's to-do list\" or \"Jukka to-do list (document)\".\n- Add aliases to improve retrieval and dedupe while maintaining specificity: [\"Jukka's todo list\", \"Jukka To Do List\", \"Jukka task list\", \"Personal to-do list (Jukka)\"] (avoid purely generic aliases that may collide with the concept node).\n- Tighten description to a neutral, factual summary, e.g., \"A personal task-tracking document maintained by Jukka that serves as the canonical list of current and planned tasks.\"\n- Add key relationships to strengthen structure:\n  - owned_by -> Jukka (Person)\n  - instance_of -> To-do list (concept/class)\n  - related_to -> task management / personal productivity (concepts)\n  - maintained_in -> [tool or platform], if known (e.g., Notion, Todoist, Apple Reminders)\n  - includes -> [task/project nodes], if those exist\n- If a generic \"To-do list\" concept node exists, ensure type/class is Concept and link this node as an instance to prevent conflation.\n- Consider setting or reviewing importance (e.g., raise if this is a central artifact in the workspace) and add clearer provenance (e.g., source: user_asserted or document_reference).\n- Add a privacy/visibility tag if the graph supports it (likely private/personal).\n- Optionally add a stable identifier/slug (e.g., \"jukka-todo-list\")."
+    }
+  ]
+}

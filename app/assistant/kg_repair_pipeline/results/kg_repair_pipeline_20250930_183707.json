@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-09-30T18:37:07.384775+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 1,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "38ece277-d9b9-4938-b4db-9f2309fe8859",
+      "label": "To-do list",
+      "status": "validated",
+      "problem_description": "The node represents a specific person's document but uses a generic label. Type 'Entity' and category 'document' seem appropriate. No temporal data is required for this type. Primary issue is inconsistent/ambiguous naming and lack of aliases.",
+      "resolution_notes": "- Rename label to a disambiguated instance name, e.g., \"Jukka's To-Do List\" (or \"Jukka To-Do List\") following naming conventions for personal artifacts.\n- Add aliases that capture common variants while retaining disambiguation: [\"Jukka's to-do list\", \"Jukka todo list\", \"Jukka task list\", \"Jukka tasks\"]. Avoid a bare generic alias \"To-do list\" unless your resolver is context-scoped.\n- Improve description for clarity and brevity, explicitly stating ownership and role, e.g., \"Jukka's personal task tracker used to plan and prioritize work and personal commitments; a central reference in his productivity system.\"\n- Strengthen connectivity: add edges such as owned_by -> Jukka (Person), instance_of -> To-do list (Concept), part_of -> Jukka's productivity system (if modeled), hosted_in/implemented_in -> [tool/app] (if known).\n- If a concept node for the general idea of a to-do list does not exist, create it and link via instance_of; otherwise ensure this node is not conflated with the concept.\n- Consider updating importance from 0.5 to ~0.7 given it is described as a central reference; keep confidence as-is.\n- Optionally add lightweight attributes for clarity: owner=Jukka, scope=personal, privacy=private, platform=[app] when known.\n- Ensure edges have proper predicates and directions; replace the current unknown->unknown sample with typed relations."
+    }
+  ]
+}

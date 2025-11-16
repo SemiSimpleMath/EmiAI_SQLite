@@ -1,0 +1,46 @@
+Today is {{ date_time }}
+{% if task %}
+Task: {{ task }}
+{% endif %}
+
+{% if information %}
+Additional information:
+{{ information }}
+{% endif %}
+
+{% if final_answer_content %}
+Collected information towards final answer: {{ final_answer_content }}
+{% endif %}
+
+{% if summary %}
+These are things that happened while ago, listed in order oldest to newest:
+{{ summary }}
+{% endif %}
+
+{% if plan %}
+### Previous Plan:
+{{ plan}}
+{% endif %}
+
+{% if recent_history %}
+Things that happened since last time you made a plan from oldest to latest:
+{{ recent_history }}
+{% endif %}
+
+{% if important_links %}
+Found Links:
+{% for link in important_links %}
+  - [{{ link.url }}]({{ link.url }}) - {{ link.description }}
+{% endfor %}
+{% endif %}
+
+{% if checklist %}
+{{ checklist }}
+{% endif %}
+
+{% if accomplishments %}
+Current Progress:
+{% for accomplishment_item in accomplishments %}
+  - {{ accomplishment_item }}
+{% endfor %}
+{% endif %}

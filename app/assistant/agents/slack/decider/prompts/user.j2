@@ -1,0 +1,13 @@
+Today is: {{ date_time }}
+{{ entity_info }}
+{% if information %}
+This is old chat from Slack.  Messages go from oldest to newest:
+{{ information }}
+{% endif %}
+
+{% if task %}
+This is most current chat from Slack. Messages from oldest to newest:
+{{ task }}
+{% endif %}
+
+{{ allowed_nodes }}

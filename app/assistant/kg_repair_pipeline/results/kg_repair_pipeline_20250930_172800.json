@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-09-30T17:28:00.476376+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 1,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "38ece277-d9b9-4938-b4db-9f2309fe8859",
+      "label": "To-do list",
+      "status": "validated",
+      "problem_description": "This appears to be a specific personal document but is labeled generically, creating ambiguity and potential collisions with other to-do lists or the class concept. No temporal data is required for an Entity. Overall classification looks correct; main issue is naming specificity and discoverability.",
+      "resolution_notes": "1) Rename for disambiguation using an owner-qualified pattern, e.g., \"Jukka's To-Do List\" or \"To-Do List (Jukka)\"; ensure consistent hyphenation per naming standard. 2) Add aliases: [\"Jukka's todo list\", \"Jukka task list\", \"Personal to-do list (Jukka)\", \"todo list\"]. 3) Add structural edges: has_owner/maintained_by -> Person:Jukka; instance_of -> Concept: To-do list (if concept/class exists; if not, create it); is_a -> Document (or your graph’s document superclass). 4) Improve connectivity as applicable: maintained_in/tool -> (e.g., Notion/Obsidian) if known; about/topics -> Task management, Personal productivity. 5) Add privacy/visibility metadata (e.g., visibility: private/internal; sensitivity: personal). 6) Optionally refine description to note it is a living personal task tracker maintained by Jukka and, if known, its platform or inception year. 7) Ensure a unique slug/ID that includes the owner (e.g., to-do-list-jukka) and align capitalization with labeling policy. 8) If a class-level \"To-do list\" node exists, ensure no label collision and link via instance_of; if it does not exist, avoid using the bare generic label for this instance."
+    }
+  ]
+}

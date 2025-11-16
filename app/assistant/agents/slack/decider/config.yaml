@@ -1,0 +1,33 @@
+name: slack::decider
+class_name: Agent
+color: green
+llm_params:
+  llm_provider: openai
+  api_key: dummy_api_key
+  engine: gpt-4o-mini
+  temperature: 0.1
+
+system_context_items:
+  - allowed_nodes
+
+user_context_items:
+  - date_time
+  - information
+  - task
+  - allowed_nodes
+  - entity_summary
+
+allowed_nodes:
+  - slack::casual_chat_writer
+  - slack::mathematician
+  - web
+  - exit_node
+
+rag_fields:
+  information:
+    - chat
+    - slack
+  task:
+    - chat
+    - slack
+

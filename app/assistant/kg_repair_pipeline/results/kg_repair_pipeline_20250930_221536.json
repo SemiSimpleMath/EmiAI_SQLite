@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-09-30T22:15:36.799769+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 1,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "38ece277-d9b9-4938-b4db-9f2309fe8859",
+      "label": "To-do list",
+      "status": "validated",
+      "problem_description": "Node represents a specific document and Type=Entity, Category=document are appropriate. Description is clear and specific. Main issue is an overly generic label that conflicts with the node’s specificity and could be confused with a Concept node for the general idea of a to-do list.",
+      "resolution_notes": "- Rename label to a specific, disambiguated form, e.g., \"Jukka's to-do list\" (preferred) or \"Jukka to-do list\".\n- Add aliases to preserve searchability and common variants, e.g., [\"To-do list\", \"Personal to-do list\", \"Jukka to-do list\"].\n- Keep Type=Entity and Category=document as-is.\n- Minor copy edit: normalize the description apostrophe to ASCII (\"Jukka's\") and optionally add a brief clarifier that it is a specific personal document to prevent conceptual confusion (e.g., \"This is Jukka's personal to-do list document.\")."
+    }
+  ]
+}

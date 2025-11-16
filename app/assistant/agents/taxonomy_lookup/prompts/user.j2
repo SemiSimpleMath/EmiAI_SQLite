@@ -1,0 +1,27 @@
+{# User prompt for Taxonomy Lookup Agent #}
+
+Find the most relevant taxonomy paths based on this description:
+
+**TOP LEVEL TAXONOMY**: {{ top_level_taxonomy }}
+**DESCRIPTION**: {{ description }}
+**TOTAL PATHS AVAILABLE**: {{ total_paths }}
+
+**ALL AVAILABLE PATHS:**
+{{ all_paths }}
+
+---
+
+Find the most relevant paths that match the description:
+
+1. **ANALYZE** - Review all available paths
+2. **MATCH** - Find paths that semantically match the description
+3. **SCORE** - Assign relevance scores (0.0-1.0) based on how well each path matches
+4. **RANK** - Order by relevance score (highest first)
+5. **EXPLAIN** - Provide brief reasoning for each selection
+
+Return only the most relevant paths with:
+- Full taxonomy path
+- Relevance score (0.0-1.0)
+- Brief reasoning for relevance
+
+Focus on quality over quantity - only include genuinely relevant paths.

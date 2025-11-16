@@ -1,0 +1,53 @@
+Today is {{ date_time }}
+{% if task %}
+This is the overall question we are trying to answer: {{ task }}
+{% endif %}
+
+{% if information %}
+Additional information:
+{{ information }}
+{% endif %}
+
+{% if plan %}
+Overall plan to solve the task:
+    {{ plan }}
+{% endif %}
+
+###########
+This is the most recent query that was sent to the RAG database:
+{{ query }}
+
+{% if rag %}
+Found context for most recent query:
+{{ rag }}
+{% else %}
+No context was found for this query.
+{% endif %}
+#############
+
+{% if checklist %}
+Current Checklist:
+{{ checklist }}
+{% endif %}
+
+{% if query_list %}
+###############
+    These are queries we have already tried:
+    {% for item in query_list %}
+        {{ item }}
+    {% endfor %}
+###############
+{% endif %}
+
+{% if accomplishments %}
+These are fundamental pieces of information you believe will be needed to construct the final answer.
+{% for accomplishment_item in accomplishments %}
+  - {{ accomplishment_item }}
+{% endfor %}
+{% endif %}
+
+Checklist is rewritten each time. Preserver old information exactly when appropriate and add the new info to it.
+
+Accomplishments is automatically appended to.  So you only need the new sentence or two per accomplishment that was found.  If there are no new accomplishments, leave blank.
+
+

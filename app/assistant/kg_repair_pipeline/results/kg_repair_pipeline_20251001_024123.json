@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-10-01T02:41:23.395299+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 0,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "38ece277-d9b9-4938-b4db-9f2309fe8859",
+      "label": "To-do list",
+      "status": "failed",
+      "problem_description": "The node represents a specific document (Jukka's personal to-do list) and is correctly typed as Entity with category document. However, the label is generic and inconsistent with the node's specificity, risking confusion with a concept node. Temporal data is not required for an Entity. Main issues: inconsistent/ambiguous naming and missing aliases.",
+      "resolution_notes": "1 validation error for Message\ninformation\n  Input should be a valid string [type=string_type, input_value={'node_id': '38ece277-d9b...': 'kg_repair_pipeline'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.5/v/string_type"
+    }
+  ]
+}

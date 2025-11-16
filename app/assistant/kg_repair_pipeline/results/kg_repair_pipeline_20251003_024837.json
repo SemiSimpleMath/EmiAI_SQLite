@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-10-03T02:48:37.585891+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 0,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 1,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "12bc829d-c22f-4aa9-92d8-1910718c418f",
+      "label": "Emi",
+      "status": "skipped",
+      "problem_description": "The node uses 'Emi' as both its label and semantic_label, which violates the labeling guidelines. The label should describe the role or type (e.g., 'Assistant'), and the semantic_label should add context (e.g., 'Assistant (Jukka)'). The node type and category are otherwise appropriate, and the description is clear and meaningful.",
+      "resolution_notes": "User requested to skip"
+    }
+  ]
+}

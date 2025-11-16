@@ -1,0 +1,11 @@
+name: taxonomy_team::delegator
+class_name: Delegator
+color: "blue"
+llm_provider: "openai"
+llm_params:
+  engine: "gpt-4o-mini"
+  temperature: 0.1
+
+# No tools required for Delegator
+allowed_tools: []
+

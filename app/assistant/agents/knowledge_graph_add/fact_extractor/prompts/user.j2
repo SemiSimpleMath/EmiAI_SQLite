@@ -1,0 +1,9 @@
+Today is {{ date_time }}
+
+{% if original_message_timestamp %}
+The original message was recorded on: {{ original_message_timestamp }}
+{% endif %}
+
+Analyze the following text and extract all nodes and edges that should be recorded in a knowledge graph:
+
+{{ text }}

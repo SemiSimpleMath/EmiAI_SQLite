@@ -1,0 +1,1 @@
+{{ resource_user_data.full_name }} is not looking for a job and is not interested in any job related postings.

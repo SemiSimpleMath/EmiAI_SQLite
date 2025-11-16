@@ -1,0 +1,282 @@
+[
+  {
+    "type_name": "person",
+    "json_schema": {}
+  },
+  {
+    "type_name": "thing",
+    "json_schema": {}
+  },
+  {
+    "type_name": "hobby",
+    "json_schema": {}
+  },
+  {
+    "type_name": "project",
+    "json_schema": {}
+  },
+  {
+    "type_name": "role",
+    "json_schema": {}
+  },
+  {
+    "type_name": "song",
+    "json_schema": {}
+  },
+  {
+    "type_name": "work",
+    "json_schema": {}
+  },
+  {
+    "type_name": "organization",
+    "json_schema": {}
+  },
+  {
+    "type_name": "concept",
+    "json_schema": {}
+  },
+  {
+    "type_name": "product",
+    "json_schema": {}
+  },
+  {
+    "type_name": "country",
+    "json_schema": {}
+  },
+  {
+    "type_name": "food",
+    "json_schema": {}
+  },
+  {
+    "type_name": "date",
+    "json_schema": {}
+  },
+  {
+    "type_name": "email",
+    "json_schema": {}
+  },
+  {
+    "type_name": "anniversary",
+    "json_schema": {}
+  },
+  {
+    "type_name": "event",
+    "json_schema": {}
+  },
+  {
+    "type_name": "degree",
+    "json_schema": {}
+  },
+  {
+    "type_name": "field",
+    "json_schema": {}
+  },
+  {
+    "type_name": "place",
+    "json_schema": {}
+  },
+  {
+    "type_name": "birthday",
+    "json_schema": {}
+  },
+  {
+    "type_name": "university",
+    "json_schema": {}
+  },
+  {
+    "type_name": "category",
+    "json_schema": {}
+  },
+  {
+    "type_name": "band",
+    "json_schema": {}
+  },
+  {
+    "type_name": "music_group",
+    "json_schema": {}
+  },
+  {
+    "type_name": "entity",
+    "json_schema": {}
+  },
+  {
+    "type_name": "movie",
+    "json_schema": {}
+  },
+  {
+    "type_name": "condition",
+    "json_schema": {}
+  },
+  {
+    "type_name": "animal",
+    "json_schema": {}
+  },
+  {
+    "type_name": "group",
+    "json_schema": {}
+  },
+  {
+    "type_name": "company",
+    "json_schema": {}
+  },
+  {
+    "type_name": "phone_number",
+    "json_schema": {}
+  },
+  {
+    "type_name": "book",
+    "json_schema": {}
+  },
+  {
+    "type_name": "drink",
+    "json_schema": {}
+  },
+  {
+    "type_name": "season",
+    "json_schema": {}
+  },
+  {
+    "type_name": "activity",
+    "json_schema": {}
+  },
+  {
+    "type_name": "game",
+    "json_schema": {}
+  },
+  {
+    "type_name": "language",
+    "json_schema": {}
+  },
+  {
+    "type_name": "genre",
+    "json_schema": {}
+  },
+  {
+    "type_name": "tv_show",
+    "json_schema": {}
+  },
+  {
+    "type_name": "job",
+    "json_schema": {}
+  },
+  {
+    "type_name": "tool",
+    "json_schema": {}
+  },
+  {
+    "type_name": "dataset",
+    "json_schema": {}
+  },
+  {
+    "type_name": "habit",
+    "json_schema": {}
+  },
+  {
+    "type_name": "document",
+    "json_schema": {}
+  },
+  {
+    "type_name": "course",
+    "json_schema": {}
+  },
+  {
+    "type_name": "website",
+    "json_schema": {}
+  },
+  {
+    "type_name": "task",
+    "json_schema": {}
+  },
+  {
+    "type_name": "city",
+    "json_schema": {}
+  },
+  {
+    "type_name": "month",
+    "json_schema": {}
+  },
+  {
+    "type_name": "ability",
+    "json_schema": {}
+  },
+  {
+    "type_name": "chat_handle",
+    "json_schema": {}
+  },
+  {
+    "type_name": "trait",
+    "json_schema": {}
+  },
+  {
+    "type_name": "quote",
+    "json_schema": {}
+  },
+  {
+    "type_name": "address",
+    "json_schema": {}
+  },
+  {
+    "type_name": "service",
+    "json_schema": {}
+  },
+  {
+    "type_name": "cuisine",
+    "json_schema": {}
+  },
+  {
+    "type_name": "system",
+    "json_schema": {}
+  },
+  {
+    "type_name": "feature",
+    "json_schema": {}
+  },
+  {
+    "type_name": "video",
+    "json_schema": {}
+  },
+  {
+    "type_name": "skill",
+    "json_schema": {}
+  },
+  {
+    "type_name": "goal",
+    "json_schema": {}
+  },
+  {
+    "type_name": "level",
+    "json_schema": {}
+  },
+  {
+    "type_name": "technology",
+    "json_schema": {}
+  },
+  {
+    "type_name": "action",
+    "json_schema": {}
+  },
+  {
+    "type_name": "position",
+    "json_schema": {}
+  },
+  {
+    "type_name": "meme",
+    "json_schema": {}
+  },
+  {
+    "type_name": "label",
+    "json_schema": {}
+  },
+  {
+    "type_name": "location",
+    "json_schema": {}
+  },
+  {
+    "type_name": "building",
+    "json_schema": {}
+  },
+  {
+    "type_name": "time",
+    "json_schema": {}
+  }
+]

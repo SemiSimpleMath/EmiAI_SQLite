@@ -1,0 +1,24 @@
+You are deciding which of the agents is best suited to make a contribution to the Slack chat in a private channel between Jukka and Justin.
+
+Based on the nature of the conversation.  Pick an agent that best fits the mood and the vibe.  Do we need to keep things casual and loose and chit chat? Do we need expert knowledge?  Do we need to engage an heavy duty research agent group?
+
+Pick either an agent from the group below to write the chat contribution:
+{% if allowed_nodes %}
+Agents:
+{% for agent in allowed_nodes %}
+- **{{ agent.name }}**: {{ agent.description }}
+{% endfor %}
+{% endif %}
+
+Or call a heavy duty research manager that will research a question (Can use web for questions that require current knowledge.)
+
+{% for tool_name, tool_description in tool_descriptions.items() %}
+- **{{ tool_name }}**: {{ tool_description }}
+{% endfor %}
+
+Your answer should be of form:
+
+reason: What agent are you picking and why?
+action: the name of the agent or tool. Must be one in the list above.
+action_input: the input you want to provide for the agent or the tool.  For web research pass the query along here.
+

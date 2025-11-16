@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-09-30T18:26:15.601910+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 1,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "38ece277-d9b9-4938-b4db-9f2309fe8859",
+      "label": "To-do list",
+      "status": "validated",
+      "problem_description": "The node represents a specific personal document but uses a generic label (To-do list). This can cause ambiguity with other to-do lists and suggests a class-level concept rather than an instance. Type=Entity and category=document appear reasonable; no temporal data is required for an Entity. Main issues are naming specificity and missing aliases.",
+      "resolution_notes": "- Rename the label to be unambiguous, e.g., \"Jukka's To-do List\", \"To-do list (Jukka)\", or \"Jukka To-do List\" (choose a label style consistent with graph conventions; avoid apostrophes if your system disallows them).\n- Add aliases to improve retrieval, e.g., [\"Todo list\", \"To-do\", \"Task list\", \"Jukka's task list\", \"Personal task tracker\"].\n- Add key edges:\n  - maintained_by/owned_by -> Person: Jukka\n  - instance_of -> Concept: To-do list (class) or Document\n  - hosted_on/stored_in -> specific app or repository (e.g., Notion/Obsidian/Google Tasks) if known\n  - related_to/aggregates -> relevant Projects or Task nodes, if modeled\n- Improve description to include disambiguating details (scope, platform, canonical location/link, and, if available, creation or last-updated date). Keep objective tone.\n- Review and, if warranted by its central role, raise importance (e.g., 0.7-0.8). Add a more specific source/provenance (e.g., file path, URL, or system of record) while keeping confidence if justified.\n- If other nodes share the label \"To-do list\", either merge duplicates or add disambiguation via consistent naming and instance_of links.\n- Optionally add a stable identifier in attributes (e.g., slug: jukka-todo-list) and a sensitivity flag (personal), if your schema supports it."
+    }
+  ]
+}

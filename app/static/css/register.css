@@ -1,0 +1,88 @@
+/* General Styles */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+h1 {
+    text-align: center;
+    color: #333;
+    padding: 0;
+    margin: 0;
+}
+
+/* Form Styles */
+form {
+    display: flex;
+    flex-direction: column;
+    width: 100%
+}
+
+label {
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+input[type="text"],
+input[type="password"] {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+
+input[type="submit"] {
+    background-color: #007bff;
+    color: white;
+    padding: 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+input[type="submit"]:hover {
+    background-color: #0056b3;
+}
+
+/* Link Styles */
+a {
+    color: #007bff;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+
+#register-container {
+    background-color: white;
+    padding: 1vh;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    display: flex; /* Added for centering the div */
+    justify-content: center; /* Center horizontally */
+    align-items: center; /* Center vertically */
+    width: 30%;
+    height: 60%;
+
+}
+
+#register-box{
+width: 90%;
+
+}
+
+main{
+height: 100vh;
+width: 100vw;
+display: flex;
+justify-content: center;
+align-items: center;
+}

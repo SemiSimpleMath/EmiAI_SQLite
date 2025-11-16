@@ -1,0 +1,23 @@
+name: shared::find_node
+class_name: Planner
+color: "blue"
+llm_params:
+  llm_provider: "openai"
+  engine: "gpt-5-mini"
+  temperature: 1
+  api_key: "dummy_api_key"
+
+allowed_tools: [kg_find_node]
+allowed_nodes: [flow_exit_node]
+
+user_context_items:
+  - date_time
+  - agent_task
+  - recent_history
+  - find_node_checklist
+  - find_node_found_information
+
+
+system_context_items:
+  - tool_descriptions
+  - allowed_nodes

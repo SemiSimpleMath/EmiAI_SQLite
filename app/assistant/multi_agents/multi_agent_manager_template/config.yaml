@@ -1,0 +1,28 @@
+name: new_manager
+class_name: MultiAgentManager
+description: "A template for creating a multi agent manager that controls team of agents."
+max_cycles: 50  # Prevent infinite loops
+role_bindings:
+  delegator: shared::delegator
+  tool_selector: shared::tool_selector
+
+agents:
+  - name: shared::delegator
+    class: Delegator
+  - name: shared::final_answer
+    class: FinalAnswer
+
+control_nodes:
+  # Add control nodes here as needed
+  # - name: exit_node
+  #   class: ExitNode
+
+tools:
+  allowed_tools:
+  except_tools: []
+
+flow_config:
+  state_map:
+    "shared::delegator": "shared::final_answer"
+
+

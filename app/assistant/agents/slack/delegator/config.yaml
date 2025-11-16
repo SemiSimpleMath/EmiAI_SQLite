@@ -1,0 +1,30 @@
+name: slack::delegator
+class_name: Delegator
+color: "blue"
+llm_provider: "openai"
+llm_params:
+  engine: "gpt-4o-mini"
+  temperature: 0.1
+
+allowed_tools: all
+
+allowed_nodes:
+  - slack::casual_chat_writer
+  - slack::expert_writer
+  - slack::mathematician
+
+user_context_items:
+  - task
+  - information
+
+system_context_items:
+  - tool_descriptions
+  - allowed_nodes
+
+rag_fields:
+  information:
+    - chat
+    - slack
+  task:
+    - chat
+    - slack

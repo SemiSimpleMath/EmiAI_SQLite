@@ -1,0 +1,48 @@
+{
+  "timestamp": "2025-09-18 10:39:06.486709",
+  "total_suspect_nodes": 3,
+  "suspect_nodes": [
+    {
+      "node_id": "e7f1cad7-e175-4593-a639-b2627809ee07",
+      "label": "Consent to share favorite hobby",
+      "type": "Event",
+      "node_type": "Event",
+      "category": "consent_event",
+      "sentence": "On 2025-02-28, Jukka's agreement to pass 'playing the saxophone' as his favorite hobby resulted in setting his favorite hobby to playing the saxophone.",
+      "edge_count": 2,
+      "jukka_distance": 1,
+      "suspect_reason": "Agent/system meta event logging Jukka\u2019s consent to share a preference. It captures interaction mechanics rather than a lasting real-world fact. The enduring knowledge is the resulting state (favorite hobby = playing the saxophone); the consent event itself is provenance/assistive noise (System/Agent Noise).",
+      "confidence": 0.8,
+      "cleanup_priority": "medium",
+      "suggested_action": "convert_to_property (record provenance on the 'Favorite hobby of Jukka' state or delete the event)"
+    },
+    {
+      "node_id": "ee598fc1-1f55-4cb4-a248-3b4fa6b67ffe",
+      "label": "Worldwide",
+      "type": "Concept",
+      "node_type": "Concept",
+      "category": "concept",
+      "sentence": "The goal to copy Emi Team to every computer in the world has a worldwide scope.",
+      "edge_count": 1,
+      "jukka_distance": 2,
+      "suspect_reason": "Generic concept used only to indicate a goal's scope. Functions as a property value (scope: worldwide/global) rather than a meaningful standalone concept. Misclassified and low-connectivity; better modeled as an attribute on the goal.",
+      "confidence": 0.8,
+      "cleanup_priority": "medium",
+      "suggested_action": "convert_to_property"
+    },
+    {
+      "node_id": "c8efd4fd-69ce-4369-a084-44545991e78e",
+      "label": "Agent",
+      "type": "Entity",
+      "node_type": "Entity",
+      "category": "ai_agent",
+      "sentence": "An agent is communicating with Jukka as of 2025-02-14.",
+      "edge_count": 3,
+      "jukka_distance": 2,
+      "suspect_reason": "The label 'Agent' is overly generic and ambiguous, the node lacks a proper classification, and uses a nonstandard category ('ai_agent'). Although it has 3 edges tied to real interactions, the entity is not clearly identified (which agent?) and likely represents the generic assistant. This should be consolidated or renamed to a specific, well-defined node rather than kept as a vague placeholder.",
+      "confidence": 0.69,
+      "cleanup_priority": "medium",
+      "suggested_action": "Rename to a specific entity (e.g., 'Jukka's AI assistant') and set classification=entity_node, category=Thing or Software; merge with any existing 'AI assistant'/'Assistant' nodes if present. Do not delete due to meaningful connected states/events."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+name: context_generator::delegator
+class_name: Delegator
+color: blue
+llm_params:
+  engine: gpt-4o-mini
+  temperature: 0.1
+allowed_tools: []
+type: agent
+llm_provider: openai

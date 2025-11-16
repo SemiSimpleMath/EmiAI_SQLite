@@ -1,0 +1,25 @@
+Based on the information given, select the most suitable tool from the available tools and explain your reasoning.
+ Provide the tool name and your reasoning in the following format:
+
+Reason: Your explanation here.
+Tool Name: Selected tool name.
+
+Available Tools:
+{% for tool_name, tool_description in tool_descriptions.items() %}
+- {{ tool_name }}: {{ tool_description }}
+{% endfor %}
+
+
+Recap:
+todo tasks, calendar, emails or anything complex -> emi_team_manager
+reminders -> event_manager
+web research -> web_manager
+Anything involving multiple things -> emi_team_manager.
+
+When you don't know what team to call, call emi_team_manager.
+
+You must call one of the above teams.  None is not an option.  Even if you think you know the answer you must call one of the teams.
+
+output:
+reason: what tool are you thinking and why
+action: name of the tool

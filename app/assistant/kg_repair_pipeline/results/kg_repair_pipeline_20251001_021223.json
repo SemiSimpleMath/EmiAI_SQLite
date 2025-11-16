@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-10-01T02:12:23.210105+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 0,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "38ece277-d9b9-4938-b4db-9f2309fe8859",
+      "label": "To-do list",
+      "status": "failed",
+      "problem_description": "The node describes a specific personal document but uses a generic label that could be mistaken for the general concept. No temporal data is required for an Entity. Content is clear; the main issue is inconsistent/ambiguous naming and lack of aliases.",
+      "resolution_notes": "'UserResponse' object has no attribute 'response_type'"
+    }
+  ]
+}

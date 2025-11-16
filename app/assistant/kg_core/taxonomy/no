@@ -1,0 +1,1635 @@
+{
+  "analysis_results": [
+    {
+      "branch_name": "entity",
+      "total_categories": 167,
+      "analysis": {
+        "issues": [
+          {
+            "category_ids": [
+              746,
+              492,
+              747,
+              493,
+              748,
+              494,
+              799
+            ],
+            "labels": [
+              "machine",
+              "machine",
+              "robot",
+              "robot",
+              "competition_robot",
+              "competition_robot",
+              "combat_robot"
+            ],
+            "paths": [
+              "entity > artifact > machine",
+              "entity > artifact > product > physical_product > machine",
+              "entity > artifact > machine > robot",
+              "entity > artifact > product > physical_product > machine > robot",
+              "entity > artifact > machine > robot > competition_robot",
+              "entity > artifact > product > physical_product > machine > robot > competition_robot",
+              "entity > artifact > machine > robot > competition_robot > combat_robot"
+            ],
+            "problem": "Duplicate machine/robot subtrees exist under both 'artifact' and 'product > physical_product'. This splits identical concepts across two branches and duplicates 'robot' and 'competition_robot'.",
+            "actions": [
+              "merge_categories(746, 492)",
+              "merge_categories(747, 493)",
+              "merge_categories(748, 494)"
+            ],
+            "confidence": 0.93
+          },
+          {
+            "category_ids": [
+              735,
+              509
+            ],
+            "labels": [
+              "codebase",
+              "codebase"
+            ],
+            "paths": [
+              "entity > artifact > product > digital_product > codebase",
+              "entity > artifact > product > digital_product > software > codebase"
+            ],
+            "problem": "Duplicate 'codebase' categories: one directly under 'digital_product' and another under 'software'. Keeping the one under 'software' provides the correct specificity (a codebase is a type of software).",
+            "actions": [
+              "merge_categories(735, 509)"
+            ],
+            "confidence": 0.9
+          },
+          {
+            "category_ids": [
+              93,
+              117,
+              794,
+              731
+            ],
+            "labels": [
+              "service",
+              "service",
+              "email_service",
+              "messaging_service"
+            ],
+            "paths": [
+              "entity > artifact > product > digital_product > service",
+              "entity > artifact > product > service",
+              "entity > artifact > product > digital_product > service > email_service",
+              "entity > artifact > product > service > messaging_service"
+            ],
+            "problem": "Two separate 'service' categories create ambiguity. Digital services are split under 'digital_product > service' while general services are under 'product > service'. Also, 'email_service' is placed under the digital-only branch while 'messaging_service' is under the general services branch.",
+            "actions": [
+              "merge_categories(93, 117)",
+              "move_category(794, 731)"
+            ],
+            "confidence": 0.86
+          },
+          {
+            "category_ids": [
+              803,
+              576
+            ],
+            "labels": [
+              "law_firm",
+              "law_firm"
+            ],
+            "paths": [
+              "entity > organization > company > law_firm",
+              "entity > organization > professional_services_firm > law_firm"
+            ],
+            "problem": "Duplicate 'law_firm' exists under both 'company' and 'professional_services_firm'. This is the same concept duplicated in two places.",
+            "actions": [
+              "merge_categories(803, 576)"
+            ],
+            "confidence": 0.92
+          },
+          {
+            "category_ids": [
+              697,
+              84
+            ],
+            "labels": [
+              "video_game",
+              "game"
+            ],
+            "paths": [
+              "entity > artifact > creative_work > video_game",
+              "entity > artifact > creative_work > game"
+            ],
+            "problem": "'video_game' is a subtype of 'game' but is currently a sibling under 'creative_work'. This violates the IS-A hierarchy expectation within the 'game' branch.",
+            "actions": [
+              "move_category(697, 84)"
+            ],
+            "confidence": 0.8
+          },
+          {
+            "category_ids": [
+              671
+            ],
+            "labels": [
+              "midle_school"
+            ],
+            "paths": [
+              "entity > organization > educational_institution > midle_school"
+            ],
+            "problem": "Misspelled category label 'midle_school'. Inconsistent naming harms discoverability and professionalism.",
+            "actions": [
+              "rename_category(671, middle_school)"
+            ],
+            "confidence": 0.99
+          },
+          {
+            "category_ids": [
+              707,
+              716,
+              717,
+              739,
+              710,
+              724,
+              731,
+              711,
+              718,
+              725
+            ],
+            "labels": [
+              "reference_agent",
+              "digital_entity",
+              "template_variable",
+              "board_game",
+              "phone_number",
+              "room",
+              "messaging_service",
+              "mobile_carrier",
+              "templating_engine",
+              "shelf"
+            ],
+            "paths": [
+              "entity > ai_agent > reference_agent",
+              "entity > artifact > digital_entity",
+              "entity > artifact > digital_entity > template_variable",
+              "entity > artifact > creative_work > game > board_game",
+              "entity > contact_point > phone_number",
+              "entity > location > room",
+              "entity > artifact > product > service > messaging_service",
+              "entity > organization > company > mobile_carrier",
+              "entity > artifact > product > digital_product > tool > templating_engine",
+              "entity > artifact > product > physical_product > furniture > shelf"
+            ],
+            "problem": "Important categories lack meaningful descriptions, reducing clarity for classifiers and users.",
+            "actions": [
+              "update_description(707, \"An AI agent that retrieves, cites, or links to external sources to provide references or evidence.\")",
+              "update_description(716, \"A non-physical artifact that exists only in digital form (e.g., websites, social profiles, repositories).\")",
+              "update_description(717, \"A placeholder token used in templating systems that is replaced with dynamic values during rendering.\")",
+              "update_description(739, \"A tabletop game played on a board with set pieces and rules, typically using physical components.\")",
+              "update_description(710, \"A telephony contact identifier composed of digits used to route calls or messages.\")",
+              "update_description(724, \"An enclosed indoor space within a building, typically bounded by walls and a door.\")",
+              "update_description(731, \"A service that sends or receives messages (email, SMS, chat) between users or systems.\")",
+              "update_description(711, \"A telecommunications company that provides cellular network services.\")",
+              "update_description(718, \"Software that combines templates with data to generate formatted text or documents (e.g., HTML).\")",
+              "update_description(725, \"A flat horizontal surface or furniture component used for storing or displaying items.\")"
+            ],
+            "confidence": 0.88
+          },
+          {
+            "category_ids": [
+              697
+            ],
+            "labels": [
+              "video_game"
+            ],
+            "paths": [
+              "entity > artifact > creative_work > video_game"
+            ],
+            "problem": "Unclear/poor description for 'video_game' (editorial note rather than a definition).",
+            "actions": [
+              "update_description(697, \"An electronic game played on a computer, console, or mobile device, involving user interaction with a visual interface.\")"
+            ],
+            "confidence": 0.9
+          }
+        ]
+      },
+      "categories": [
+        {
+          "id": 1,
+          "label": "entity",
+          "path": "entity",
+          "description": "Physical or abstract things that exist",
+          "children_labels": [
+            "ai_agent",
+            "animal",
+            "artifact",
+            "contact_point",
+            "food",
+            "group",
+            "intangible",
+            "location",
+            "medical_entity",
+            "organization",
+            "person",
+            "plant"
+          ]
+        },
+        {
+          "id": 65,
+          "label": "ai_agent",
+          "path": "entity > ai_agent",
+          "description": "An artificial intelligence agent",
+          "children_labels": [
+            "agent",
+            "assistant",
+            "chatbot",
+            "data_processing_agent",
+            "reference_agent"
+          ]
+        },
+        {
+          "id": 68,
+          "label": "agent",
+          "path": "entity > ai_agent > agent",
+          "description": "An autonomous AI system",
+          "children_labels": []
+        },
+        {
+          "id": 66,
+          "label": "assistant",
+          "path": "entity > ai_agent > assistant",
+          "description": "An AI assistant",
+          "children_labels": [
+            "personal_assistant"
+          ]
+        },
+        {
+          "id": 752,
+          "label": "personal_assistant",
+          "path": "entity > ai_agent > assistant > personal_assistant",
+          "description": "Created from suggestion: personal_assistant",
+          "children_labels": []
+        },
+        {
+          "id": 67,
+          "label": "chatbot",
+          "path": "entity > ai_agent > chatbot",
+          "description": "A conversational AI",
+          "children_labels": []
+        },
+        {
+          "id": 774,
+          "label": "data_processing_agent",
+          "path": "entity > ai_agent > data_processing_agent",
+          "description": "Created from suggestion: data_processing_agent",
+          "children_labels": []
+        },
+        {
+          "id": 707,
+          "label": "reference_agent",
+          "path": "entity > ai_agent > reference_agent",
+          "description": null,
+          "children_labels": []
+        },
+        {
+          "id": 69,
+          "label": "animal",
+          "path": "entity > animal",
+          "description": "A living organism",
+          "children_labels": [
+            "pet"
+          ]
+        },
+        {
+          "id": 70,
+          "label": "pet",
+          "path": "entity > animal > pet",
+          "description": "A domesticated animal kept for companionship",
+          "children_labels": [
+            "bird",
+            "cat",
+            "dog",
+            "fish"
+          ]
+        },
+        {
+          "id": 73,
+          "label": "bird",
+          "path": "entity > animal > pet > bird",
+          "description": "An avian pet",
+          "children_labels": []
+        },
+        {
+          "id": 72,
+          "label": "cat",
+          "path": "entity > animal > pet > cat",
+          "description": "A domesticated feline",
+          "children_labels": []
+        },
+        {
+          "id": 71,
+          "label": "dog",
+          "path": "entity > animal > pet > dog",
+          "description": "A domesticated canine",
+          "children_labels": []
+        },
+        {
+          "id": 74,
+          "label": "fish",
+          "path": "entity > animal > pet > fish",
+          "description": "An aquatic pet",
+          "children_labels": []
+        },
+        {
+          "id": 491,
+          "label": "artifact",
+          "path": "entity > artifact",
+          "description": "Anything man made.  Can be physical object or digital object.  Any kind of product.",
+          "children_labels": [
+            "creative_work",
+            "digital_entity",
+            "machine",
+            "product"
+          ]
+        },
+        {
+          "id": 75,
+          "label": "creative_work",
+          "path": "entity > artifact > creative_work",
+          "description": "A work of creative expression",
+          "children_labels": [
+            "article",
+            "artwork",
+            "book",
+            "game",
+            "movie",
+            "music",
+            "photograph",
+            "podcast",
+            "song",
+            "theatrical_work",
+            "tv_show",
+            "video",
+            "video_game"
+          ]
+        },
+        {
+          "id": 77,
+          "label": "article",
+          "path": "entity > artifact > creative_work > article",
+          "description": "A written piece",
+          "children_labels": []
+        },
+        {
+          "id": 85,
+          "label": "artwork",
+          "path": "entity > artifact > creative_work > artwork",
+          "description": "A piece of visual art",
+          "children_labels": []
+        },
+        {
+          "id": 76,
+          "label": "book",
+          "path": "entity > artifact > creative_work > book",
+          "description": "A written or printed work",
+          "children_labels": []
+        },
+        {
+          "id": 84,
+          "label": "game",
+          "path": "entity > artifact > creative_work > game",
+          "description": "An interactive entertainment",
+          "children_labels": [
+            "board_game"
+          ]
+        },
+        {
+          "id": 739,
+          "label": "board_game",
+          "path": "entity > artifact > creative_work > game > board_game",
+          "description": null,
+          "children_labels": []
+        },
+        {
+          "id": 78,
+          "label": "movie",
+          "path": "entity > artifact > creative_work > movie",
+          "description": "A motion picture",
+          "children_labels": []
+        },
+        {
+          "id": 81,
+          "label": "music",
+          "path": "entity > artifact > creative_work > music",
+          "description": "Musical composition or recording",
+          "children_labels": []
+        },
+        {
+          "id": 86,
+          "label": "photograph",
+          "path": "entity > artifact > creative_work > photograph",
+          "description": "A captured image",
+          "children_labels": []
+        },
+        {
+          "id": 83,
+          "label": "podcast",
+          "path": "entity > artifact > creative_work > podcast",
+          "description": "An audio program",
+          "children_labels": []
+        },
+        {
+          "id": 82,
+          "label": "song",
+          "path": "entity > artifact > creative_work > song",
+          "description": "A musical piece",
+          "children_labels": []
+        },
+        {
+          "id": 556,
+          "label": "theatrical_work",
+          "path": "entity > artifact > creative_work > theatrical_work",
+          "description": "Created via manual review",
+          "children_labels": [
+            "musical_theatre_work"
+          ]
+        },
+        {
+          "id": 557,
+          "label": "musical_theatre_work",
+          "path": "entity > artifact > creative_work > theatrical_work > musical_theatre_work",
+          "description": "Created via manual review",
+          "children_labels": [
+            "stage_musical"
+          ]
+        },
+        {
+          "id": 558,
+          "label": "stage_musical",
+          "path": "entity > artifact > creative_work > theatrical_work > musical_theatre_work > stage_musical",
+          "description": "Created via manual review",
+          "children_labels": []
+        },
+        {
+          "id": 79,
+          "label": "tv_show",
+          "path": "entity > artifact > creative_work > tv_show",
+          "description": "A television program",
+          "children_labels": []
+        },
+        {
+          "id": 80,
+          "label": "video",
+          "path": "entity > artifact > creative_work > video",
+          "description": "A recorded visual medium",
+          "children_labels": []
+        },
+        {
+          "id": 697,
+          "label": "video_game",
+          "path": "entity > artifact > creative_work > video_game",
+          "description": "The proposed path 'entity > creative_work > game' is close, but 'game' is too general and doesn't align with the existing siblings under 'creative_work'. The context suggests 'End Game' is an interactive entertainment, which fits the category of 'video_game'. This new category would align well with existing siblings like 'movie', 'tv_show', and 'music', all of which are specific types of creative works. Therefore, a new category 'video_game' should be added under 'creative_work'.",
+          "children_labels": []
+        },
+        {
+          "id": 716,
+          "label": "digital_entity",
+          "path": "entity > artifact > digital_entity",
+          "description": null,
+          "children_labels": [
+            "social_media_platform",
+            "software_project",
+            "subreddit",
+            "template_variable"
+          ]
+        },
+        {
+          "id": 749,
+          "label": "social_media_platform",
+          "path": "entity > artifact > digital_entity > social_media_platform",
+          "description": "Created from suggestion: social_media_platform",
+          "children_labels": []
+        },
+        {
+          "id": 753,
+          "label": "software_project",
+          "path": "entity > artifact > digital_entity > software_project",
+          "description": "Created from suggestion: software_project",
+          "children_labels": []
+        },
+        {
+          "id": 750,
+          "label": "subreddit",
+          "path": "entity > artifact > digital_entity > subreddit",
+          "description": "Created from suggestion: subreddit",
+          "children_labels": []
+        },
+        {
+          "id": 717,
+          "label": "template_variable",
+          "path": "entity > artifact > digital_entity > template_variable",
+          "description": null,
+          "children_labels": []
+        },
+        {
+          "id": 746,
+          "label": "machine",
+          "path": "entity > artifact > machine",
+          "description": "Created via manual review",
+          "children_labels": [
+            "robot"
+          ]
+        },
+        {
+          "id": 747,
+          "label": "robot",
+          "path": "entity > artifact > machine > robot",
+          "description": "Created via manual review",
+          "children_labels": [
+            "competition_robot"
+          ]
+        },
+        {
+          "id": 748,
+          "label": "competition_robot",
+          "path": "entity > artifact > machine > robot > competition_robot",
+          "description": "Created via manual review",
+          "children_labels": [
+            "combat_robot"
+          ]
+        },
+        {
+          "id": 799,
+          "label": "combat_robot",
+          "path": "entity > artifact > machine > robot > competition_robot > combat_robot",
+          "description": "Created from suggestion: combat_robot",
+          "children_labels": []
+        },
+        {
+          "id": 111,
+          "label": "product",
+          "path": "entity > artifact > product",
+          "description": "A commercial product or offering",
+          "children_labels": [
+            "digital_product",
+            "physical_product",
+            "service"
+          ]
+        },
+        {
+          "id": 672,
+          "label": "digital_product",
+          "path": "entity > artifact > product > digital_product",
+          "description": "Added via web interface",
+          "children_labels": [
+            "api",
+            "application",
+            "codebase",
+            "database",
+            "dataset",
+            "digital_document",
+            "digital_link",
+            "platform",
+            "service",
+            "software",
+            "tool",
+            "website"
+          ]
+        },
+        {
+          "id": 95,
+          "label": "api",
+          "path": "entity > artifact > product > digital_product > api",
+          "description": "An application programming interface",
+          "children_labels": []
+        },
+        {
+          "id": 89,
+          "label": "application",
+          "path": "entity > artifact > product > digital_product > application",
+          "description": "A software application",
+          "children_labels": []
+        },
+        {
+          "id": 735,
+          "label": "codebase",
+          "path": "entity > artifact > product > digital_product > codebase",
+          "description": null,
+          "children_labels": []
+        },
+        {
+          "id": 94,
+          "label": "database",
+          "path": "entity > artifact > product > digital_product > database",
+          "description": "A data storage system",
+          "children_labels": []
+        },
+        {
+          "id": 529,
+          "label": "dataset",
+          "path": "entity > artifact > product > digital_product > dataset",
+          "description": "Created via manual review",
+          "children_labels": [
+            "personal_data_collection",
+            "reference_dictionary",
+            "text_corpus"
+          ]
+        },
+        {
+          "id": 535,
+          "label": "personal_data_collection",
+          "path": "entity > artifact > product > digital_product > dataset > personal_data_collection",
+          "description": "Created via manual review",
+          "children_labels": []
+        },
+        {
+          "id": 538,
+          "label": "reference_dictionary",
+          "path": "entity > artifact > product > digital_product > dataset > reference_dictionary",
+          "description": "Created via manual review",
+          "children_labels": []
+        },
+        {
+          "id": 530,
+          "label": "text_corpus",
+          "path": "entity > artifact > product > digital_product > dataset > text_corpus",
+          "description": "Created via manual review",
+          "children_labels": [
+            "chat_corpus"
+          ]
+        },
+        {
+          "id": 531,
+          "label": "chat_corpus",
+          "path": "entity > artifact > product > digital_product > dataset > text_corpus > chat_corpus",
+          "description": "Created via manual review",
+          "children_labels": []
+        },
+        {
+          "id": 96,
+          "label": "digital_document",
+          "path": "entity > artifact > product > digital_product > digital_document",
+          "description": "A digital file or document",
+          "children_labels": [
+            "code_file",
+            "document",
+            "presentation",
+            "spreadsheet"
+          ]
+        },
+        {
+          "id": 100,
+          "label": "code_file",
+          "path": "entity > artifact > product > digital_product > digital_document > code_file",
+          "description": "A source code file",
+          "children_labels": []
+        },
+        {
+          "id": 97,
+          "label": "document",
+          "path": "entity > artifact > product > digital_product > digital_document > document",
+          "description": "A text document",
+          "children_labels": []
+        },
+        {
+          "id": 99,
+          "label": "presentation",
+          "path": "entity > artifact > product > digital_product > digital_document > presentation",
+          "description": "A slide deck",
+          "children_labels": []
+        },
+        {
+          "id": 98,
+          "label": "spreadsheet",
+          "path": "entity > artifact > product > digital_product > digital_document > spreadsheet",
+          "description": "A tabular document",
+          "children_labels": []
+        },
+        {
+          "id": 619,
+          "label": "digital_link",
+          "path": "entity > artifact > product > digital_product > digital_link",
+          "description": "Created via manual review",
+          "children_labels": [
+            "meeting_link"
+          ]
+        },
+        {
+          "id": 620,
+          "label": "meeting_link",
+          "path": "entity > artifact > product > digital_product > digital_link > meeting_link",
+          "description": "Created via manual review",
+          "children_labels": []
+        },
+        {
+          "id": 91,
+          "label": "platform",
+          "path": "entity > artifact > product > digital_product > platform",
+          "description": "A software platform",
+          "children_labels": []
+        },
+        {
+          "id": 93,
+          "label": "service",
+          "path": "entity > artifact > product > digital_product > service",
+          "description": "An online service",
+          "children_labels": [
+            "email_service"
+          ]
+        },
+        {
+          "id": 794,
+          "label": "email_service",
+          "path": "entity > artifact > product > digital_product > service > email_service",
+          "description": "Created from suggestion: email_service",
+          "children_labels": []
+        },
+        {
+          "id": 508,
+          "label": "software",
+          "path": "entity > artifact > product > digital_product > software",
+          "description": "Created via manual review",
+          "children_labels": [
+            "codebase"
+          ]
+        },
+        {
+          "id": 509,
+          "label": "codebase",
+          "path": "entity > artifact > product > digital_product > software > codebase",
+          "description": "Created via manual review",
+          "children_labels": []
+        },
+        {
+          "id": 92,
+          "label": "tool",
+          "path": "entity > artifact > product > digital_product > tool",
+          "description": "A software tool",
+          "children_labels": [
+            "templating_engine"
+          ]
+        },
+        {
+          "id": 718,
+          "label": "templating_engine",
+          "path": "entity > artifact > product > digital_product > tool > templating_engine",
+          "description": null,
+          "children_labels": []
+        },
+        {
+          "id": 90,
+          "label": "website",
+          "path": "entity > artifact > product > digital_product > website",
+          "description": "A web presence",
+          "children_labels": []
+        },
+        {
+          "id": 112,
+          "label": "physical_product",
+          "path": "entity > artifact > product > physical_product",
+          "description": "A tangible product",
+          "children_labels": [
+            "appliance",
+            "clothing",
+            "device",
+            "furniture",
+            "machine",
+            "vehicle"
+          ]
+        },
+        {
+          "id": 116,
+          "label": "appliance",
+          "path": "entity > artifact > product > physical_product > appliance",
+          "description": "Household appliance",
+          "children_labels": []
+        },
+        {
+          "id": 115,
+          "label": "clothing",
+          "path": "entity > artifact > product > physical_product > clothing",
+          "description": "Clothing item",
+          "children_labels": [
+            "shirt"
+          ]
+        },
+        {
+          "id": 836,
+          "label": "shirt",
+          "path": "entity > artifact > product > physical_product > clothing > shirt",
+          "description": "Created from suggestion: shirt",
+          "children_labels": []
+        },
+        {
+          "id": 106,
+          "label": "device",
+          "path": "entity > artifact > product > physical_product > device",
+          "description": "An electronic device",
+          "children_labels": [
+            "computer",
+            "phone",
+            "tablet",
+            "wearable"
+          ]
+        },
+        {
+          "id": 108,
+          "label": "computer",
+          "path": "entity > artifact > product > physical_product > device > computer",
+          "description": "A computing device",
+          "children_labels": []
+        },
+        {
+          "id": 107,
+          "label": "phone",
+          "path": "entity > artifact > product > physical_product > device > phone",
+          "description": "A mobile phone",
+          "children_labels": []
+        },
+        {
+          "id": 109,
+          "label": "tablet",
+          "path": "entity > artifact > product > physical_product > device > tablet",
+          "description": "A tablet device",
+          "children_labels": []
+        },
+        {
+          "id": 110,
+          "label": "wearable",
+          "path": "entity > artifact > product > physical_product > device > wearable",
+          "description": "A wearable device",
+          "children_labels": []
+        },
+        {
+          "id": 114,
+          "label": "furniture",
+          "path": "entity > artifact > product > physical_product > furniture",
+          "description": "Furniture product",
+          "children_labels": [
+            "shelf"
+          ]
+        },
+        {
+          "id": 725,
+          "label": "shelf",
+          "path": "entity > artifact > product > physical_product > furniture > shelf",
+          "description": null,
+          "children_labels": []
+        },
+        {
+          "id": 492,
+          "label": "machine",
+          "path": "entity > artifact > product > physical_product > machine",
+          "description": "Created via manual review",
+          "children_labels": [
+            "robot"
+          ]
+        },
+        {
+          "id": 493,
+          "label": "robot",
+          "path": "entity > artifact > product > physical_product > machine > robot",
+          "description": "Created via manual review",
+          "children_labels": [
+            "competition_robot"
+          ]
+        },
+        {
+          "id": 494,
+          "label": "competition_robot",
+          "path": "entity > artifact > product > physical_product > machine > robot > competition_robot",
+          "description": "Created via manual review",
+          "children_labels": []
+        },
+        {
+          "id": 581,
+          "label": "vehicle",
+          "path": "entity > artifact > product > physical_product > vehicle",
+          "description": "Created via manual review",
+          "children_labels": [
+            "watercraft"
+          ]
+        },
+        {
+          "id": 582,
+          "label": "watercraft",
+          "path": "entity > artifact > product > physical_product > vehicle > watercraft",
+          "description": "Created via manual review",
+          "children_labels": [
+            "ship"
+          ]
+        },
+        {
+          "id": 583,
+          "label": "ship",
+          "path": "entity > artifact > product > physical_product > vehicle > watercraft > ship",
+          "description": "Created via manual review",
+          "children_labels": []
+        },
+        {
+          "id": 117,
+          "label": "service",
+          "path": "entity > artifact > product > service",
+          "description": "A service offering",
+          "children_labels": [
+            "messaging_service",
+            "professional_service",
+            "subscription",
+            "utility"
+          ]
+        },
+        {
+          "id": 731,
+          "label": "messaging_service",
+          "path": "entity > artifact > product > service > messaging_service",
+          "description": null,
+          "children_labels": []
+        },
+        {
+          "id": 118,
+          "label": "professional_service",
+          "path": "entity > artifact > product > service > professional_service",
+          "description": "Professional service",
+          "children_labels": []
+        },
+        {
+          "id": 119,
+          "label": "subscription",
+          "path": "entity > artifact > product > service > subscription",
+          "description": "Subscription service",
+          "children_labels": []
+        },
+        {
+          "id": 120,
+          "label": "utility",
+          "path": "entity > artifact > product > service > utility",
+          "description": "Utility service",
+          "children_labels": []
+        },
+        {
+          "id": 586,
+          "label": "contact_point",
+          "path": "entity > contact_point",
+          "description": "Any kind of contact information.",
+          "children_labels": [
+            "email_address",
+            "phone_number"
+          ]
+        },
+        {
+          "id": 587,
+          "label": "email_address",
+          "path": "entity > contact_point > email_address",
+          "description": "Created via manual review",
+          "children_labels": []
+        },
+        {
+          "id": 710,
+          "label": "phone_number",
+          "path": "entity > contact_point > phone_number",
+          "description": null,
+          "children_labels": []
+        },
+        {
+          "id": 121,
+          "label": "food",
+          "path": "entity > food",
+          "description": "Edible substance",
+          "children_labels": [
+            "beverage",
+            "dairy_product",
+            "dish",
+            "ingredient",
+            "meal",
+            "snack"
+          ]
+        },
+        {
+          "id": 124,
+          "label": "beverage",
+          "path": "entity > food > beverage",
+          "description": "A drink",
+          "children_labels": []
+        },
+        {
+          "id": 781,
+          "label": "dairy_product",
+          "path": "entity > food > dairy_product",
+          "description": "Created from suggestion: dairy_product",
+          "children_labels": []
+        },
+        {
+          "id": 125,
+          "label": "dish",
+          "path": "entity > food > dish",
+          "description": "A prepared dish",
+          "children_labels": []
+        },
+        {
+          "id": 123,
+          "label": "ingredient",
+          "path": "entity > food > ingredient",
+          "description": "A food ingredient",
+          "children_labels": []
+        },
+        {
+          "id": 122,
+          "label": "meal",
+          "path": "entity > food > meal",
+          "description": "A meal",
+          "children_labels": []
+        },
+        {
+          "id": 126,
+          "label": "snack",
+          "path": "entity > food > snack",
+          "description": "A snack food",
+          "children_labels": []
+        },
+        {
+          "id": 801,
+          "label": "group",
+          "path": "entity > group",
+          "description": "Created via safe taxonomy creation",
+          "children_labels": [
+            "audience",
+            "family"
+          ]
+        },
+        {
+          "id": 802,
+          "label": "audience",
+          "path": "entity > group > audience",
+          "description": "Created from suggestion: audience",
+          "children_labels": []
+        },
+        {
+          "id": 837,
+          "label": "family",
+          "path": "entity > group > family",
+          "description": "Created from suggestion: family",
+          "children_labels": []
+        },
+        {
+          "id": 133,
+          "label": "intangible",
+          "path": "entity > intangible",
+          "description": "An intangible entity",
+          "children_labels": [
+            "intellectual_property",
+            "license",
+            "personal_data",
+            "right",
+            "warranty"
+          ]
+        },
+        {
+          "id": 134,
+          "label": "intellectual_property",
+          "path": "entity > intangible > intellectual_property",
+          "description": "Intellectual property",
+          "children_labels": []
+        },
+        {
+          "id": 135,
+          "label": "license",
+          "path": "entity > intangible > license",
+          "description": "A license or permission",
+          "children_labels": []
+        },
+        {
+          "id": 821,
+          "label": "personal_data",
+          "path": "entity > intangible > personal_data",
+          "description": "Created from suggestion: personal_data",
+          "children_labels": []
+        },
+        {
+          "id": 136,
+          "label": "right",
+          "path": "entity > intangible > right",
+          "description": "A right or entitlement",
+          "children_labels": []
+        },
+        {
+          "id": 137,
+          "label": "warranty",
+          "path": "entity > intangible > warranty",
+          "description": "A warranty or guarantee",
+          "children_labels": []
+        },
+        {
+          "id": 45,
+          "label": "location",
+          "path": "entity > location",
+          "description": "A place or position",
+          "children_labels": [
+            "building",
+            "city",
+            "country",
+            "neighborhood",
+            "outdoor_location",
+            "room",
+            "state",
+            "town"
+          ]
+        },
+        {
+          "id": 51,
+          "label": "building",
+          "path": "entity > location > building",
+          "description": "A structure with walls and a roof",
+          "children_labels": [
+            "gym",
+            "hospital",
+            "office",
+            "residence",
+            "restaurant",
+            "school_building",
+            "store"
+          ]
+        },
+        {
+          "id": 58,
+          "label": "gym",
+          "path": "entity > location > building > gym",
+          "description": "A fitness facility",
+          "children_labels": []
+        },
+        {
+          "id": 55,
+          "label": "hospital",
+          "path": "entity > location > building > hospital",
+          "description": "A medical facility",
+          "children_labels": []
+        },
+        {
+          "id": 53,
+          "label": "office",
+          "path": "entity > location > building > office",
+          "description": "A workplace",
+          "children_labels": []
+        },
+        {
+          "id": 647,
+          "label": "residence",
+          "path": "entity > location > building > residence",
+          "description": "Created via manual review",
+          "children_labels": [
+            "home"
+          ]
+        },
+        {
+          "id": 648,
+          "label": "home",
+          "path": "entity > location > building > residence > home",
+          "description": "Created via manual review",
+          "children_labels": []
+        },
+        {
+          "id": 56,
+          "label": "restaurant",
+          "path": "entity > location > building > restaurant",
+          "description": "A dining establishment",
+          "children_labels": []
+        },
+        {
+          "id": 54,
+          "label": "school_building",
+          "path": "entity > location > building > school_building",
+          "description": "An educational facility",
+          "children_labels": []
+        },
+        {
+          "id": 57,
+          "label": "store",
+          "path": "entity > location > building > store",
+          "description": "A retail establishment",
+          "children_labels": []
+        },
+        {
+          "id": 48,
+          "label": "city",
+          "path": "entity > location > city",
+          "description": "An urban area",
+          "children_labels": []
+        },
+        {
+          "id": 46,
+          "label": "country",
+          "path": "entity > location > country",
+          "description": "A nation state",
+          "children_labels": []
+        },
+        {
+          "id": 50,
+          "label": "neighborhood",
+          "path": "entity > location > neighborhood",
+          "description": "A district within a city",
+          "children_labels": []
+        },
+        {
+          "id": 59,
+          "label": "outdoor_location",
+          "path": "entity > location > outdoor_location",
+          "description": "A location in the open air",
+          "children_labels": [
+            "beach",
+            "forest",
+            "mountain",
+            "park",
+            "trail"
+          ]
+        },
+        {
+          "id": 61,
+          "label": "beach",
+          "path": "entity > location > outdoor_location > beach",
+          "description": "A shore area",
+          "children_labels": []
+        },
+        {
+          "id": 63,
+          "label": "forest",
+          "path": "entity > location > outdoor_location > forest",
+          "description": "A wooded area",
+          "children_labels": []
+        },
+        {
+          "id": 62,
+          "label": "mountain",
+          "path": "entity > location > outdoor_location > mountain",
+          "description": "An elevated landform",
+          "children_labels": []
+        },
+        {
+          "id": 60,
+          "label": "park",
+          "path": "entity > location > outdoor_location > park",
+          "description": "A public green space",
+          "children_labels": []
+        },
+        {
+          "id": 64,
+          "label": "trail",
+          "path": "entity > location > outdoor_location > trail",
+          "description": "A path for walking or hiking",
+          "children_labels": []
+        },
+        {
+          "id": 724,
+          "label": "room",
+          "path": "entity > location > room",
+          "description": null,
+          "children_labels": []
+        },
+        {
+          "id": 47,
+          "label": "state",
+          "path": "entity > location > state",
+          "description": "A state or province",
+          "children_labels": []
+        },
+        {
+          "id": 49,
+          "label": "town",
+          "path": "entity > location > town",
+          "description": "A small urban area",
+          "children_labels": []
+        },
+        {
+          "id": 127,
+          "label": "medical_entity",
+          "path": "entity > medical_entity",
+          "description": "A medical-related entity",
+          "children_labels": [
+            "medical_condition",
+            "medical_procedure",
+            "medication",
+            "symptom",
+            "treatment"
+          ]
+        },
+        {
+          "id": 130,
+          "label": "medical_condition",
+          "path": "entity > medical_entity > medical_condition",
+          "description": "A health condition",
+          "children_labels": []
+        },
+        {
+          "id": 132,
+          "label": "medical_procedure",
+          "path": "entity > medical_entity > medical_procedure",
+          "description": "A medical procedure",
+          "children_labels": []
+        },
+        {
+          "id": 128,
+          "label": "medication",
+          "path": "entity > medical_entity > medication",
+          "description": "A pharmaceutical drug",
+          "children_labels": []
+        },
+        {
+          "id": 131,
+          "label": "symptom",
+          "path": "entity > medical_entity > symptom",
+          "description": "A medical symptom",
+          "children_labels": []
+        },
+        {
+          "id": 129,
+          "label": "treatment",
+          "path": "entity > medical_entity > treatment",
+          "description": "A medical treatment",
+          "children_labels": []
+        },
+        {
+          "id": 31,
+          "label": "organization",
+          "path": "entity > organization",
+          "description": "A structured group of people with a common purpose",
+          "children_labels": [
+            "club",
+            "community",
+            "company",
+            "educational_institution",
+            "government",
+            "musical_group",
+            "ngo",
+            "nonprofit",
+            "political_party",
+            "professional_services_firm",
+            "team"
+          ]
+        },
+        {
+          "id": 43,
+          "label": "club",
+          "path": "entity > organization > club",
+          "description": "A membership organization",
+          "children_labels": []
+        },
+        {
+          "id": 495,
+          "label": "community",
+          "path": "entity > organization > community",
+          "description": "Created via manual review",
+          "children_labels": [
+            "open_source_community"
+          ]
+        },
+        {
+          "id": 496,
+          "label": "open_source_community",
+          "path": "entity > organization > community > open_source_community",
+          "description": "Created via manual review",
+          "children_labels": []
+        },
+        {
+          "id": 32,
+          "label": "company",
+          "path": "entity > organization > company",
+          "description": "A commercial business organization",
+          "children_labels": [
+            "corporation",
+            "law_firm",
+            "mobile_carrier",
+            "restaurant_company",
+            "startup",
+            "tech_company"
+          ]
+        },
+        {
+          "id": 35,
+          "label": "corporation",
+          "path": "entity > organization > company > corporation",
+          "description": "A large company",
+          "children_labels": []
+        },
+        {
+          "id": 803,
+          "label": "law_firm",
+          "path": "entity > organization > company > law_firm",
+          "description": "Created from suggestion: law_firm",
+          "children_labels": []
+        },
+        {
+          "id": 711,
+          "label": "mobile_carrier",
+          "path": "entity > organization > company > mobile_carrier",
+          "description": null,
+          "children_labels": []
+        },
+        {
+          "id": 785,
+          "label": "restaurant_company",
+          "path": "entity > organization > company > restaurant_company",
+          "description": "Created from suggestion: restaurant_company",
+          "children_labels": []
+        },
+        {
+          "id": 34,
+          "label": "startup",
+          "path": "entity > organization > company > startup",
+          "description": "An early-stage company",
+          "children_labels": []
+        },
+        {
+          "id": 33,
+          "label": "tech_company",
+          "path": "entity > organization > company > tech_company",
+          "description": "A technology company",
+          "children_labels": []
+        },
+        {
+          "id": 624,
+          "label": "educational_institution",
+          "path": "entity > organization > educational_institution",
+          "description": "Created via manual review",
+          "children_labels": [
+            "high_school",
+            "midle_school",
+            "university"
+          ]
+        },
+        {
+          "id": 670,
+          "label": "high_school",
+          "path": "entity > organization > educational_institution > high_school",
+          "description": "Added via web interface",
+          "children_labels": []
+        },
+        {
+          "id": 671,
+          "label": "midle_school",
+          "path": "entity > organization > educational_institution > midle_school",
+          "description": "Added via web interface",
+          "children_labels": []
+        },
+        {
+          "id": 625,
+          "label": "university",
+          "path": "entity > organization > educational_institution > university",
+          "description": "Created via manual review",
+          "children_labels": []
+        },
+        {
+          "id": 40,
+          "label": "government",
+          "path": "entity > organization > government",
+          "description": "A governing body",
+          "children_labels": []
+        },
+        {
+          "id": 629,
+          "label": "musical_group",
+          "path": "entity > organization > musical_group",
+          "description": "Created via manual review",
+          "children_labels": [
+            "band"
+          ]
+        },
+        {
+          "id": 630,
+          "label": "band",
+          "path": "entity > organization > musical_group > band",
+          "description": "Created via manual review",
+          "children_labels": [
+            "rock_band"
+          ]
+        },
+        {
+          "id": 807,
+          "label": "rock_band",
+          "path": "entity > organization > musical_group > band > rock_band",
+          "description": "Created from suggestion: rock_band",
+          "children_labels": []
+        },
+        {
+          "id": 41,
+          "label": "ngo",
+          "path": "entity > organization > ngo",
+          "description": "A non-governmental organization",
+          "children_labels": []
+        },
+        {
+          "id": 42,
+          "label": "nonprofit",
+          "path": "entity > organization > nonprofit",
+          "description": "A non-profit organization",
+          "children_labels": []
+        },
+        {
+          "id": 577,
+          "label": "political_party",
+          "path": "entity > organization > political_party",
+          "description": "Created via manual review",
+          "children_labels": []
+        },
+        {
+          "id": 575,
+          "label": "professional_services_firm",
+          "path": "entity > organization > professional_services_firm",
+          "description": "Created via manual review",
+          "children_labels": [
+            "law_firm"
+          ]
+        },
+        {
+          "id": 576,
+          "label": "law_firm",
+          "path": "entity > organization > professional_services_firm > law_firm",
+          "description": "Created via manual review",
+          "children_labels": []
+        },
+        {
+          "id": 44,
+          "label": "team",
+          "path": "entity > organization > team",
+          "description": "A group organized for a purpose",
+          "children_labels": []
+        },
+        {
+          "id": 7,
+          "label": "person",
+          "path": "entity > person",
+          "description": "A human being",
+          "children_labels": []
+        },
+        {
+          "id": 138,
+          "label": "plant",
+          "path": "entity > plant",
+          "description": "A plant organism",
+          "children_labels": [
+            "flower",
+            "herb",
+            "tree",
+            "vegetable_plant"
+          ]
+        },
+        {
+          "id": 140,
+          "label": "flower",
+          "path": "entity > plant > flower",
+          "description": "A flowering plant",
+          "children_labels": []
+        },
+        {
+          "id": 142,
+          "label": "herb",
+          "path": "entity > plant > herb",
+          "description": "An herb plant",
+          "children_labels": []
+        },
+        {
+          "id": 139,
+          "label": "tree",
+          "path": "entity > plant > tree",
+          "description": "A tree plant",
+          "children_labels": []
+        },
+        {
+          "id": 141,
+          "label": "vegetable_plant",
+          "path": "entity > plant > vegetable_plant",
+          "description": "A vegetable plant",
+          "children_labels": []
+        }
+      ]
+    }
+  ],
+  "formatted_for_team_manager": [
+    {
+      "task": "Duplicate machine/robot subtrees exist under both 'artifact' and 'product > physical_product'. This splits identical concepts across two branches and duplicates 'robot' and 'competition_robot'.",
+      "info": "PROBLEM:\nDuplicate machine/robot subtrees exist under both 'artifact' and 'product > physical_product'. This splits identical concepts across two branches and duplicates 'robot' and 'competition_robot'.\n\nAFFECTED CATEGORIES:\n  \u2022 machine (ID: 746)\n    Path: entity > artifact > machine\n    Description: Created via manual review\n  \u2022 machine (ID: 492)\n    Path: entity > artifact > product > physical_product > machine\n    Description: Created via manual review\n  \u2022 robot (ID: 747)\n    Path: entity > artifact > machine > robot\n    Description: Created via manual review\n  \u2022 robot (ID: 493)\n    Path: entity > artifact > product > physical_product > machine > robot\n    Description: Created via manual review\n  \u2022 competition_robot (ID: 748)\n    Path: entity > artifact > machine > robot > competition_robot\n    Description: Created via manual review\n  \u2022 competition_robot (ID: 494)\n    Path: entity > artifact > product > physical_product > machine > robot > competition_robot\n    Description: Created via manual review\n  \u2022 combat_robot (ID: 799)\n    Path: entity > artifact > machine > robot > competition_robot > combat_robot\n    Description: Created from suggestion: combat_robot\n\nACTIONS TO TAKE (IN ORDER):\n  1. merge_categories(746, 492)\n  2. merge_categories(747, 493)\n  3. merge_categories(748, 494)\n\nCONFIDENCE: 93.0%"
+    },
+    {
+      "task": "Duplicate 'codebase' categories: one directly under 'digital_product' and another under 'software'. Keeping the one under 'software' provides the correct specificity (a codebase is a type of software)...",
+      "info": "PROBLEM:\nDuplicate 'codebase' categories: one directly under 'digital_product' and another under 'software'. Keeping the one under 'software' provides the correct specificity (a codebase is a type of software).\n\nAFFECTED CATEGORIES:\n  \u2022 codebase (ID: 735)\n    Path: entity > artifact > product > digital_product > codebase\n    Description: (no description)\n  \u2022 codebase (ID: 509)\n    Path: entity > artifact > product > digital_product > software > codebase\n    Description: Created via manual review\n\nACTIONS TO TAKE (IN ORDER):\n  1. merge_categories(735, 509)\n\nCONFIDENCE: 90.0%"
+    },
+    {
+      "task": "Two separate 'service' categories create ambiguity. Digital services are split under 'digital_product > service' while general services are under 'product > service'. Also, 'email_service' is placed u...",
+      "info": "PROBLEM:\nTwo separate 'service' categories create ambiguity. Digital services are split under 'digital_product > service' while general services are under 'product > service'. Also, 'email_service' is placed under the digital-only branch while 'messaging_service' is under the general services branch.\n\nAFFECTED CATEGORIES:\n  \u2022 service (ID: 93)\n    Path: entity > artifact > product > digital_product > service\n    Description: An online service\n  \u2022 service (ID: 117)\n    Path: entity > artifact > product > service\n    Description: A service offering\n  \u2022 email_service (ID: 794)\n    Path: entity > artifact > product > digital_product > service > email_service\n    Description: Created from suggestion: email_service\n  \u2022 messaging_service (ID: 731)\n    Path: entity > artifact > product > service > messaging_service\n    Description: (no description)\n\nACTIONS TO TAKE (IN ORDER):\n  1. merge_categories(93, 117)\n  2. move_category(794, 731)\n\nCONFIDENCE: 86.0%"
+    },
+    {
+      "task": "Duplicate 'law_firm' exists under both 'company' and 'professional_services_firm'. This is the same concept duplicated in two places.",
+      "info": "PROBLEM:\nDuplicate 'law_firm' exists under both 'company' and 'professional_services_firm'. This is the same concept duplicated in two places.\n\nAFFECTED CATEGORIES:\n  \u2022 law_firm (ID: 803)\n    Path: entity > organization > company > law_firm\n    Description: Created from suggestion: law_firm\n  \u2022 law_firm (ID: 576)\n    Path: entity > organization > professional_services_firm > law_firm\n    Description: Created via manual review\n\nACTIONS TO TAKE (IN ORDER):\n  1. merge_categories(803, 576)\n\nCONFIDENCE: 92.0%"
+    },
+    {
+      "task": "'video_game' is a subtype of 'game' but is currently a sibling under 'creative_work'. This violates the IS-A hierarchy expectation within the 'game' branch.",
+      "info": "PROBLEM:\n'video_game' is a subtype of 'game' but is currently a sibling under 'creative_work'. This violates the IS-A hierarchy expectation within the 'game' branch.\n\nAFFECTED CATEGORIES:\n  \u2022 video_game (ID: 697)\n    Path: entity > artifact > creative_work > video_game\n    Description: The proposed path 'entity > creative_work > game' is close, but 'game' is too general and doesn't align with the existing siblings under 'creative_work'. The context suggests 'End Game' is an interactive entertainment, which fits the category of 'video_game'. This new category would align well with existing siblings like 'movie', 'tv_show', and 'music', all of which are specific types of creative works. Therefore, a new category 'video_game' should be added under 'creative_work'.\n  \u2022 game (ID: 84)\n    Path: entity > artifact > creative_work > game\n    Description: An interactive entertainment\n\nACTIONS TO TAKE (IN ORDER):\n  1. move_category(697, 84)\n\nCONFIDENCE: 80.0%"
+    },
+    {
+      "task": "Misspelled category label 'midle_school'. Inconsistent naming harms discoverability and professionalism.",
+      "info": "PROBLEM:\nMisspelled category label 'midle_school'. Inconsistent naming harms discoverability and professionalism.\n\nAFFECTED CATEGORIES:\n  \u2022 midle_school (ID: 671)\n    Path: entity > organization > educational_institution > midle_school\n    Description: Added via web interface\n\nACTIONS TO TAKE (IN ORDER):\n  1. rename_category(671, middle_school)\n\nCONFIDENCE: 99.0%"
+    },
+    {
+      "task": "Important categories lack meaningful descriptions, reducing clarity for classifiers and users.",
+      "info": "PROBLEM:\nImportant categories lack meaningful descriptions, reducing clarity for classifiers and users.\n\nAFFECTED CATEGORIES:\n  \u2022 reference_agent (ID: 707)\n    Path: entity > ai_agent > reference_agent\n    Description: (no description)\n  \u2022 digital_entity (ID: 716)\n    Path: entity > artifact > digital_entity\n    Description: (no description)\n  \u2022 template_variable (ID: 717)\n    Path: entity > artifact > digital_entity > template_variable\n    Description: (no description)\n  \u2022 board_game (ID: 739)\n    Path: entity > artifact > creative_work > game > board_game\n    Description: (no description)\n  \u2022 phone_number (ID: 710)\n    Path: entity > contact_point > phone_number\n    Description: (no description)\n  \u2022 room (ID: 724)\n    Path: entity > location > room\n    Description: (no description)\n  \u2022 messaging_service (ID: 731)\n    Path: entity > artifact > product > service > messaging_service\n    Description: (no description)\n  \u2022 mobile_carrier (ID: 711)\n    Path: entity > organization > company > mobile_carrier\n    Description: (no description)\n  \u2022 templating_engine (ID: 718)\n    Path: entity > artifact > product > digital_product > tool > templating_engine\n    Description: (no description)\n  \u2022 shelf (ID: 725)\n    Path: entity > artifact > product > physical_product > furniture > shelf\n    Description: (no description)\n\nACTIONS TO TAKE (IN ORDER):\n  1. update_description(707, \"An AI agent that retrieves, cites, or links to external sources to provide references or evidence.\")\n  2. update_description(716, \"A non-physical artifact that exists only in digital form (e.g., websites, social profiles, repositories).\")\n  3. update_description(717, \"A placeholder token used in templating systems that is replaced with dynamic values during rendering.\")\n  4. update_description(739, \"A tabletop game played on a board with set pieces and rules, typically using physical components.\")\n  5. update_description(710, \"A telephony contact identifier composed of digits used to route calls or messages.\")\n  6. update_description(724, \"An enclosed indoor space within a building, typically bounded by walls and a door.\")\n  7. update_description(731, \"A service that sends or receives messages (email, SMS, chat) between users or systems.\")\n  8. update_description(711, \"A telecommunications company that provides cellular network services.\")\n  9. update_description(718, \"Software that combines templates with data to generate formatted text or documents (e.g., HTML).\")\n  10. update_description(725, \"A flat horizontal surface or furniture component used for storing or displaying items.\")\n\nCONFIDENCE: 88.0%"
+    },
+    {
+      "task": "Unclear/poor description for 'video_game' (editorial note rather than a definition).",
+      "info": "PROBLEM:\nUnclear/poor description for 'video_game' (editorial note rather than a definition).\n\nAFFECTED CATEGORIES:\n  \u2022 video_game (ID: 697)\n    Path: entity > artifact > creative_work > video_game\n    Description: The proposed path 'entity > creative_work > game' is close, but 'game' is too general and doesn't align with the existing siblings under 'creative_work'. The context suggests 'End Game' is an interactive entertainment, which fits the category of 'video_game'. This new category would align well with existing siblings like 'movie', 'tv_show', and 'music', all of which are specific types of creative works. Therefore, a new category 'video_game' should be added under 'creative_work'.\n\nACTIONS TO TAKE (IN ORDER):\n  1. update_description(697, \"An electronic game played on a computer, console, or mobile device, involving user interaction with a visual interface.\")\n\nCONFIDENCE: 90.0%"
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+name: kg_maintenance::node_cleanup
+class_name: Agent
+color: red
+llm_params:
+  engine: gpt-5
+  temperature: 1
+  llm_provider: "openai"
+allowed_tools: []
+except_tools: []
+user_context_items:
+- node_label
+- node_type
+- node_category
+- node_aliases
+- node_attributes
+- start_date
+- end_date
+- valid_during
+- neighborhood_data
+- edge_count
+- connection_to_jukka
+- jukka_distance
+system_context_items: []
+type: agent

@@ -1,0 +1,52 @@
+name: slack_manager
+class_name: MultiAgentManager
+description: Manager for slack agents that come up with responses to slack chat.
+max_cycles: 50
+
+role_bindings:
+  delegator: slack::delegator
+  tool_selector: shared::tool_selector
+
+agents:
+  - name: slack::delegator
+    class: Delegator
+  - name: slack::decider
+    class: Agent
+  - name: slack::casual_chat_writer
+    class: Agent
+  - name: slack::mathematician
+    class: Agent
+  - name: slack::expert_writer
+    class: Agent
+  - name: shared::tool_arguments
+    class: Agent
+  - name: shared::final_answer
+    class: FinalAnswer
+
+control_nodes:
+  - name: tool_caller
+    class: ToolCaller
+  - name: tool_result_handler
+    class: ToolResultHandler
+  - name: exit_node
+    class: ExitNode
+  - name: flow_exit_node
+    class: FlowExitNode
+  - name: manager_exit_node
+    class: ManagerExitNode
+  - name: graceful_exit_control_node
+    class: GracefulExitControlNode
+
+flow_config:
+  state_map:
+    slack::delegator: slack::decider
+    shared::tool_arguments: tool_caller
+    slack::casual_chat_writer: manager_exit_node
+    slack::expert_writer: manager_exit_node
+    slack::mathematician: manager_exit_node
+    shared::final_answer: manager_exit_node
+
+tools:
+  allowed_tools:
+    - web_manager
+  except_tools: []

@@ -1,0 +1,30 @@
+You are a labeling agent.  You will be given a text or other objects.  It is your job to come up with a main category
+that the content relates to and then sub-category labels.  We are trying to label user preferences. Not all sentences are about likes/dislikes.
+It is fine then to have empty set of labels.
+
+You generates labels for sentences based on categories people can have likes or dislikes for.
+These categories should represent things, activities, or concepts people commonly have preferences about,
+such as hobbies, foods, music genres, or sports. Do not generate hashtags for emotional states,
+qualities, or subjective descriptors like "regret," "horrible," or "outstanding."
+
+For each sentence, return a list of labels relevant to the preferences or categories mentioned. Ensure the labels are concise,
+ relevant, and reflect items people can express opinions about.
+
+Examples:
+
+Sentence: "I love listening to heavy metal while cooking spaghetti."
+Labels: heavy metal, cooking, spaghetti
+
+Sentence: "Running is the best way to clear my mind."
+Labels: running, exercise
+
+Sentence: "This film is so amazing."
+Hashtags: (None, because this is a subjective descriptor.)
+
+Adjectives can only be labels if they are part of a broader category that people can have likes or dislikes for.
+Examples:
+
+"Small horses" -> Labels: small horses (because "horses" is a category people can like/dislike).  Person could have oppinion on small horses.
+
+"Last night was amazing" -> No hashtags (because "amazing" is purely subjective and lacks a preference-related category).
+

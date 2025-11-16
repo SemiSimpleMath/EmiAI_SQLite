@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-09-30T18:10:19.935416+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 1,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "38ece277-d9b9-4938-b4db-9f2309fe8859",
+      "label": "To-do list",
+      "status": "validated",
+      "problem_description": "The node likely represents a specific personal document belonging to Jukka, but its label is generic and ambiguous. The type may be overly generic compared to the category. The description is clear but includes subjective wording. Temporal fields are not required for this node type, so no temporal issues identified.",
+      "resolution_notes": "Recommended repairs:\n1) Rename label for disambiguation and consistency:\n   - Preferred: \"Jukka's To-Do List\" (Title Case)\n   - Acceptable variants to add as aliases: \"Jukka To-do List\", \"Jukka todo list\", \"Jukka to do list\", \"Jukka task list\", \"Personal to-do list\".\n2) Tighten the type/category:\n   - Change type from \"Entity\" to a more specific schema class such as \"Document\" or \"List\" (whichever exists in your schema). Keep category as \"document\" or refine to a subcategory like \"personal_document\" or \"list\" if available.\n3) Neutralize and tighten the description:\n   - Replace with: \"A personal to-do list maintained by Jukka to track and prioritize work and personal tasks.\"\n   - Remove evaluative language about planning style.\n4) Improve connectivity with key relationships:\n   - owned_by/maintained_by -> Person:Jukka\n   - instance_of -> Concept:To-do list (or Document/List class)\n   - part_of -> Jukka's personal productivity system (if modeled)\n   - references/contains -> Task nodes (if tasks are modeled individually)\n   - stored_in/hosted_on -> the platform (e.g., Notion, Apple Reminders) if known.\n5) Metadata hygiene:\n   - If the source is automated (processed_entity_log) and not user-confirmed, consider setting confidence to 0.8 unless verified; keep at 0.9 if confirmed.\n   - If this list is central to many tasks, raise importance to ~0.7; otherwise keep 0.5.\n6) Add privacy/visibility attribute or edge if your schema supports it (e.g., visibility: private).\n7) Ensure naming conventions (Title Case, ascii hyphenation) are consistent across similar nodes."
+    }
+  ]
+}

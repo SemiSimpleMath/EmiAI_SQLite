@@ -1,0 +1,19 @@
+name: knowledge_graph_add::taxonomy_critic
+class_name: Agent
+llm_params:
+  engine: gpt-5
+  temperature: 1
+  llm_provider: "openai"
+description: "Reviews and validates/corrects taxonomy classification proposals"
+
+user_context_items:
+  - node_label
+  - node_category
+  - node_sentence
+  - node_type
+  - candidates
+color: magenta
+allowed_tools: []
+except_tools: []
+system_context_items: []
+

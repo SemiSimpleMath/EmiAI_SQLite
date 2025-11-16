@@ -1,0 +1,23 @@
+name: rag::query_agent
+class_name: Agent
+color: red
+llm_params:
+  engine: gpt-4o-mini
+  temperature: 0.1
+allowed_tools: []
+except_tools: []
+user_context_items:
+- date_time
+- task
+- information
+- plan
+- accomplishments
+- query_list
+- checklist
+
+rag_fields:
+  task: ["chat"]
+  information: ["chat"]
+type: agent
+llm_provider: openai
+append_fields: [query_list]

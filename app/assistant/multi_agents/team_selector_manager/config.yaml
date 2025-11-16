@@ -1,0 +1,37 @@
+name: team_selector_manager
+class_name: TeamSelectorManager
+description: "A minimal config for team_selector_manager."
+max_cycles: 10
+role_bindings:
+  delegator: emi_team_selector::delegator
+  tool_selector: emi_team_selector::tool_selector
+
+agents:
+  - name: emi_team_selector::delegator
+    class: EmiTeamSelectorDelegator
+  - name: emi_team_selector::tool_selector
+    class: Agent
+  - name: emi_team_selector::tool_arguments
+    class: ToolArguments
+
+control_nodes:
+  - name: emi_team_selector_tool_caller
+    class: EmiTeamSelectorToolCaller
+
+tools:
+  allowed_tools:
+    - emi_team_manager
+    - event_manager
+    - web_manager
+  except_tools: []
+
+events:
+  - team_selector_manager_request
+
+flow_config:
+  state_map:
+    "emi_team_selector::delegator": "emi_team_selector::tool_selector"
+    "emi_team_selector::tool_selector": "emi_team_selector::tool_arguments"
+    "emi_team_selector::tool_arguments": "emi_team_selector_tool_caller"
+    "emi_team_selector_tool_caller": "exit"
+

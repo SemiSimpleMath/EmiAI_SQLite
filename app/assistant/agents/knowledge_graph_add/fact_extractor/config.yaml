@@ -1,0 +1,16 @@
+name: knowledge_graph_add::fact_extractor
+class_name: Agent
+color: blue
+llm_params:
+  engine: gpt-5
+  temperature: 1
+  timeout: 240
+  llm_provider: "openai"
+allowed_tools: []
+except_tools: []
+user_context_items:
+- text
+- date_time
+- original_message_timestamp
+system_context_items: []
+type: agent

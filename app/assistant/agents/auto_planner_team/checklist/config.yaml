@@ -1,0 +1,27 @@
+name: auto_planner_team::checklist
+class_name: Agent
+color: "magenta"
+llm_params:
+  llm_provider: "openai"
+  engine: "gpt-4o-mini"
+  temperature: 0.1
+
+allowed_tools: []
+
+user_context_items:
+  - date_time
+  - task
+  - information
+  - plan
+  - summary
+  - recent_history
+  - important_links
+  - checklist
+  - accomplishments
+
+append_fields:
+  - accomplishments
+
+rag_fields:
+  task: ["chat"]
+  information: ["chat"]

@@ -1,0 +1,605 @@
+# google_calendar.py
+import json
+from typing import Optional, List, Dict, Any
+from datetime import datetime, timezone
+from googleapiclient.discovery import build
+from google_auth_oauthlib.flow import InstalledAppFlow
+from google.auth.transport.requests import Request
+import pickle
+import os
+
+# Setup Logging
+
+from app.assistant.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
+
+# Define the scope
+SCOPES = ['https://www.googleapis.com/auth/calendar']
+
+from pathlib import Path
+
+# Define paths for credentials and token
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+TOKEN_PATH = PROJECT_ROOT / "credentials" / "token.pickle"
+CREDENTIALS_PATH = PROJECT_ROOT / "credentials" / "credentials.json"
+
+## Google needs everything to be in the local timezone at the time of creation.  Otherwise there are problems with DST
+
+from app.assistant.utils.time_utils import utc_to_local, get_local_timezone
+
+
+def convert_utc_to_local_event_times(event_dict):
+    """
+    Converts UTC start and end times in an event dictionary to local time.
+
+    Args:
+        event_dict (dict): Dictionary containing event details, including 'start' and 'end' in UTC.
+
+    Returns:
+        dict: Updated event dictionary with 'start' and 'end' converted to local time.
+    """
+    local_timezone = get_local_timezone().key  # Fetch local timezone (e.g., 'America/Los_Angeles')
+
+    event_dict = event_dict.copy()  # Ensure we don't modify the original dictionary
+
+    if "start" in event_dict and event_dict["start"]:
+        event_dict["start"] = {
+            "dateTime": utc_to_local(event_dict["start"]).isoformat(),
+            "timeZone": local_timezone
+        }
+
+    if "end" in event_dict and event_dict["end"]:
+        event_dict["end"] = {
+            "dateTime": utc_to_local(event_dict["end"]).isoformat(),
+            "timeZone": local_timezone
+        }
+
+    return event_dict
+
+
+def authenticate_google_api(token_path: str, credentials_path: str):
+    """
+    Authenticate the user and return the Google Calendar service.
+    """
+    logger.info(f"Using token path: {token_path}")
+    logger.info(f"Using credentials path: {credentials_path}")
+    creds = None
+    # Check if token.pickle exists
+    if os.path.exists(token_path):
+        with open(token_path, 'rb') as token:
+            creds = pickle.load(token)
+    # If no valid credentials are available, let the user log in
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            try:
+                creds.refresh(Request())
+                logger.info("Credentials refreshed successfully.")
+            except Exception as e:
+                logger.error(f"Error refreshing credentials: {e}")
+                creds = None
+        if not creds:
+            flow = InstalledAppFlow.from_client_secrets_file(credentials_path, SCOPES)
+            creds = flow.run_local_server(port=0)
+            logger.info("New credentials obtained.")
+        # Save the credentials for the next run
+        with open(token_path, 'wb') as token:
+            pickle.dump(creds, token)
+            logger.info("Credentials saved to token.pickle.")
+    try:
+        service = build('calendar', 'v3', credentials=creds)
+        return service
+    except Exception as e:
+        logger.error(f"Failed to create Google Calendar service: {e}")
+        return None
+
+
+def get_calendar_by_name(service, calendar_name: str) -> Optional[str]:
+    """
+    Resolves a calendar name to its calendarId. Handles 'primary' as a special case.
+
+    Args:
+        service: Authenticated Google Calendar service instance.
+        calendar_name (str): Name of the calendar to resolve.
+
+    Returns:
+        str: The calendarId if found, otherwise None.
+    """
+
+    try:
+        # Handle the special case for 'primary'
+        if calendar_name.lower() == 'primary':
+            return 'primary'
+
+        # Fetch all calendars (handle pagination)
+        calendar_list = []
+        page_token = None
+        while True:
+            response = service.calendarList().list(pageToken=page_token).execute()
+            calendar_list.extend(response.get('items', []))
+            page_token = response.get('nextPageToken')
+            if not page_token:
+                break
+
+        # Debug: List all available calendar summaries
+        available_calendars = [calendar.get('summary', '').lower() for calendar in calendar_list]
+        logger.info(f"Available calendars: {available_calendars}")
+
+        # Match the calendar name (case-insensitive)
+        for calendar in calendar_list:
+            if calendar.get('summary', '').lower() == calendar_name.lower():
+                logger.debug(f"Found calendar: {calendar['summary']} (ID: {calendar['id']})")
+                return calendar['id']
+
+        logger.warning(f"Calendar '{calendar_name}' not found.")
+        return None
+    except Exception as e:
+        logger.error(f"Error resolving calendar name '{calendar_name}': {e}")
+        return None
+
+
+def create_event(service, event_dict, calendarId='primary'):
+    """
+    Create a single event on the Google Calendar with proper time zone handling.
+    """
+    summary = event_dict.get('event_name')
+    start = event_dict.get('start')
+    end = event_dict.get('end')
+    description = event_dict.get('description')
+    location = event_dict.get('location')
+    link = event_dict.get('link')
+    participants = event_dict.get('participants')
+
+    if not summary or not start or not end:
+        logger.error("Event dictionary missing required fields.")
+        return None
+
+    # Convert UTC times to local time before sending to Google Calendar
+    event_dict = convert_utc_to_local_event_times(event_dict)
+
+    event = {
+        'summary': summary,
+        'start': event_dict["start"],  # Now correctly in local timezone
+        'end': event_dict["end"],  # Now correctly in local timezone
+    }
+
+    # Add optional fields
+    if description:
+        event['description'] = description
+    if location:
+        event['location'] = location
+    if link:
+        desc = event.get('description', "")
+        event['description'] = (desc + "\n" if desc else "") + f"Link: {link}"
+    if participants and isinstance(participants, list):
+        event['attendees'] = participants
+
+    try:
+        created_event = service.events().insert(calendarId=calendarId, body=event).execute()
+        logger.info(f"Event created: {created_event.get('htmlLink')}")
+        return created_event
+    except Exception as e:
+        logger.error(f"An error occurred while creating the event: {e}")
+        return None
+
+
+def create_repeating_event(service, event_dict, calendarId='primary'):
+    """
+    Create a repeating event on Google Calendar and log full request details.
+    """
+    # Extract required fields
+    summary = event_dict.get('event_name')
+    start = event_dict.get('start')
+    end = event_dict.get('end')
+    recurrence_rule = event_dict.get('recurrence_rule')
+
+    # Extract optional fields
+    description = event_dict.get('description')
+    location = event_dict.get('location')
+    link = event_dict.get('link')
+    participants = event_dict.get('participants')
+
+    if not summary or not start or not end:
+        logger.error("Event dictionary missing required fields.")
+        return None
+
+    # Convert UTC→local for Google payload
+    times = convert_utc_to_local_event_times({
+        "event_name": summary,
+        "start": start,
+        "end": end
+    })
+
+    event = {
+        'summary': summary,
+        'start': times["start"],
+        'end': times["end"],
+        'recurrence': [recurrence_rule],
+    }
+
+    # Optional fields
+    if description:
+        event['description'] = description
+    if location:
+        event['location'] = location
+    if link:
+        desc = event.get('description', "")
+        event['description'] = (desc + "\n" if desc else "") + f"Link: {link}"
+
+    # Build attendees list from a list of dicts
+    if isinstance(participants, list):
+        attendees = []
+        for p in participants:
+            email = p.get('email')
+            name = p.get('displayName') or p.get('name') or ""
+            if email:
+                attendee = {'email': email}
+                if name:
+                    attendee['displayName'] = name
+                attendees.append(attendee)
+        event['attendees'] = attendees
+
+    logger.info(f"Creating repeating event with payload: {event}")
+
+    try:
+        created_event = service.events().insert(
+            calendarId=calendarId,
+            body=event
+        ).execute()
+        logger.info(f"Repeating event created successfully: {created_event}")
+        return created_event
+
+    except Exception as e:
+        logger.error(f"An error occurred while creating the repeating event: {e}")
+        return None
+
+
+
+def get_events(
+        service,
+        calendar_names: Optional[List[str]] = None,
+        calendar_ids: Optional[List[str]] = None,
+        max_results: int = 10,
+        start_str: Optional[str] = None,
+        end_str: Optional[str] = None,
+        single_events=False
+) -> Optional[List[Dict[str, Any]]]:
+    """
+    Fetch events from specified Google Calendars. Supports both a time range and upcoming events.
+
+    Args:
+        service: Authenticated Google Calendar service instance.
+        calendar_names (Optional[List[str]]): List of calendar names to fetch events from.
+        calendar_ids (Optional[List[str]]): List of calendar IDs to fetch events from.
+        max_results (int): Maximum number of events per calendar.
+        start_str (Optional[str]): Start datetime in RFC3339 format with timezone.
+                                   Defaults to current time if not provided.
+        end_str (Optional[str]): End datetime in RFC3339 format with timezone.
+
+    Returns:
+        List of event dictionaries or None if an error occurs.
+    """
+    try:
+        # Resolve calendar IDs for the provided names
+        resolved_calendar_ids = []
+        if calendar_names:
+            for name in calendar_names:
+                print(name)
+                calendar_id = get_calendar_by_name(service, name)
+                print(calendar_id)
+                if calendar_id:
+                    resolved_calendar_ids.append(calendar_id)
+                else:
+                    logger.warning(f"Skipping unresolved calendar name: {name}")
+
+        # Include any direct calendar IDs provided (e.g., 'Birthday')
+        if calendar_ids:
+            print("Calendard ID DEBUG")
+            print(calendar_ids)
+            resolved_calendar_ids.extend(calendar_ids)
+            print(resolved_calendar_ids)
+
+        if not resolved_calendar_ids:
+            logger.warning("No valid calendar IDs resolved. Defaulting to 'primary'.")
+            resolved_calendar_ids = ['primary']
+
+        # Use current time as default start_str if not provided
+        now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        start_str = start_str or now
+
+        all_events = []
+        for calendar_id in resolved_calendar_ids:
+            try:
+                logger.info(f"Fetching events from calendar ID: {calendar_id}")
+                events_result = service.events().list(
+                    calendarId=calendar_id,
+                    timeMin=start_str,
+                    timeMax=end_str,
+                    maxResults=max_results,
+                    singleEvents=single_events,
+                    orderBy='startTime' if single_events else None,
+                    timeZone='UTC'
+                ).execute()
+
+                events = events_result.get('items', [])
+
+                logger.info(f"Fetched {len(events)} events from calendar '{calendar_id}'.")
+                all_events.extend(events)
+
+            except Exception as e:
+                logger.error(f"Error fetching events for calendar ID '{calendar_id}': {e}")
+
+        return all_events if all_events else None
+
+    except Exception as e:
+        logger.error(f"Error in get_events: {e}")
+        return None
+
+
+def list_calendars(service):
+    """
+    Lists all available calendars with their summaries and IDs.
+
+    Args:
+        service: Authenticated Google Calendar service instance.
+    """
+    try:
+        calendar_list = []
+        page_token = None
+        while True:
+            response = service.calendarList().list(pageToken=page_token).execute()
+            calendar_list.extend(response.get('items', []))
+            page_token = response.get('nextPageToken')
+            if not page_token:
+                break
+
+        logger.info("Available Calendars:")
+        for calendar in calendar_list:
+            logger.info(f"Name: {calendar.get('summary')}, ID: {calendar.get('id')}")
+    except Exception as e:
+        logger.error(f"Failed to list calendars: {e}")
+
+
+def search_event_by_name(service, query: str) -> Optional[List[Dict[str, Any]]]:
+    """
+    Search events by name or keyword in the summary.
+    """
+    try:
+        events_result = service.events().list(
+            calendarId='primary',
+            q=query,
+            singleEvents=True,
+            orderBy='startTime',
+            timeZone='UTC'
+        ).execute()
+        events = events_result.get('items', [])
+        if not events:
+            logger.info(f'No events found for query: {query}')
+            return []
+
+        event_details = []
+        for event in events:
+            event_info = {
+                "id": event.get('id'),
+                "summary": event.get('summary', 'No Title'),
+                "start": event['start'].get('dateTime', event['start'].get('date')),
+                "end": event['end'].get('dateTime', event['end'].get('date')),
+                "link": event.get('htmlLink', 'No link available')
+            }
+            event_details.append(event_info)
+
+        logger.info(f"Found {len(event_details)} events matching '{query}'.")
+        return event_details
+    except Exception as e:
+        logger.error(f"An error occurred while searching for events: {e}")
+        return None
+
+
+def edit_event(service, event_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """
+    Edit an existing event by its ID. If the event is part of a series, modify the parent event.
+    """
+    try:
+        # Fetch the existing event
+        event = service.events().get(calendarId='primary', eventId=event_id).execute()
+
+        # If the event is part of a recurrence, update the parent instead
+        parent_event_id = event.get("recurringEventId", event_id)  # Use parent if available
+
+        # Ensure recurrence is fully replaced, not merged
+        if "recurrence" in updates and isinstance(updates["recurrence"], list):
+            updates["recurrence"] = [updates["recurrence"][0]]  # Ensure it's a full override list
+
+        # Handle datetime conversions correctly
+        if "start" in updates and isinstance(updates["start"], dict):
+            if "dateTime" in updates["start"]:
+                updates["start"]["dateTime"] = updates["start"]["dateTime"].replace("Z", "")
+
+        if "end" in updates and isinstance(updates["end"], dict):
+            if "dateTime" in updates["end"]:
+                updates["end"]["dateTime"] = updates["end"]["dateTime"].replace("Z", "")
+
+        # Apply updates
+        event.update(updates)
+
+        # Update the event in Google Calendar
+        print("Data before update: ", parent_event_id, event)
+        updated_event = service.events().update(calendarId='primary', eventId=parent_event_id, body=event).execute()
+        print("\n\nUpdated event is: ", updated_event)
+        logger.info(f"Event updated: {updated_event.get('htmlLink')}")
+        return updated_event
+    except Exception as e:
+        logger.error(f"An error occurred while updating the event: {e}")
+        return None
+
+
+def delete_event(service, event_id: str) -> bool:
+    """
+    Deletes an event by its ID. If the event is a child of a recurring event, delete the parent event instead.
+    """
+    try:
+        # Fetch the event details
+        event = service.events().get(calendarId='primary', eventId=event_id).execute()
+
+        # Check if it's part of a recurring event
+        parent_event_id = event.get("recurringEventId", event_id)  # Use parent if available
+
+        # Delete the parent event (removes all instances)
+        service.events().delete(calendarId='primary', eventId=parent_event_id).execute()
+        logger.info(f"Event deleted successfully: {parent_event_id}")
+
+        return True
+    except Exception as e:
+        logger.error(f"An error occurred while deleting the event: {e}")
+        return False
+
+
+if __name__ == "__main__":
+    # Initialize the Google Calendar service
+    service = authenticate_google_api(TOKEN_PATH, CREDENTIALS_PATH)
+    if not service:
+        logger.error("Google Calendar service initialization failed.")
+        exit(1)
+
+    # List all available calendars for verification
+    list_calendars(service)
+
+    # Test: Fetch events from multiple calendars using explicit UTC strings
+    try:
+        # Define start and end times in explicit UTC (ISO 8601 with 'Z')
+        start_time = "2025-02-21T00:00:00Z"  # Jan 1, 2025 at midnight UTC
+        end_time = "2025-03-10T23:59:59Z"
+
+        # List of calendar names to fetch events from
+        calendar_names = ['primary', 'Birthday', 'Food', 'Work']
+
+        logger.info("Fetching events from multiple calendars (fixed period)...")
+        events = get_events(
+            service=service,
+            calendar_names=calendar_names,
+            start_str=start_time,
+            end_str=end_time,
+            max_results=100
+            # Ensure get_events() passes timeZone='UTC' in its API call.
+        )
+
+        if events:
+            logger.info(f"Total events fetched: {len(events)}")
+            for event in events:
+                summary = event.get('summary', 'No Title')
+                # Since we are now receiving events in UTC, no conversion is necessary.
+                event_start = event.get('start', {}).get('dateTime', event.get('start', {}).get('date'))
+                event_end = event.get('end', {}).get('dateTime', event.get('end', {}).get('date'))
+                link = event.get('htmlLink', 'No link available')
+                logger.info(f"Event: {summary}")
+                logger.info(f"Start: {event_start}")
+                logger.info(f"End: {event_end}")
+                logger.info(f"Link: {link}\n")
+        else:
+            logger.info("No events found for the specified calendars and time range.")
+    except Exception as e:
+        logger.error(f"Error fetching events: {e}")
+
+    # # Example: Creating a single event with explicit UTC times
+    # single_event = {
+    #     "event_name": "Party at Los Angeles",
+    #     "start": "2024-05-20T20:00:00Z",  # Explicit UTC time
+    #     "end": "2024-05-20T23:59:00Z",  # Explicit UTC time
+    #     "time_zone": "UTC",
+    #     "description": "An exciting party with food, drinks, and music.",
+    #     "location": "Downtown Los Angeles",
+    #     "link": "https://zoom.us/j/123456789",
+    #     "participants": {
+    #         "John Doe": "john.doe@example.com",
+    #         "Jane Smith": "jane.smith@example.com"
+    #     }
+    # }
+    # result = create_event(service, single_event)
+    # if result:
+    #     print("Created single event:")
+    #     print(result)
+    #
+    # # Example: Creating a repeating event with explicit UTC times
+    # repeating_event = {
+    #     "event_name": "Gym Session",
+    #     "start": "2024-05-20T20:00:00Z",  # Explicit UTC time
+    #     "end": "2024-05-20T23:59:00Z",  # Explicit UTC time
+    #     "time_zone": "UTC",
+    #     "recurrence_rule": "RRULE:FREQ=WEEKLY;COUNT=10",
+    #     "description": "Weekly gym session to stay fit and healthy.",
+    #     "location": "Gold's Gym, Los Angeles",
+    #     "link": "https://zoom.us/j/987654321",
+    #     "participants": {
+    #         "Trainer Mike": "mike.trainer@example.com",
+    #         "Alice Brown": "alice.brown@example.com"
+    #     }
+    # }
+    # result = create_repeating_event(service, repeating_event)
+    # if result:
+    #     print("Created repeating event:")
+    #     print(result)
+    #
+    # # Search for an event by name
+    # events = search_event_by_name(service, "Party")
+    # if events:
+    #     print("Search results for 'Party':")
+    #     print(events)
+    #
+    # # Edit an event by ID (using explicit UTC times)
+    # if events:
+    #     event_id = events[0]['id']  # Use the ID of the first matching event
+    #     updates = {
+    #         "summary": "Updated Gym Session",
+    #         "start": {"dateTime": "2024-07-02T08:00:00Z", "timeZone": "UTC"},
+    #         "end": {"dateTime": "2024-07-02T09:00:00Z", "timeZone": "UTC"},
+    #         "description": "Updated description for the weekly gym session.",
+    #         "location": "Updated Gold's Gym, Los Angeles",
+    #     }
+    #     updated_event = edit_event(service, event_id, updates)
+    #     print("Updated event:")
+    #     print(updated_event)
+
+    # Delete an event by ID
+    if events:
+        event_id = events[0]['id']
+        delete_event(service, event_id)
+        logger.info(f"Deleted event with ID: {event_id}")
+
+    # Additionally: Fetch all events for the current week
+    try:
+        # Calculate the start (Monday) and end (Sunday) of the current week in UTC.
+        now = datetime.now(timezone.utc).replace(tzinfo=datetime.timezone.utc)
+        start_of_week = now - datetime.timedelta(days=now.weekday())
+        # End of week: Sunday 23:59:59
+        end_of_week = start_of_week + datetime.timedelta(days=6, hours=23, minutes=59, seconds=59)
+
+        start_week_str = start_of_week.isoformat().replace('+00:00', 'Z')
+        end_week_str = end_of_week.isoformat().replace('+00:00', 'Z')
+
+        logger.info("Fetching events for the current week (UTC)...")
+        week_events = get_events(
+            service=service,
+            calendar_names=calendar_names,
+            start_str=start_week_str,
+            end_str=end_week_str,
+            max_results=50
+        )
+
+        if week_events:
+            logger.info(f"Total events for this week: {len(week_events)}")
+            for event in week_events:
+                logger.info(json.dumps(event, indent=4))  # Print full event data
+            logger.info("No events found for the current week.")
+            for event in week_events:
+                summary = event.get('summary', 'No Title')
+                event_start = event.get('start', {}).get('dateTime', event.get('start', {}).get('date'))
+                event_end = event.get('end', {}).get('dateTime', event.get('end', {}).get('date'))
+                link = event.get('htmlLink', 'No link available')
+                logger.info(f"Weekly Event: {summary}")
+                logger.info(f"Start: {event_start}")
+                logger.info(f"End: {event_end}")
+                logger.info(f"Link: {link}\n")
+        else:
+            logger.info("No events found for the current week.")
+    except Exception as e:
+        logger.error(f"Error fetching current week events: {e}")

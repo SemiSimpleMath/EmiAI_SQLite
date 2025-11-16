@@ -1,0 +1,16 @@
+name: entity_card_generator
+class_name: Agent
+color: "green"
+llm_params:
+  llm_provider: "openai"
+  engine: "gpt-4o-mini"
+  temperature: 0.1
+allowed_tools: []
+user_context_items:
+  - entity_name
+  - entity_type
+  - entity_description
+  - entity_aliases
+  - relationships_data
+system_context_items: []
+

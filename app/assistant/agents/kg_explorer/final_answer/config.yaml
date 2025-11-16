@@ -1,0 +1,20 @@
+name: kg_explorer::final_answer
+class_name: FinalAnswer
+color: "green"
+llm_params:
+  llm_provider: "openai"
+  engine: "gpt-5"
+  temperature: 1
+  api_key: "dummy_api_key"
+
+allowed_tools: []
+except_tools: []
+allowed_nodes: [manager_exit_node]
+
+user_context_items:
+  - date_time
+  - task
+  - information
+  - recent_history
+
+system_context_items: []

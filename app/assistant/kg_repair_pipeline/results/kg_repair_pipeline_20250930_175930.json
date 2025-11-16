@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-09-30T17:59:30.103831+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 1,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "38ece277-d9b9-4938-b4db-9f2309fe8859",
+      "label": "To-do list",
+      "status": "validated",
+      "problem_description": "The node describes a specific personal document but uses a generic label, creating ambiguity and potential collisions with a concept-level 'to-do list' node. Classification appears broadly correct (an entity/document) but can be made more precise. No temporal data is required for this node type. Content is adequate but could be tightened to be more objective.",
+      "resolution_notes": "Proposed repairs:\n1) Disambiguate label:\n   - Rename to one of: \"To-do list (Jukka)\" or \"Jukka to-do list\" (pick a naming convention consistent with the graph). Ensure a unique slug.\n   - Add aliases: [\"Jukka's to-do list\", \"Jukka task list\", \"Jukka task tracker\"].\n2) Tighten description (neutral/objective):\n   - Replace with: \"Personal task list maintained by Jukka used to organize and prioritize work and personal commitments; serves as the central reference for tasks.\" Remove subjective claims about planning style.\n3) Type/category precision:\n   - Keep type: Entity; category: document. If the schema supports a more specific type (e.g., Document), update type accordingly.\n4) Strengthen connectivity:\n   - Link to owner: owned_by -> Jukka (Person) and/or maintained_by -> Jukka.\n   - Add instance_of -> To-do list (concept/class), to avoid conflation with the generic concept.\n   - Add stored_in/implemented_in -> the actual tool/app (e.g., Notion, Google Tasks) if known.\n   - Add related_to -> Task management / Personal productivity system (if such nodes exist).\n   - If tasks are modeled as nodes, add has_part/contains -> Task nodes. Review and fix the existing unknown edge.\n5) Collision check:\n   - Search for existing concept-level \"To-do list\" and any other personal to-do list nodes to prevent duplicate labeling; merge or link appropriately.\n6) Metadata adjustments:\n   - Verify source and evidence; if not directly validated, consider lowering confidence from 0.9 to ~0.7. Keep importance at 0.5 unless downstream usage dictates otherwise.\n7) Consistency cleanup:\n   - Standardize capitalization per style guide (e.g., \"To-do list\" vs \"To-Do List\") and ensure ASCII apostrophes in aliases if required by the system."
+    }
+  ]
+}

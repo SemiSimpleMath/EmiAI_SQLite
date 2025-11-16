@@ -1,0 +1,21 @@
+{
+  "timestamp": "2025-09-30T16:36:36.041478+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 1,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [
+    "Questioning failed: 'ProblematicNode' object has no attribute 'node_id'",
+    "'list' object has no attribute 'get'"
+  ],
+  "processed_nodes": [
+    {
+      "node_id": "38ece277-d9b9-4938-b4db-9f2309fe8859",
+      "label": "To-do list",
+      "status": "validated",
+      "problem_description": "The node likely represents a specific personal document (Jukka's to-do list). Type=Entity and category=document are plausible for an instance, and the description is clear. However, the label is generic and may be mistaken for the general concept, creating potential misclassification or ambiguity. No temporal fields are required for this node type.",
+      "resolution_notes": "- Rename the label to a specific, disambiguated form per naming conventions, e.g., \"Jukka's To-Do List\" or \"To-Do List (Jukka)\". \n- Add aliases to capture common variants: \"To-do list\", \"To-Do List\", \"Todo list\", \"Personal to-do list\".\n- Add/ensure a relationship to the Person node for Jukka (owned_by/maintained_by/authored_by) to establish ownership.\n- If a concept node for the general idea exists, link via instance_of: To-do list (concept)/Task list to prevent conflation.\n- Add connections to the platform or location where the list is maintained (e.g., hosted_on: Notion/Google Tasks/Apple Reminders; stored_at: URL if applicable).\n- Review for potential duplicate nodes with similar labels and merge or disambiguate if found.\n- Optionally refine the description to include scope (work/personal), primary platform, and current status (active), if known.\n- Consider adjusting importance upward if this is indeed a central reference for prioritizing tasks, based on curator judgment."
+    }
+  ]
+}

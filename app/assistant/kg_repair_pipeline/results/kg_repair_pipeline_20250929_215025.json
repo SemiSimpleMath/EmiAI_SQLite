@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-09-29T21:50:25.701448+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 1,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "38ece277-d9b9-4938-b4db-9f2309fe8859",
+      "status": "validated",
+      "problem_description": "The node 'To-do list' (Entity, document) has minimal content (no attributes, no description) and only one edge, indicating weak connectivity. Its only neighbor is another Entity with the exact same label 'To-do list', suggesting duplication or a self-loop. Expected relationships (owner: Jukka, has_entry tasks/projects, stored_in/created_by) are missing. Quality fields are present (confidence, importance, source), and temporal fields are not required for an Entity. Main issues: incomplete attributes, generic/ambiguous naming, weak connections, potential duplicate/self-referential structure, and missing expected relationships.",
+      "priority": "medium",
+      "resolution_notes": "1) Verify the node by ID 38ece277-d9b9-4938-b4db-9f2309fe8859: confirm current label, attributes, and actual edge count from the graph. 2) Resolve naming: if this node represents a document called “To-do list,” store the UUID as the node ID and set a human-readable name/title attribute; avoid using the UUID as the display label. 3) Duplicate check: search for nodes with normalized name/title “to-do list” (and aliases). If duplicates exist, select the most complete as canonical, merge attributes and edges, update references to the canonical, and delete or deprecate the duplicate(s). 4) Connectivity: if the node is kept, add at least one meaningful relationship: owned_by -> Person (e.g., Jukka if verified), contains/has_entry -> Task or Project nodes, stored_in/located_in -> System/Folder, created_by -> Agent/App. Remove any self-loop if found. 5) Attributes: add type/subtype (Document or List), description/summary, status, source/provenance, confidence, importance/priority, and timestamps (created_at/updated_at) if available. 6) If no provenance or related content can be established and no duplicate exists, mark as deprecated and schedule deletion as an orphan. 7) Run validation: enforce rule that non-stub Entities must have ≥1 attribute or ≥1 edge; flag UUID-like strings in label fields for correction. 8) After changes, recompute edge counts and run integrity checks for orphaned nodes and self-loops."
+    }
+  ]
+}

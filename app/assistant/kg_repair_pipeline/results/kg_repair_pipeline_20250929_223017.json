@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-09-29T22:30:17.352576+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 1,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "38ece277-d9b9-4938-b4db-9f2309fe8859",
+      "status": "validated",
+      "problem_description": "The node 'To-do list' is under-specified (no attributes, no description), weakly connected (only 1 edge), and likely duplicates another node with the same label in its neighborhood. It should either be merged with the neighbor or disambiguated (e.g., as 'Jukka’s to-do list'), and enriched with core attributes and relationships (owner, tool, included tasks). Quality metrics are present; no critical temporal data is required for an Entity.",
+      "priority": "critical",
+      "resolution_notes": "Recommended repair actions:\n- Verify identity and naming:\n  - Confirm if this node’s human-readable name/title is 'To-do list'; if missing, add a name attribute. Resolve the mismatch between the UUID label and the referenced name.\n  - Determine whether this node is an instance (a specific task list) or a class/concept. If instance, set a more specific type (e.g., TaskList/Document) instead of generic Entity.\n- Duplicate check:\n  - Search for nodes with same/similar title ('to-do list', case-insensitive, normalized) within the same scope (owner/project/tool). Use attributes like owner/tool/project to disambiguate.\n  - If a true duplicate exists, merge: choose canonical node, merge attributes/edges, preserve provenance, and deprecate the duplicate with a redirect.\n- Enrichment if kept:\n  - Core attributes: name/title, description, owner (Person), tool/app (e.g., Notion/Trello), project/context, created_at, updated_at, source URI, language, confidence score, provenance/source.\n  - Relationships: OwnedBy->Person, PartOf->Project, RepresentedIn/UsesTool->Application/Board, Contains->Task items, SameAs/EquivalentTo if applicable.\n- Structural integrity:\n  - Connect it meaningfully or mark for archival/deletion if no supporting information can be found.\n  - Recompute and validate edge count; fix any indexing issues causing the analyzer to see 1 edge.\n- Governance:\n  - Apply naming convention for disambiguation (e.g., \"<Owner> – To-do list (<Tool>/<Project>)\").\n  - Update type from generic 'Entity' to a precise class and ensure category alignment.\n"
+    }
+  ]
+}

@@ -1,0 +1,2182 @@
+[
+  {
+    "type_name": "likes",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_hobby",
+    "json_schema": {}
+  },
+  {
+    "type_name": "enjoys",
+    "json_schema": {}
+  },
+  {
+    "type_name": "plays",
+    "json_schema": {}
+  },
+  {
+    "type_name": "codes",
+    "json_schema": {}
+  },
+  {
+    "type_name": "works_on",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_role",
+    "json_schema": {}
+  },
+  {
+    "type_name": "performed",
+    "json_schema": {}
+  },
+  {
+    "type_name": "from",
+    "json_schema": {}
+  },
+  {
+    "type_name": "is_chain_of",
+    "json_schema": {}
+  },
+  {
+    "type_name": "offers",
+    "json_schema": {}
+  },
+  {
+    "type_name": "is",
+    "json_schema": {}
+  },
+  {
+    "type_name": "famous_for",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_locations_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "known_for",
+    "json_schema": {}
+  },
+  {
+    "type_name": "focuses_on",
+    "json_schema": {}
+  },
+  {
+    "type_name": "available",
+    "json_schema": {}
+  },
+  {
+    "type_name": "noted_for",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_different_appeal_than",
+    "json_schema": {}
+  },
+  {
+    "type_name": "is_popular_for",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_birthday",
+    "json_schema": {}
+  },
+  {
+    "type_name": "interested_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_email",
+    "json_schema": {}
+  },
+  {
+    "type_name": "friends_with",
+    "json_schema": {}
+  },
+  {
+    "type_name": "is_a",
+    "json_schema": {}
+  },
+  {
+    "type_name": "married_to",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_anniversary",
+    "json_schema": {}
+  },
+  {
+    "type_name": "occurs_on",
+    "json_schema": {}
+  },
+  {
+    "type_name": "occurred_on",
+    "json_schema": {}
+  },
+  {
+    "type_name": "had_event",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_degree",
+    "json_schema": {}
+  },
+  {
+    "type_name": "in_field",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_advisor",
+    "json_schema": {}
+  },
+  {
+    "type_name": "shares_advisor_with",
+    "json_schema": {}
+  },
+  {
+    "type_name": "favorite_color",
+    "json_schema": {}
+  },
+  {
+    "type_name": "shared_advisor_with",
+    "json_schema": {}
+  },
+  {
+    "type_name": "advisor_of",
+    "json_schema": {}
+  },
+  {
+    "type_name": "had_advisor",
+    "json_schema": {}
+  },
+  {
+    "type_name": "influenced",
+    "json_schema": {}
+  },
+  {
+    "type_name": "works_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "born_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "works_for",
+    "json_schema": {}
+  },
+  {
+    "type_name": "loves",
+    "json_schema": {}
+  },
+  {
+    "type_name": "wanted_to_be",
+    "json_schema": {}
+  },
+  {
+    "type_name": "from_university",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_child",
+    "json_schema": {}
+  },
+  {
+    "type_name": "skilled_at",
+    "json_schema": {}
+  },
+  {
+    "type_name": "is_member_of",
+    "json_schema": {}
+  },
+  {
+    "type_name": "does_not_believe_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "believes_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "passionate_about",
+    "json_schema": {}
+  },
+  {
+    "type_name": "is_passionate_about",
+    "json_schema": {}
+  },
+  {
+    "type_name": "favorite_movie",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_condition",
+    "json_schema": {}
+  },
+  {
+    "type_name": "lives_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "moved_to",
+    "json_schema": {}
+  },
+  {
+    "type_name": "met",
+    "json_schema": {}
+  },
+  {
+    "type_name": "met_at",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_connection_with",
+    "json_schema": {}
+  },
+  {
+    "type_name": "partner_of",
+    "json_schema": {}
+  },
+  {
+    "type_name": "participated_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_status",
+    "json_schema": {}
+  },
+  {
+    "type_name": "attended_high_school_with",
+    "json_schema": {}
+  },
+  {
+    "type_name": "attended_college_with",
+    "json_schema": {}
+  },
+  {
+    "type_name": "best_man_for",
+    "json_schema": {}
+  },
+  {
+    "type_name": "significant_part_of_life",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_brother",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_occupation",
+    "json_schema": {}
+  },
+  {
+    "type_name": "older_than",
+    "json_schema": {}
+  },
+  {
+    "type_name": "younger_than",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_sister",
+    "json_schema": {}
+  },
+  {
+    "type_name": "mother_of",
+    "json_schema": {}
+  },
+  {
+    "type_name": "considers_soul_mate",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_best_friend",
+    "json_schema": {}
+  },
+  {
+    "type_name": "considers_soulmate",
+    "json_schema": {}
+  },
+  {
+    "type_name": "best_friend_of",
+    "json_schema": {}
+  },
+  {
+    "type_name": "knows",
+    "json_schema": {}
+  },
+  {
+    "type_name": "significant_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "dedicated_to",
+    "json_schema": {}
+  },
+  {
+    "type_name": "favorite_band",
+    "json_schema": {}
+  },
+  {
+    "type_name": "wants",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_dog",
+    "json_schema": {}
+  },
+  {
+    "type_name": "sibling_of",
+    "json_schema": {}
+  },
+  {
+    "type_name": "pair_bonded_with",
+    "json_schema": {}
+  },
+  {
+    "type_name": "part_of_family_of",
+    "json_schema": {}
+  },
+  {
+    "type_name": "part_of",
+    "json_schema": {}
+  },
+  {
+    "type_name": "calls",
+    "json_schema": {}
+  },
+  {
+    "type_name": "works_as",
+    "json_schema": {}
+  },
+  {
+    "type_name": "beloved_by",
+    "json_schema": {}
+  },
+  {
+    "type_name": "beloved_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "attended",
+    "json_schema": {}
+  },
+  {
+    "type_name": "graduated_from",
+    "json_schema": {}
+  },
+  {
+    "type_name": "awarded_by",
+    "json_schema": {}
+  },
+  {
+    "type_name": "owned",
+    "json_schema": {}
+  },
+  {
+    "type_name": "had",
+    "json_schema": {}
+  },
+  {
+    "type_name": "had_dog",
+    "json_schema": {}
+  },
+  {
+    "type_name": "uses",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_carrier",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_wife",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_phone",
+    "json_schema": {}
+  },
+  {
+    "type_name": "writes_for",
+    "json_schema": {}
+  },
+  {
+    "type_name": "wrote",
+    "json_schema": {}
+  },
+  {
+    "type_name": "writes_about",
+    "json_schema": {}
+  },
+  {
+    "type_name": "supports",
+    "json_schema": {}
+  },
+  {
+    "type_name": "advocates_for",
+    "json_schema": {}
+  },
+  {
+    "type_name": "criticized",
+    "json_schema": {}
+  },
+  {
+    "type_name": "grew_up_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "lived_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "located_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_father",
+    "json_schema": {}
+  },
+  {
+    "type_name": "biked_with",
+    "json_schema": {}
+  },
+  {
+    "type_name": "biked_from",
+    "json_schema": {}
+  },
+  {
+    "type_name": "biked_to",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_memories_with",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_sibling",
+    "json_schema": {}
+  },
+  {
+    "type_name": "owns",
+    "json_schema": {}
+  },
+  {
+    "type_name": "prefers",
+    "json_schema": {}
+  },
+  {
+    "type_name": "less_prefers",
+    "json_schema": {}
+  },
+  {
+    "type_name": "prefers_less_than",
+    "json_schema": {}
+  },
+  {
+    "type_name": "favorite_season_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "enjoys_playing",
+    "json_schema": {}
+  },
+  {
+    "type_name": "returns_to",
+    "json_schema": {}
+  },
+  {
+    "type_name": "drew",
+    "json_schema": {}
+  },
+  {
+    "type_name": "played_chess_with",
+    "json_schema": {}
+  },
+  {
+    "type_name": "played_against",
+    "json_schema": {}
+  },
+  {
+    "type_name": "drew_with",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_political_leaning",
+    "json_schema": {}
+  },
+  {
+    "type_name": "committed_to",
+    "json_schema": {}
+  },
+  {
+    "type_name": "dislikes",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_trait",
+    "json_schema": {}
+  },
+  {
+    "type_name": "speaks",
+    "json_schema": {}
+  },
+  {
+    "type_name": "based_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "released",
+    "json_schema": {}
+  },
+  {
+    "type_name": "recorded_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "recorded_with",
+    "json_schema": {}
+  },
+  {
+    "type_name": "vocalist_of",
+    "json_schema": {}
+  },
+  {
+    "type_name": "office_mates_with",
+    "json_schema": {}
+  },
+  {
+    "type_name": "child_of",
+    "json_schema": {}
+  },
+  {
+    "type_name": "holds",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_project",
+    "json_schema": {}
+  },
+  {
+    "type_name": "is_fan_of",
+    "json_schema": {}
+  },
+  {
+    "type_name": "preceded",
+    "json_schema": {}
+  },
+  {
+    "type_name": "created",
+    "json_schema": {}
+  },
+  {
+    "type_name": "defense_against",
+    "json_schema": {}
+  },
+  {
+    "type_name": "perceives",
+    "json_schema": {}
+  },
+  {
+    "type_name": "becomes",
+    "json_schema": {}
+  },
+  {
+    "type_name": "analyzes",
+    "json_schema": {}
+  },
+  {
+    "type_name": "regulated_by",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_client",
+    "json_schema": {}
+  },
+  {
+    "type_name": "played_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "brought_joy_to",
+    "json_schema": {}
+  },
+  {
+    "type_name": "faced",
+    "json_schema": {}
+  },
+  {
+    "type_name": "at",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_goal",
+    "json_schema": {}
+  },
+  {
+    "type_name": "career_goal_at",
+    "json_schema": {}
+  },
+  {
+    "type_name": "career_goal",
+    "json_schema": {}
+  },
+  {
+    "type_name": "practices",
+    "json_schema": {}
+  },
+  {
+    "type_name": "includes",
+    "json_schema": {}
+  },
+  {
+    "type_name": "applies_for",
+    "json_schema": {}
+  },
+  {
+    "type_name": "tailors",
+    "json_schema": {}
+  },
+  {
+    "type_name": "completes",
+    "json_schema": {}
+  },
+  {
+    "type_name": "enrolls_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "participates_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "publishes",
+    "json_schema": {}
+  },
+  {
+    "type_name": "collaborates_with",
+    "json_schema": {}
+  },
+  {
+    "type_name": "submitted_to",
+    "json_schema": {}
+  },
+  {
+    "type_name": "practices_on",
+    "json_schema": {}
+  },
+  {
+    "type_name": "prepares_for",
+    "json_schema": {}
+  },
+  {
+    "type_name": "networks_with",
+    "json_schema": {}
+  },
+  {
+    "type_name": "attends",
+    "json_schema": {}
+  },
+  {
+    "type_name": "refines_skills_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "refines_skills_with",
+    "json_schema": {}
+  },
+  {
+    "type_name": "explores",
+    "json_schema": {}
+  },
+  {
+    "type_name": "such_as",
+    "json_schema": {}
+  },
+  {
+    "type_name": "showcases_on",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_capital",
+    "json_schema": {}
+  },
+  {
+    "type_name": "is_name_for",
+    "json_schema": {}
+  },
+  {
+    "type_name": "occurs_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "originates_from",
+    "json_schema": {}
+  },
+  {
+    "type_name": "named",
+    "json_schema": {}
+  },
+  {
+    "type_name": "named_after",
+    "json_schema": {}
+  },
+  {
+    "type_name": "is_not_a",
+    "json_schema": {}
+  },
+  {
+    "type_name": "works_at",
+    "json_schema": {}
+  },
+  {
+    "type_name": "appeared_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "first_appeared_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_season",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_episode",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_title",
+    "json_schema": {}
+  },
+  {
+    "type_name": "helps",
+    "json_schema": {}
+  },
+  {
+    "type_name": "manages",
+    "json_schema": {}
+  },
+  {
+    "type_name": "designed_for",
+    "json_schema": {}
+  },
+  {
+    "type_name": "helps_manage",
+    "json_schema": {}
+  },
+  {
+    "type_name": "receives",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_feature",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_features_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_ability",
+    "json_schema": {}
+  },
+  {
+    "type_name": "associated_with",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_mobile_carrier",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_chat_handle",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_favorite",
+    "json_schema": {}
+  },
+  {
+    "type_name": "wants_to_watch",
+    "json_schema": {}
+  },
+  {
+    "type_name": "wants_to_see",
+    "json_schema": {}
+  },
+  {
+    "type_name": "in_relationship_with",
+    "json_schema": {}
+  },
+  {
+    "type_name": "possibly_is",
+    "json_schema": {}
+  },
+  {
+    "type_name": "client_of",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_taken",
+    "json_schema": {}
+  },
+  {
+    "type_name": "looking_for",
+    "json_schema": {}
+  },
+  {
+    "type_name": "will_take",
+    "json_schema": {}
+  },
+  {
+    "type_name": "follows",
+    "json_schema": {}
+  },
+  {
+    "type_name": "involved_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "officemate_of",
+    "json_schema": {}
+  },
+  {
+    "type_name": "ate",
+    "json_schema": {}
+  },
+  {
+    "type_name": "set",
+    "json_schema": {}
+  },
+  {
+    "type_name": "related_to",
+    "json_schema": {}
+  },
+  {
+    "type_name": "provided",
+    "json_schema": {}
+  },
+  {
+    "type_name": "selected_from",
+    "json_schema": {}
+  },
+  {
+    "type_name": "used_for",
+    "json_schema": {}
+  },
+  {
+    "type_name": "attributed_to",
+    "json_schema": {}
+  },
+  {
+    "type_name": "scheduled_for",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_participant",
+    "json_schema": {}
+  },
+  {
+    "type_name": "received_quote_from",
+    "json_schema": {}
+  },
+  {
+    "type_name": "located_at",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_fax",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_attendance_line",
+    "json_schema": {}
+  },
+  {
+    "type_name": "sent_email_to",
+    "json_schema": {}
+  },
+  {
+    "type_name": "shared_recipes_with",
+    "json_schema": {}
+  },
+  {
+    "type_name": "curated",
+    "json_schema": {}
+  },
+  {
+    "type_name": "intended_for",
+    "json_schema": {}
+  },
+  {
+    "type_name": "for",
+    "json_schema": {}
+  },
+  {
+    "type_name": "had_participant",
+    "json_schema": {}
+  },
+  {
+    "type_name": "took_place_on",
+    "json_schema": {}
+  },
+  {
+    "type_name": "used",
+    "json_schema": {}
+  },
+  {
+    "type_name": "organizes",
+    "json_schema": {}
+  },
+  {
+    "type_name": "provided_guide_to",
+    "json_schema": {}
+  },
+  {
+    "type_name": "about",
+    "json_schema": {}
+  },
+  {
+    "type_name": "helped",
+    "json_schema": {}
+  },
+  {
+    "type_name": "requested",
+    "json_schema": {}
+  },
+  {
+    "type_name": "to_receive",
+    "json_schema": {}
+  },
+  {
+    "type_name": "hosts",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_passion_for",
+    "json_schema": {}
+  },
+  {
+    "type_name": "dating",
+    "json_schema": {}
+  },
+  {
+    "type_name": "features",
+    "json_schema": {}
+  },
+  {
+    "type_name": "performed_by",
+    "json_schema": {}
+  },
+  {
+    "type_name": "available_on",
+    "json_schema": {}
+  },
+  {
+    "type_name": "can_be_watched_on",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_website",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_nationality",
+    "json_schema": {}
+  },
+  {
+    "type_name": "born_on",
+    "json_schema": {}
+  },
+  {
+    "type_name": "appeared_with",
+    "json_schema": {}
+  },
+  {
+    "type_name": "character_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "source_of",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_event",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_link",
+    "json_schema": {}
+  },
+  {
+    "type_name": "favorite_cuisine",
+    "json_schema": {}
+  },
+  {
+    "type_name": "prefers_travel_destination",
+    "json_schema": {}
+  },
+  {
+    "type_name": "began_on",
+    "json_schema": {}
+  },
+  {
+    "type_name": "officemate_at",
+    "json_schema": {}
+  },
+  {
+    "type_name": "sensitive_to",
+    "json_schema": {}
+  },
+  {
+    "type_name": "avoids",
+    "json_schema": {}
+  },
+  {
+    "type_name": "wants_to_visit",
+    "json_schema": {}
+  },
+  {
+    "type_name": "finds_interesting",
+    "json_schema": {}
+  },
+  {
+    "type_name": "favorite_dessert",
+    "json_schema": {}
+  },
+  {
+    "type_name": "worked_for",
+    "json_schema": {}
+  },
+  {
+    "type_name": "reads",
+    "json_schema": {}
+  },
+  {
+    "type_name": "listens_to",
+    "json_schema": {}
+  },
+  {
+    "type_name": "is_great_at",
+    "json_schema": {}
+  },
+  {
+    "type_name": "remembers",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_spouse",
+    "json_schema": {}
+  },
+  {
+    "type_name": "incorporated_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "interested_in_accessing",
+    "json_schema": {}
+  },
+  {
+    "type_name": "wants_to_use",
+    "json_schema": {}
+  },
+  {
+    "type_name": "identified_limitation",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_limitation",
+    "json_schema": {}
+  },
+  {
+    "type_name": "plans_to_use",
+    "json_schema": {}
+  },
+  {
+    "type_name": "used_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "connects_to",
+    "json_schema": {}
+  },
+  {
+    "type_name": "wants_access_to",
+    "json_schema": {}
+  },
+  {
+    "type_name": "lacks_feature",
+    "json_schema": {}
+  },
+  {
+    "type_name": "to",
+    "json_schema": {}
+  },
+  {
+    "type_name": "to_be_integrated_into",
+    "json_schema": {}
+  },
+  {
+    "type_name": "plans_to_integrate",
+    "json_schema": {}
+  },
+  {
+    "type_name": "integrates_into",
+    "json_schema": {}
+  },
+  {
+    "type_name": "accesses",
+    "json_schema": {}
+  },
+  {
+    "type_name": "wants_to_access",
+    "json_schema": {}
+  },
+  {
+    "type_name": "runs_on",
+    "json_schema": {}
+  },
+  {
+    "type_name": "integrate_into",
+    "json_schema": {}
+  },
+  {
+    "type_name": "will_incorporate_into",
+    "json_schema": {}
+  },
+  {
+    "type_name": "intends_to_incorporate",
+    "json_schema": {}
+  },
+  {
+    "type_name": "to_be_incorporated_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "wants_to_connect_to",
+    "json_schema": {}
+  },
+  {
+    "type_name": "accessible_from",
+    "json_schema": {}
+  },
+  {
+    "type_name": "lacks_status",
+    "json_schema": {}
+  },
+  {
+    "type_name": "limited_to",
+    "json_schema": {}
+  },
+  {
+    "type_name": "suggested_using",
+    "json_schema": {}
+  },
+  {
+    "type_name": "can_be_exposed_with",
+    "json_schema": {}
+  },
+  {
+    "type_name": "used_to_expose",
+    "json_schema": {}
+  },
+  {
+    "type_name": "integrates_with",
+    "json_schema": {}
+  },
+  {
+    "type_name": "used_by",
+    "json_schema": {}
+  },
+  {
+    "type_name": "referenced",
+    "json_schema": {}
+  },
+  {
+    "type_name": "created_by",
+    "json_schema": {}
+  },
+  {
+    "type_name": "knows_source_of",
+    "json_schema": {}
+  },
+  {
+    "type_name": "is_likely_member_of",
+    "json_schema": {}
+  },
+  {
+    "type_name": "announcer_for",
+    "json_schema": {}
+  },
+  {
+    "type_name": "contributes_to",
+    "json_schema": {}
+  },
+  {
+    "type_name": "is_one_of",
+    "json_schema": {}
+  },
+  {
+    "type_name": "member_of",
+    "json_schema": {}
+  },
+  {
+    "type_name": "considers_as",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_subject",
+    "json_schema": {}
+  },
+  {
+    "type_name": "contains",
+    "json_schema": {}
+  },
+  {
+    "type_name": "sent",
+    "json_schema": {}
+  },
+  {
+    "type_name": "sent_sonnet_to",
+    "json_schema": {}
+  },
+  {
+    "type_name": "chose_subject",
+    "json_schema": {}
+  },
+  {
+    "type_name": "chose",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_song",
+    "json_schema": {}
+  },
+  {
+    "type_name": "praised",
+    "json_schema": {}
+  },
+  {
+    "type_name": "familiar_with",
+    "json_schema": {}
+  },
+  {
+    "type_name": "unfamiliar_with",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_video",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_contact",
+    "json_schema": {}
+  },
+  {
+    "type_name": "in_contacts_of",
+    "json_schema": {}
+  },
+  {
+    "type_name": "working_on",
+    "json_schema": {}
+  },
+  {
+    "type_name": "aims_to_predict",
+    "json_schema": {}
+  },
+  {
+    "type_name": "does_not_aim_to_predict",
+    "json_schema": {}
+  },
+  {
+    "type_name": "levels_up",
+    "json_schema": {}
+  },
+  {
+    "type_name": "spares",
+    "json_schema": {}
+  },
+  {
+    "type_name": "implemented",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_experience_playing",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_experience_with",
+    "json_schema": {}
+  },
+  {
+    "type_name": "includes_activity",
+    "json_schema": {}
+  },
+  {
+    "type_name": "appears_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_alias",
+    "json_schema": {}
+  },
+  {
+    "type_name": "plays_role_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "built",
+    "json_schema": {}
+  },
+  {
+    "type_name": "makes_up",
+    "json_schema": {}
+  },
+  {
+    "type_name": "competes_with",
+    "json_schema": {}
+  },
+  {
+    "type_name": "can_create",
+    "json_schema": {}
+  },
+  {
+    "type_name": "built_on_top_of",
+    "json_schema": {}
+  },
+  {
+    "type_name": "aims_to_rival",
+    "json_schema": {}
+  },
+  {
+    "type_name": "plans_to_open_source",
+    "json_schema": {}
+  },
+  {
+    "type_name": "developed",
+    "json_schema": {}
+  },
+  {
+    "type_name": "develops",
+    "json_schema": {}
+  },
+  {
+    "type_name": "intends_to_open_source",
+    "json_schema": {}
+  },
+  {
+    "type_name": "aims_to_compete_with",
+    "json_schema": {}
+  },
+  {
+    "type_name": "aims_for",
+    "json_schema": {}
+  },
+  {
+    "type_name": "worked_on",
+    "json_schema": {}
+  },
+  {
+    "type_name": "aims_for_success_of",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_infrastructure",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_component",
+    "json_schema": {}
+  },
+  {
+    "type_name": "supported_by",
+    "json_schema": {}
+  },
+  {
+    "type_name": "spent_time_on",
+    "json_schema": {}
+  },
+  {
+    "type_name": "aims_for_competition_with",
+    "json_schema": {}
+  },
+  {
+    "type_name": "interested_in_similar",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_level",
+    "json_schema": {}
+  },
+  {
+    "type_name": "prefers_loot_with",
+    "json_schema": {}
+  },
+  {
+    "type_name": "clearing",
+    "json_schema": {}
+  },
+  {
+    "type_name": "plans_to_move_to",
+    "json_schema": {}
+  },
+  {
+    "type_name": "plans_to_burn",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_level_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "plans",
+    "json_schema": {}
+  },
+  {
+    "type_name": "involves",
+    "json_schema": {}
+  },
+  {
+    "type_name": "not_interchangeable_with",
+    "json_schema": {}
+  },
+  {
+    "type_name": "can_equip",
+    "json_schema": {}
+  },
+  {
+    "type_name": "requires",
+    "json_schema": {}
+  },
+  {
+    "type_name": "cleared",
+    "json_schema": {}
+  },
+  {
+    "type_name": "includes_location",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_skill",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_skill_level",
+    "json_schema": {}
+  },
+  {
+    "type_name": "is_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "in_game",
+    "json_schema": {}
+  },
+  {
+    "type_name": "exists_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "wants_to_kill",
+    "json_schema": {}
+  },
+  {
+    "type_name": "targets_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "inquired_about",
+    "json_schema": {}
+  },
+  {
+    "type_name": "was_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "featured_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "asked_about",
+    "json_schema": {}
+  },
+  {
+    "type_name": "concerns",
+    "json_schema": {}
+  },
+  {
+    "type_name": "observed_lack_of",
+    "json_schema": {}
+  },
+  {
+    "type_name": "explored_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "targets",
+    "json_schema": {}
+  },
+  {
+    "type_name": "in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "considered_using",
+    "json_schema": {}
+  },
+  {
+    "type_name": "aims_to_eliminate",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_nickname",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_background_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "considering_adopting",
+    "json_schema": {}
+  },
+  {
+    "type_name": "said",
+    "json_schema": {}
+  },
+  {
+    "type_name": "acted_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "played",
+    "json_schema": {}
+  },
+  {
+    "type_name": "thinks_is_good_actor",
+    "json_schema": {}
+  },
+  {
+    "type_name": "thinks_is_weird",
+    "json_schema": {}
+  },
+  {
+    "type_name": "thinks_boring",
+    "json_schema": {}
+  },
+  {
+    "type_name": "discussed_with",
+    "json_schema": {}
+  },
+  {
+    "type_name": "discussed",
+    "json_schema": {}
+  },
+  {
+    "type_name": "compared_to",
+    "json_schema": {}
+  },
+  {
+    "type_name": "does_not_support",
+    "json_schema": {}
+  },
+  {
+    "type_name": "does_not_buy_from",
+    "json_schema": {}
+  },
+  {
+    "type_name": "plans_to_buy",
+    "json_schema": {}
+  },
+  {
+    "type_name": "plans_to_play",
+    "json_schema": {}
+  },
+  {
+    "type_name": "empathizes_with",
+    "json_schema": {}
+  },
+  {
+    "type_name": "cannot_support",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_reason",
+    "json_schema": {}
+  },
+  {
+    "type_name": "motivated_by",
+    "json_schema": {}
+  },
+  {
+    "type_name": "due_to",
+    "json_schema": {}
+  },
+  {
+    "type_name": "appreciates",
+    "json_schema": {}
+  },
+  {
+    "type_name": "understands",
+    "json_schema": {}
+  },
+  {
+    "type_name": "invented",
+    "json_schema": {}
+  },
+  {
+    "type_name": "revolutionized",
+    "json_schema": {}
+  },
+  {
+    "type_name": "enables",
+    "json_schema": {}
+  },
+  {
+    "type_name": "allows_decryption_by",
+    "json_schema": {}
+  },
+  {
+    "type_name": "paired_with",
+    "json_schema": {}
+  },
+  {
+    "type_name": "allows_decrypt",
+    "json_schema": {}
+  },
+  {
+    "type_name": "encrypted_messages_decrypted_by",
+    "json_schema": {}
+  },
+  {
+    "type_name": "boss_of",
+    "json_schema": {}
+  },
+  {
+    "type_name": "enabled",
+    "json_schema": {}
+  },
+  {
+    "type_name": "can",
+    "json_schema": {}
+  },
+  {
+    "type_name": "used_to",
+    "json_schema": {}
+  },
+  {
+    "type_name": "husband_of",
+    "json_schema": {}
+  },
+  {
+    "type_name": "surrounded_by",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_birth_year",
+    "json_schema": {}
+  },
+  {
+    "type_name": "born_in_month",
+    "json_schema": {}
+  },
+  {
+    "type_name": "born_in_year",
+    "json_schema": {}
+  },
+  {
+    "type_name": "close_in_age_with",
+    "json_schema": {}
+  },
+  {
+    "type_name": "siblings_with",
+    "json_schema": {}
+  },
+  {
+    "type_name": "talks_with",
+    "json_schema": {}
+  },
+  {
+    "type_name": "was_apart_from",
+    "json_schema": {}
+  },
+  {
+    "type_name": "closer_in_age_to",
+    "json_schema": {}
+  },
+  {
+    "type_name": "shared_experiences_with",
+    "json_schema": {}
+  },
+  {
+    "type_name": "went_on_trip_with",
+    "json_schema": {}
+  },
+  {
+    "type_name": "traveled_around",
+    "json_schema": {}
+  },
+  {
+    "type_name": "moved_from",
+    "json_schema": {}
+  },
+  {
+    "type_name": "held",
+    "json_schema": {}
+  },
+  {
+    "type_name": "attended_high_school_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "accepted_to",
+    "json_schema": {}
+  },
+  {
+    "type_name": "met_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "offered_by",
+    "json_schema": {}
+  },
+  {
+    "type_name": "enrolled_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_family",
+    "json_schema": {}
+  },
+  {
+    "type_name": "returned_to",
+    "json_schema": {}
+  },
+  {
+    "type_name": "studied_at",
+    "json_schema": {}
+  },
+  {
+    "type_name": "backward_compatible_with",
+    "json_schema": {}
+  },
+  {
+    "type_name": "president_of",
+    "json_schema": {}
+  },
+  {
+    "type_name": "made_statement_about",
+    "json_schema": {}
+  },
+  {
+    "type_name": "produces",
+    "json_schema": {}
+  },
+  {
+    "type_name": "stated",
+    "json_schema": {}
+  },
+  {
+    "type_name": "expressed_surprise_to",
+    "json_schema": {}
+  },
+  {
+    "type_name": "comments_on",
+    "json_schema": {}
+  },
+  {
+    "type_name": "joked_about",
+    "json_schema": {}
+  },
+  {
+    "type_name": "considered_telling",
+    "json_schema": {}
+  },
+  {
+    "type_name": "compatible_with",
+    "json_schema": {}
+  },
+  {
+    "type_name": "can_be_upcycled",
+    "json_schema": {}
+  },
+  {
+    "type_name": "valuable_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_property",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_effective",
+    "json_schema": {}
+  },
+  {
+    "type_name": "favors",
+    "json_schema": {}
+  },
+  {
+    "type_name": "registered_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_quantity",
+    "json_schema": {}
+  },
+  {
+    "type_name": "runs",
+    "json_schema": {}
+  },
+  {
+    "type_name": "emphasizes",
+    "json_schema": {}
+  },
+  {
+    "type_name": "covers",
+    "json_schema": {}
+  },
+  {
+    "type_name": "acts_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "could_work_on",
+    "json_schema": {}
+  },
+  {
+    "type_name": "traveling_to",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_habit",
+    "json_schema": {}
+  },
+  {
+    "type_name": "can_work_on",
+    "json_schema": {}
+  },
+  {
+    "type_name": "excels_at",
+    "json_schema": {}
+  },
+  {
+    "type_name": "assigns",
+    "json_schema": {}
+  },
+  {
+    "type_name": "assigned_to",
+    "json_schema": {}
+  },
+  {
+    "type_name": "cover",
+    "json_schema": {}
+  },
+  {
+    "type_name": "prepared_for",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_upcoming",
+    "json_schema": {}
+  },
+  {
+    "type_name": "includes_destination",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_trip_to",
+    "json_schema": {}
+  },
+  {
+    "type_name": "will_study",
+    "json_schema": {}
+  },
+  {
+    "type_name": "is_strong_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "can_be_assigned",
+    "json_schema": {}
+  },
+  {
+    "type_name": "preparing_trip_to",
+    "json_schema": {}
+  },
+  {
+    "type_name": "includes_subject",
+    "json_schema": {}
+  },
+  {
+    "type_name": "studies",
+    "json_schema": {}
+  },
+  {
+    "type_name": "can_assign",
+    "json_schema": {}
+  },
+  {
+    "type_name": "provides",
+    "json_schema": {}
+  },
+  {
+    "type_name": "preparing",
+    "json_schema": {}
+  },
+  {
+    "type_name": "focus_on",
+    "json_schema": {}
+  },
+  {
+    "type_name": "will_work_on",
+    "json_schema": {}
+  },
+  {
+    "type_name": "tailored_for",
+    "json_schema": {}
+  },
+  {
+    "type_name": "includes_participant",
+    "json_schema": {}
+  },
+  {
+    "type_name": "aims_for_independent_activities",
+    "json_schema": {}
+  },
+  {
+    "type_name": "prepares",
+    "json_schema": {}
+  },
+  {
+    "type_name": "wants_independent_activities_for",
+    "json_schema": {}
+  },
+  {
+    "type_name": "centers_on",
+    "json_schema": {}
+  },
+  {
+    "type_name": "wants_to_prepare",
+    "json_schema": {}
+  },
+  {
+    "type_name": "includes_student",
+    "json_schema": {}
+  },
+  {
+    "type_name": "preparing_for",
+    "json_schema": {}
+  },
+  {
+    "type_name": "plans_activities_for",
+    "json_schema": {}
+  },
+  {
+    "type_name": "will_travel_to",
+    "json_schema": {}
+  },
+  {
+    "type_name": "strong_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "used_as_resource_for",
+    "json_schema": {}
+  },
+  {
+    "type_name": "teaches",
+    "json_schema": {}
+  },
+  {
+    "type_name": "include",
+    "json_schema": {}
+  },
+  {
+    "type_name": "studies_for",
+    "json_schema": {}
+  },
+  {
+    "type_name": "has_label",
+    "json_schema": {}
+  },
+  {
+    "type_name": "offered_at",
+    "json_schema": {}
+  },
+  {
+    "type_name": "discussed_using",
+    "json_schema": {}
+  },
+  {
+    "type_name": "restructure",
+    "json_schema": {}
+  },
+  {
+    "type_name": "suggested_including",
+    "json_schema": {}
+  },
+  {
+    "type_name": "could_improve",
+    "json_schema": {}
+  },
+  {
+    "type_name": "specified_version",
+    "json_schema": {}
+  },
+  {
+    "type_name": "states_existence_of",
+    "json_schema": {}
+  },
+  {
+    "type_name": "applies_to",
+    "json_schema": {}
+  },
+  {
+    "type_name": "attacked",
+    "json_schema": {}
+  },
+  {
+    "type_name": "targeted",
+    "json_schema": {}
+  },
+  {
+    "type_name": "conducted_sabotage_on",
+    "json_schema": {}
+  },
+  {
+    "type_name": "conducted",
+    "json_schema": {}
+  },
+  {
+    "type_name": "adversary_of",
+    "json_schema": {}
+  },
+  {
+    "type_name": "denied_involvement_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "opposed",
+    "json_schema": {}
+  },
+  {
+    "type_name": "killed_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "killed",
+    "json_schema": {}
+  },
+  {
+    "type_name": "holds_role",
+    "json_schema": {}
+  },
+  {
+    "type_name": "not_involved_in",
+    "json_schema": {}
+  },
+  {
+    "type_name": "advised",
+    "json_schema": {}
+  },
+  {
+    "type_name": "believed_necessary_for",
+    "json_schema": {}
+  },
+  {
+    "type_name": "declared",
+    "json_schema": {}
+  },
+  {
+    "type_name": "expects_retaliation_from",
+    "json_schema": {}
+  },
+  {
+    "type_name": "may_use",
+    "json_schema": {}
+  },
+  {
+    "type_name": "had_indication_about",
+    "json_schema": {}
+  },
+  {
+    "type_name": "racing_for",
+    "json_schema": {}
+  },
+  {
+    "type_name": "denies_pursuing",
+    "json_schema": {}
+  },
+  {
+    "type_name": "notified",
+    "json_schema": {}
+  },
+  {
+    "type_name": "were_informed_about",
+    "json_schema": {}
+  },
+  {
+    "type_name": "would_not_participate_in_strikes_on",
+    "json_schema": {}
+  },
+  {
+    "type_name": "defended",
+    "json_schema": {}
+  },
+  {
+    "type_name": "was_at",
+    "json_schema": {}
+  },
+  {
+    "type_name": "present_during",
+    "json_schema": {}
+  },
+  {
+    "type_name": "claimed_about",
+    "json_schema": {}
+  },
+  {
+    "type_name": "closed",
+    "json_schema": {}
+  },
+  {
+    "type_name": "affected",
+    "json_schema": {}
+  },
+  {
+    "type_name": "suspended",
+    "json_schema": {}
+  },
+  {
+    "type_name": "departs_from",
+    "json_schema": {}
+  },
+  {
+    "type_name": "communicated_with",
+    "json_schema": {}
+  },
+  {
+    "type_name": "waited_for_outcome_of",
+    "json_schema": {}
+  },
+  {
+    "type_name": "thanked",
+    "json_schema": {}
+  },
+  {
+    "type_name": "supported",
+    "json_schema": {}
+  },
+  {
+    "type_name": "vowed_to_strike",
+    "json_schema": {}
+  }
+]

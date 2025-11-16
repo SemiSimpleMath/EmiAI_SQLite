@@ -1,0 +1,20 @@
+{
+  "timestamp": "2025-09-30T16:13:29.963776+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 0,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [
+    "Critique failed: 'ProblematicNode' object has no attribute 'node_id'"
+  ],
+  "processed_nodes": [
+    {
+      "node_id": "38ece277-d9b9-4938-b4db-9f2309fe8859",
+      "label": "To-do list",
+      "status": "identified",
+      "problem_description": "The node likely represents a specific personal document (Jukka's to-do list) but is labeled generically as 'To-do list', creating ambiguity and potential collisions with other lists. The description is generally clear but somewhat subjective. Type and category fit a document entity; no temporal fields are required.",
+      "resolution_notes": null
+    }
+  ]
+}

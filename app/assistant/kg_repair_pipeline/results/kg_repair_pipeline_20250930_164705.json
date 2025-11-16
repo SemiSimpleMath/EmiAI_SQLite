@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-09-30T16:47:05.770014+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 1,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "38ece277-d9b9-4938-b4db-9f2309fe8859",
+      "label": "To-do list",
+      "status": "validated",
+      "problem_description": "The node represents a specific personal document but is labeled with a generic term (To-do list), which conflicts with the description that specifies it is Jukka's list. This creates ambiguity and potential conflation with other to-do lists. No temporal data is required for an Entity document. Type=Entity and category=document seem plausible, though a more specific class (e.g., Document/TaskList) may exist in the ontology.",
+      "resolution_notes": "- Disambiguate label: rename to a unique, convention-compliant form such as \"Jukka To-do List\" or \"To-do list (Jukka)\"; avoid possessive/apostrophes if naming policy prefers.\n- Add aliases: [\"To-do list\", \"Todo list\", \"Task list\", \"Jukka's to-do list\"].\n- Add owner/maintainer link: connect to the Person node \"Jukka\" via owns/authored_by/maintained_by.\n- Improve connectivity: link to relevant Task/Project nodes, the tool or storage location (e.g., Notion/Evernote/file path/URL), and related concepts (personal productivity, planning). If tasks are modeled separately, add contains/organizes relations.\n- Consider ontology refinement: if available, set Type or subclass to Document.TaskList (or similar) and/or set category to personal_document/task_list.\n- Clarify description: briefly state scope (personal vs work or combined), medium (digital/paper), and canonical location; keep it document-focused.\n- Metadata enhancements: replace generic source with a concrete source (e.g., application + link), add sensitivity/privacy flag (personal document), and, if uncertain, reduce confidence or mark verification_needed. Add last_reviewed/last_updated if supported.\n- Ensure a stable identifier and, if multiple lists exist (work/personal), create distinct nodes and cross-reference them.\n- Validate edge count after updates; target >3 meaningful connections to avoid orphan/weak-node issues."
+    }
+  ]
+}

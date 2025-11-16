@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-09-30T17:21:45.680770+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 1,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "38ece277-d9b9-4938-b4db-9f2309fe8859",
+      "label": "To-do list",
+      "status": "validated",
+      "problem_description": "The node likely represents a specific document (Jukka's personal to-do list). The current label is generic and inconsistent with the specific description, which can cause ambiguity or conflation with a generic concept node. Type=Entity and category=document appear reasonable if this is an instance-level document; no temporal data is required.",
+      "resolution_notes": "1) Rename the label to a specific, disambiguated form, e.g., \"Jukka's to-do list\" (or follow the graph's naming convention such as \"Jukka - To-do list\").\n2) Add aliases covering common variants: \"To-do list (Jukka)\", \"Jukka todo list\", \"Jukka to-do list\", \"Personal to-do list (Jukka)\", \"To-Do List (Jukka)\", \"Todo list (Jukka)\".\n3) Add an instance_of/link to the concept/class node for \"to-do list\" (or \"task list\") to avoid conceptual conflation.\n4) Add a maintained_by/owned_by/authored_by edge to the Person node for Jukka.\n5) Add edges to its storage/location (e.g., file path, URL, app like Todoist/Notion) and, if available, to related Goals/Tasks or a Workspace/Project node to improve connectivity.\n6) Normalize punctuation and casing: ensure ASCII apostrophe in description (Jukka's) and consistent hyphenation/capitalization across aliases.\n7) Optionally refine the description to be concise and neutral: include purpose, owner, and system/tool; remove subjective phrasing.\n8) Review importance: keep 0.5 unless this is a central personal artifact, in which case consider 0.6-0.7.\n9) Ensure category aligns with taxonomy (document vs personal_document) and add a privacy/sensitivity tag if supported."
+    }
+  ]
+}

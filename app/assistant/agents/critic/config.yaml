@@ -1,0 +1,31 @@
+name: critic
+class_name: Agent
+color: "red"
+llm_provider: "openai"
+llm_params:
+  engine: "gpt-4o-mini"
+  temperature: 0.1
+
+allowed_tools: []
+except_tools: []
+
+user_context_items:
+  - task
+  - information
+  - summary
+  - recent_history
+  - checklist
+  - progress
+  - important_links
+  - last_plan
+
+system_context_items:
+  - task
+  - tool_descriptions
+  - allowed_nodes
+
+rag_fields:
+  - information:
+      -chat
+  - task:
+      -chat

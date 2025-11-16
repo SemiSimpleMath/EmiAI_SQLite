@@ -1,0 +1,14 @@
+name: taxonomy_path_generator
+class_name: Agent
+agent_type: structured_output
+model: gpt-4o-mini
+temperature: 0.2
+timeout: 120
+system_prompt_file: prompts/system.j2
+user_prompt_file: prompts/user.j2
+agent_form: agent_form.py
+user_context_items:
+  - node_label
+  - node_sentence
+  - node_type
+

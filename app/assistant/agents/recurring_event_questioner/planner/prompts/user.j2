@@ -1,0 +1,5 @@
+Today is {{ date_time }}
+**Event:** {{ event_title }}
+{% if event_description %}**Description:** {{ event_description }}{% endif %}
+{% if recurrence_rule %}**Recurrence:** {{ recurrence_rule }}{% endif %}
+{% if recent_history %}{{ recent_history }}{% endif %}

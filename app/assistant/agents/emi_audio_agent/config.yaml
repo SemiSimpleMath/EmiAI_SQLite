@@ -1,0 +1,28 @@
+name: emi_audio_agent
+class_name: EmiAudioAgent
+color: "white"
+llm_params:
+  llm_provider: "openai"
+  engine: "gpt-4o-mini"
+  temperature: 0.1
+
+system_context_items:
+  - resource_header
+  - resource_assistant_personality
+  - resource_assistant_role
+  - resource_core_user_info
+  - resource_chat_guidelines
+  - resource_user_data
+
+user_context_items:
+  - date_time
+  - entity_injection
+  - history
+  - agent_input
+
+# RAG fields removed - now using entity card injection instead
+# rag_fields:
+#   agent_input: ["chat", "slack"]
+
+events:
+  - emi_chat_speaking_mode_request

@@ -1,0 +1,648 @@
+from datetime import datetime, timedelta, timezone
+import threading
+from app.assistant.maintenance_manager.chat_summary import ChatSummaryRunner
+from app.assistant.maintenance_manager.maintenance_tool_caller import MaintenanceToolCaller
+from app.assistant.maintenance_manager.save_to_unified_db import save_to_unified_db
+from app.assistant.maintenance_manager.daily_summary_scheduler import DailySummaryScheduler
+from app.assistant.ServiceLocator.service_locator import DI
+# from app.assistant.rag_pipeline.rag_processor import RAGProcessor  # DEPRECATED
+from app.assistant.utils.logging_config import get_maintenance_logger
+from app.assistant.utils.pydantic_classes import Message
+from app.assistant.user_settings_manager.user_settings import can_run_feature
+
+logger = get_maintenance_logger(__name__)
+
+
+class MaintenanceManager:
+    def __init__(self, name: str = "maintenance_manager"):
+
+        self.name = name
+        self.event_hub = DI.event_hub
+
+        # ENABLED: Automatic maintenance tasks (for KG processing)
+        self.event_hub.register_event("idle_mode", self.idle_mode_handler)
+
+        self.tool_caller = MaintenanceToolCaller()
+
+        # Dictionaries for rate limiting publish events
+        self.last_publish_times = {}  # Stores the last publish time for each event
+        self.publish_intervals = {
+            'summarize_chat': timedelta(seconds=300),  # DISABLED
+            'maintenance': timedelta(seconds=30),  # Run maintenance more frequently to allow 5-min email checks
+            'system_state_monitor': timedelta(seconds=300),  # DISABLED
+            'action_decider': timedelta(seconds=240),
+            # 'rag_processing': timedelta(minutes=12),  # DISABLED - DEPRECATED
+            'kg_processing': timedelta(minutes=15),  # DISABLED
+            'kg_explorer': timedelta(hours=2),  # DISABLED
+            'kg_repair_pipeline': timedelta(minutes=5),  # NEW: KG repair pipeline testing ✨
+            'taxonomy_processing': timedelta(minutes=20),  # NEW: Taxonomy classification processing ✨
+        }
+
+        self.last_summary_time = datetime.now(timezone.utc)
+
+        # Initialize daily summary scheduler for idle mode processing
+        self.daily_summary_scheduler = DailySummaryScheduler()
+
+        # Track if KG repair pipeline is currently running (to prevent concurrent runs)
+        self.kg_repair_pipeline_running = False
+
+        # Thread safety for maintenance operations
+        self.processing_lock = threading.RLock()
+
+    def should_summarize(self, messages) -> bool:
+        return len(messages) > 50 or self.estimate_token_count(messages) > 2048
+
+    def estimate_token_count(self, messages) -> int:
+        # Rough token estimate: 1 token ≈ 4 characters in English text
+        total_chars = sum(len(msg.content or "") for msg in messages)
+        return total_chars // 4
+
+    def should_publish(self, event_name: str) -> bool:
+        now = datetime.now(timezone.utc)
+        last_time = self.last_publish_times.get(event_name, datetime.min.replace(tzinfo=timezone.utc))
+        interval = self.publish_intervals.get(event_name, timedelta(seconds=30))
+        if now - last_time >= interval:
+            self.last_publish_times[event_name] = now
+            return True
+        return False
+
+    def should_run_daily_summary(self) -> bool:
+        """
+        Check if daily summary should run (6am-5pm Pacific Time, once per day).
+        
+        Returns:
+            bool: True if daily summary should run, False otherwise
+        """
+        # Use local Pacific Time instead of UTC
+        from zoneinfo import ZoneInfo
+        now = datetime.now(ZoneInfo("America/Los_Angeles"))
+
+        # Check if we're in the time window (6am-5pm Pacific Time)
+        current_hour = now.hour
+        if not (6 <= current_hour < 17):  # 6am to 5pm (17:00) Pacific
+            return False
+
+        # Check if we've already run today
+        today = now.date()
+        last_run_date = getattr(self, 'last_daily_summary_date', None)
+
+        if last_run_date == today:
+            return False  # Already ran today
+
+        # Check if daily summary file already exists for today
+        from app.assistant.maintenance_manager.daily_summary_storage import DailySummaryStorage
+        storage = DailySummaryStorage()
+        today_str = today.strftime("%Y-%m-%d")
+
+        if storage.get_daily_summary(today_str) is not None:
+            # File already exists, mark as run for today
+            self.last_daily_summary_date = today
+            return False
+
+        # Should run - mark the date
+        self.last_daily_summary_date = today
+        return True
+
+    def _is_tool_quiet_hours(self) -> bool:
+        """
+        Check if we're in quiet hours for tool calls (11pm-7am Pacific Time).
+        Returns True if tools should be disabled.
+        """
+        from zoneinfo import ZoneInfo
+        now_local = datetime.now(ZoneInfo("America/Los_Angeles"))
+        current_hour = now_local.hour
+        
+        # Disable tool calls between 23:00 (11pm) and 07:00 (7am) Pacific Time
+        if current_hour >= 23 or current_hour < 7:
+            return True
+        return False
+
+    def _is_kg_processing_window(self) -> bool:
+        """
+        Check if we're in the KG/taxonomy processing window (12am-5am Pacific Time).
+        Returns True if KG and taxonomy processing should run.
+        """
+        from zoneinfo import ZoneInfo
+        now_local = datetime.now(ZoneInfo("America/Los_Angeles"))
+        current_hour = now_local.hour
+        
+        # Run KG and taxonomy processing between 00:00 (midnight) and 05:00 (5am) Pacific Time
+        if 0 <= current_hour < 5:
+            return True
+        return False
+
+    def idle_mode_handler(self, idle_msg):
+        logger.info("Idle mode triggered - running maintenance tasks.")
+
+        # 1. Chat saving (always runs)
+        self.save_chat_history()
+
+        # 2. Chat summarization (always runs if needed)
+        if self.should_publish("summarize_chat"):
+            messages = DI.global_blackboard.get_messages()
+            if self.should_summarize(messages):
+                ChatSummaryRunner(DI.global_blackboard).run()
+
+        # 3. Tool execution (respects quiet hours 11pm-7am)
+        if self.should_publish("maintenance"):
+            if self._is_tool_quiet_hours():
+                from zoneinfo import ZoneInfo
+                now_local = datetime.now(ZoneInfo("America/Los_Angeles"))
+                logger.info(f"⏸️ Tool quiet hours (11pm-7am PT) - skipping tool calls (current time: {now_local.strftime('%H:%M %Z')})")
+            else:
+                self.tool_caller.call_next_tool_if_ready()
+
+        # 4. System state monitoring (checks feature flag)
+        if self.should_publish("system_state_monitor"):
+            if can_run_feature('system_state_monitor'):
+                try:
+                    DI.system_state_monitor.run()
+                except AttributeError:
+                    logger.info("System state monitor not available - skipping")
+            else:
+                logger.debug("⏸️ System state monitor disabled in settings")
+
+        # 5. RAG processing - DEPRECATED
+        # if self.should_publish("rag_processing"):
+        #     self.run_rag_processing()
+
+        # 6. Knowledge Graph processing (runs midnight-5am PT only, checks feature flag & API key)
+        if self.should_publish("kg_processing"):
+            if not can_run_feature('kg'):
+                logger.debug("⏸️ KG processing disabled in settings or missing OpenAI API key")
+            elif self._is_kg_processing_window():
+                self.run_kg_processing()
+            else:
+                from zoneinfo import ZoneInfo
+                now_local = datetime.now(ZoneInfo("America/Los_Angeles"))
+                logger.debug(f"⏸️ KG processing window is 12am-5am PT (current time: {now_local.strftime('%H:%M %Z')})")
+
+        # 7. Daily Summary processing (checks feature flag & API keys)
+        if self.should_run_daily_summary():
+            if can_run_feature('daily_summary'):
+                self.run_daily_summary()
+            else:
+                logger.info("⏸️ Daily summary disabled in settings or missing required API keys (Google, OpenAI)")
+
+        # 8. Taxonomy processing (runs midnight-5am PT only, checks feature flag & API key)
+        if self.should_publish("taxonomy_processing"):
+            if not can_run_feature('taxonomy'):
+                logger.debug("⏸️ Taxonomy processing disabled in settings or missing OpenAI API key")
+            elif self._is_kg_processing_window():
+                self.run_taxonomy_processing()
+            else:
+                from zoneinfo import ZoneInfo
+                now_local = datetime.now(ZoneInfo("America/Los_Angeles"))
+                logger.debug(f"⏸️ Taxonomy processing window is 12am-5am PT (current time: {now_local.strftime('%H:%M %Z')})")
+
+        # 8. Knowledge Graph Explorer - DISABLED
+        # if self.should_publish("kg_explorer"):
+        #     self.run_kg_explorer()
+
+        # 9. KG REPAIR PIPELINE (DISABLED)
+        # if self.should_publish("kg_repair_pipeline"):
+        #     self.run_kg_repair_pipeline()
+
+    def scheduler_event_handler(self, event_msg):
+        """
+        Handle scheduler events, specifically daily summary events.
+        Respects quiet hours (11pm-7am PT) for non-critical events.
+        """
+        try:
+            # Check if we're in quiet hours for scheduler events
+            if self._is_tool_quiet_hours():
+                from zoneinfo import ZoneInfo
+                now_local = datetime.now(ZoneInfo("America/Los_Angeles"))
+                logger.info(f"⏸️ Scheduler quiet hours (11pm-7am PT) - ignoring scheduler event (current time: {now_local.strftime('%H:%M %Z')})")
+                return
+            
+            event_data = event_msg.data
+            if not event_data:
+                logger.warning("Scheduler event missing data")
+                return
+
+            event_payload = event_data.get("event_payload", {})
+            task = event_payload.get("task")
+
+            if task == "daily_summary":
+                logger.info("🕖 Daily summary event received from scheduler")
+                self.run_daily_summary()
+            else:
+                logger.info(f"Scheduler event received for task: {task}")
+
+        except Exception as e:
+            logger.error(f"Error handling scheduler event: {e}")
+
+    def save_chat_history(self):
+        with self.processing_lock:
+            global_black_board = DI.global_blackboard
+            global_black_board_messages = global_black_board.get_messages()
+
+            chat_messages = [
+                msg for msg in global_black_board_messages
+                if msg.is_chat
+                   and msg.sub_data_type not in ["history_summary", "entity_card_injection", "agent_notification"]
+                   and msg.content
+                   and not getattr(msg, 'test_mode', False)  # Skip messages with test_mode flag
+            ]
+
+            if len(chat_messages) == 0:
+                logger.info("No chat messages to save.")
+                return
+
+            # Check if we have any new messages since last save
+            try:
+                latest_msg_time = max(m.timestamp for m in chat_messages)
+                # Only skip if we have messages and the latest is older than our last save time
+                if latest_msg_time <= self.last_summary_time:
+                    logger.info("No new chat messages since last summary. Skipping summarization.")
+                    return
+            except Exception as e:
+                logger.error(f"Error checking message timestamps: {e}")
+                # If there's an error with timestamps, still try to save the messages
+                pass
+
+            result = []
+            for msg in chat_messages:
+                data = {
+                    'id': msg.id,
+                    'timestamp': msg.timestamp,
+                    'role': getattr(msg, "role", None) or 'unknown',
+                    'message': msg.content,
+                    'source': "chat",
+                    'processed': False,
+                }
+
+                result.append(data)
+
+            if len(result) == 0:
+                logger.info("No chat messages to save.")
+                return
+
+            # Update the last summary time before saving to avoid race conditions
+            self.last_summary_time = datetime.now(timezone.utc)
+            save_to_unified_db(result, "chat")
+
+    def setup_daily_summary_schedule(self):
+        """
+        Set up the daily summary to run at 7am every day.
+        """
+        try:
+            # Get the scheduler service
+            scheduler_service = DI.scheduler
+            if not scheduler_service:
+                logger.warning("Scheduler service not available. Daily summary scheduling skipped.")
+                return
+
+            event_scheduler = scheduler_service.get_event_scheduler()
+
+            # Create daily summary event (7am every day)
+            from app.assistant.scheduler.pydantic_types.base_event_data import BaseEventData
+
+            # Calculate next 7am
+            now = datetime.now(timezone.utc)
+            next_7am = now.replace(hour=7, minute=0, second=0, microsecond=0)
+            if now.hour >= 7:
+                next_7am += timedelta(days=1)
+
+            daily_summary_event = BaseEventData(
+                event_id="daily_summary_7am",
+                event_type="interval",
+                interval=24 * 60 * 60,  # 24 hours in seconds
+                start_date=next_7am.isoformat(),
+                end_date=None,  # Run indefinitely
+                event_payload={
+                    "task": "daily_summary",
+                    "description": "Generate daily summary at 7am"
+                }
+            )
+
+            # Create the event
+            result = event_scheduler.create_event(daily_summary_event)
+            logger.info(f"Daily summary schedule setup: {result}")
+
+        except Exception as e:
+            logger.error(f"Failed to setup daily summary schedule: {e}")
+
+    def run_daily_summary(self):
+        """
+        Execute the daily summary generation.
+        Called by idle mode handler between 6am-5pm, once per day.
+        """
+        try:
+            logger.info("🕖 Daily summary triggered by idle mode")
+            result = self.daily_summary_scheduler.run_daily_summary()
+
+            if result.get("success"):
+                logger.info("✅ Daily summary completed successfully")
+            else:
+                logger.error(f"❌ Daily summary failed: {result.get('error')}")
+
+            return result
+
+        except Exception as e:
+            logger.error(f"❌ Error in daily summary execution: {e}")
+            return {
+                "success": False,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "error": str(e)
+            }
+
+    def run_rag_processing(self):
+        # DEPRECATED: RAG processing has been replaced by the knowledge graph pipeline
+        logger.info("🚫 RAG processing is deprecated and disabled")
+        return {
+            'message': 'RAG processing is deprecated and disabled',
+            'timestamp': datetime.now(timezone.utc).isoformat()
+        }
+
+    def run_kg_processing(self):
+        """
+        Process unified_log messages through knowledge graph pipeline.
+        This includes entity resolution and knowledge graph building.
+        Only runs after midnight Pacific Time.
+        Runs in a separate thread to avoid blocking other maintenance tasks.
+        """
+        # Check if it's after midnight (00:00) Pacific Time
+        from zoneinfo import ZoneInfo
+        now_local = datetime.now(ZoneInfo("America/Los_Angeles"))
+
+        # Check if we've already run KG processing today
+        today = now_local.date()
+        last_kg_run_date = getattr(self, 'last_kg_processing_date', None)
+
+        if last_kg_run_date == today:
+            logger.debug(f"⏸️ KG processing already ran today ({today}) - skipping")
+            return
+
+        # Check if a KG processing thread is already running
+        if getattr(self, 'kg_processing_running', False):
+            logger.debug("⏸️ KG processing already running in background - skipping")
+            return
+
+        # Mark as running and spawn thread
+        self.kg_processing_running = True
+        thread = threading.Thread(target=self._kg_processing_worker, args=(today,), daemon=True)
+        thread.start()
+        logger.info("🧠 Started knowledge graph processing in background thread")
+
+    def _kg_processing_worker(self, today):
+        """Background worker for KG processing"""
+        try:
+            logger.info("🧠 Starting knowledge graph processing...")
+
+            # Step 1: Entity resolution (unified_log → processed_entity_log)
+            from app.assistant.kg_core.log_preprocessing import process_unified_log_chunks_with_entity_resolution
+
+            entity_result = process_unified_log_chunks_with_entity_resolution(
+                chunk_size=8,
+                overlap_size=3,
+                source_filter='chat',  # Only process chat messages
+                role_filter=['user', 'assistant']
+            )
+
+            logger.info(f"✅ Entity resolution completed: {entity_result}")
+
+            # Step 2: Knowledge graph processing (processed_entity_log → KG)
+            from app.assistant.kg_core.kg_pipeline import process_all_processed_entity_logs_to_kg
+
+            kg_result = process_all_processed_entity_logs_to_kg(
+                batch_size=100,
+                max_batches=1,  # Process one batch per idle cycle to avoid blocking
+                role_filter=['user', 'assistant']
+            )
+
+            logger.info(f"✅ Knowledge graph processing completed: {kg_result}")
+
+            # Mark that we ran KG processing today
+            self.last_kg_processing_date = today
+
+        except Exception as e:
+            logger.error(f"❌ Error in KG processing: {e}")
+        finally:
+            self.kg_processing_running = False
+
+    def run_taxonomy_processing(self):
+        """
+        Process unclassified nodes through the taxonomy pipeline.
+        This classifies nodes into the taxonomy hierarchy during idle time.
+        Runs in a separate thread to avoid blocking other maintenance tasks.
+        """
+        # Check if a taxonomy processing thread is already running
+        if getattr(self, 'taxonomy_processing_running', False):
+            logger.debug("⏸️ Taxonomy processing already running in background - skipping")
+            return
+
+        # Mark as running and spawn thread
+        self.taxonomy_processing_running = True
+        thread = threading.Thread(target=self._taxonomy_processing_worker, daemon=True)
+        thread.start()
+        logger.info("🏷️ Started taxonomy processing in background thread")
+
+    def _taxonomy_processing_worker(self):
+        """Background worker for taxonomy processing"""
+        try:
+            logger.info("🏷️ Starting taxonomy processing...")
+
+            # Import the taxonomy pipeline function
+            from app.assistant.kg_core.taxonomy.taxonomy_pipeline import process_unclassified_nodes_batch
+
+            # Process a batch of unclassified nodes
+            # Using a smaller batch size for idle processing to avoid overwhelming the system
+            result = process_unclassified_nodes_batch(
+                batch_size=50,  # Smaller batch for idle processing
+                node_type=None  # Process all node types
+            )
+
+            if result.get('nodes_processed', 0) > 0:
+                logger.info(f"✅ Taxonomy processing completed: {result}")
+            else:
+                logger.info("📭 No unclassified nodes found for taxonomy processing")
+
+        except Exception as e:
+            logger.error(f"❌ Error in taxonomy processing: {e}")
+        finally:
+            self.taxonomy_processing_running = False
+
+    def run_kg_explorer(self):
+        """
+        Run the Knowledge Graph Explorer to analyze the KG and generate insights.
+        """
+        try:
+            logger.info("🔍 Starting KG Explorer analysis...")
+
+            # Create and run the KG Explorer manager
+            kg_explorer_manager = DI.multi_agent_manager_factory.create_manager("kg_explorer_manager")
+
+            # Set up exploration parameters
+            exploration_input = {
+                "exploration_scope": "full",
+                "focus_areas": ["missing_dates", "orphaned_nodes", "data_quality", "weak_connections"]
+            }
+
+            # Run the exploration
+            result = kg_explorer_manager.request_handler(
+                Message(
+                    task=f"Explore and analyze the knowledge graph with focus on: {exploration_input['focus_areas']}")
+            )
+
+            if result:
+                logger.info(f"✅ KG Explorer completed: {result.content}")
+
+                # Save exploration results (optional - could save to a file or database)
+                self._save_exploration_results(result)
+
+                return {
+                    'exploration_result': result.content,
+                    'timestamp': datetime.now(timezone.utc).isoformat()
+                }
+            else:
+                logger.warning("⚠️ KG Explorer returned no results")
+                return {
+                    'status': 'no_results',
+                    'timestamp': datetime.now(timezone.utc).isoformat()
+                }
+
+        except Exception as e:
+            logger.error(f"❌ Error in KG Explorer: {e}")
+            return {
+                'error': str(e),
+                'timestamp': datetime.now(timezone.utc).isoformat()
+            }
+
+    def _save_exploration_results(self, result):
+        """
+        Save KG exploration results to a file for review.
+        """
+        try:
+            from app.assistant.maintenance_manager.daily_summary_storage import DailySummaryStorage
+
+            # Create a timestamped filename
+            timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+            filename = f"kg_exploration_{timestamp}.json"
+
+            # Save to the daily_summaries directory
+            import os
+            summaries_dir = os.path.join(os.path.dirname(__file__), "..", "..", "daily_summaries")
+            os.makedirs(summaries_dir, exist_ok=True)
+
+            filepath = os.path.join(summaries_dir, filename)
+
+            exploration_data = {
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "analysis": result.content,
+                "type": "kg_exploration"
+            }
+
+            with open(filepath, 'w', encoding='utf-8') as f:
+                import json
+                json.dump(exploration_data, f, indent=2, ensure_ascii=False)
+
+            logger.info(f"📁 KG exploration results saved to: {filepath}")
+
+        except Exception as e:
+            logger.error(f"❌ Error saving exploration results: {e}")
+
+    def run_kg_repair_pipeline(self):
+        """
+        Run the KG Repair Pipeline to identify and fix problematic nodes.
+        
+        This is the main entry point for the pipeline, providing Flask + DI context
+        needed for the questioner stage (ask_user tool) and implementer stage (kg_team).
+        """
+        # Prevent concurrent pipeline runs
+        if self.kg_repair_pipeline_running:
+            logger.info("⏸️ KG Repair Pipeline already running - skipping this cycle")
+            return
+
+        try:
+            self.kg_repair_pipeline_running = True
+            logger.info("🔧 Starting KG Repair Pipeline...")
+
+            from app.assistant.kg_repair_pipeline.pipeline_orchestrator import KGPipelineOrchestrator
+
+            # Create the orchestrator
+            orchestrator = KGPipelineOrchestrator()
+
+            # Run the pipeline (max 1 node per run for fast testing)
+            pipeline_state = orchestrator.run_pipeline(max_nodes=1)
+
+            # Log results
+            logger.info(f"✅ KG Repair Pipeline completed:")
+            logger.info(f"   Nodes identified: {pipeline_state.total_nodes_identified}")
+            logger.info(f"   Nodes validated: {pipeline_state.nodes_validated}")
+            logger.info(f"   Nodes questioned: {pipeline_state.nodes_questioned}")
+            logger.info(f"   Nodes resolved: {pipeline_state.nodes_resolved}")
+            logger.info(f"   Nodes skipped: {pipeline_state.nodes_skipped}")
+            logger.info(f"   Errors: {len(pipeline_state.errors)}")
+
+            # Save pipeline results
+            self._save_pipeline_results(pipeline_state)
+
+            return {
+                'success': True,
+                'nodes_identified': pipeline_state.total_nodes_identified,
+                'nodes_validated': pipeline_state.nodes_validated,
+                'nodes_questioned': pipeline_state.nodes_questioned,
+                'nodes_resolved': pipeline_state.nodes_resolved,
+                'nodes_skipped': pipeline_state.nodes_skipped,
+                'errors': pipeline_state.errors,
+                'timestamp': datetime.now(timezone.utc).isoformat()
+            }
+
+        except Exception as e:
+            logger.error(f"❌ Error in KG Repair Pipeline: {e}", exc_info=True)
+            return {
+                'success': False,
+                'error': str(e),
+                'timestamp': datetime.now(timezone.utc).isoformat()
+            }
+        finally:
+            # Always clear the running flag
+            self.kg_repair_pipeline_running = False
+
+    def _save_pipeline_results(self, pipeline_state):
+        """
+        Save KG repair pipeline results to a file for review.
+        """
+        try:
+            import os
+            import json
+
+            # Create a timestamped filename
+            timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+            filename = f"kg_repair_pipeline_{timestamp}.json"
+
+            # Save to the kg_repair_pipeline directory
+            results_dir = os.path.join(os.path.dirname(__file__), "..", "kg_repair_pipeline", "results")
+            os.makedirs(results_dir, exist_ok=True)
+
+            filepath = os.path.join(results_dir, filename)
+
+            pipeline_data = {
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "nodes_identified": pipeline_state.total_nodes_identified,
+                "nodes_validated": pipeline_state.nodes_validated,
+                "nodes_questioned": pipeline_state.nodes_questioned,
+                "nodes_resolved": pipeline_state.nodes_resolved,
+                "nodes_skipped": pipeline_state.nodes_skipped,
+                "errors": pipeline_state.errors,
+                "processed_nodes": [
+                    {
+                        "node_id": node.id,
+                        "label": node.label,
+                        "status": node.status,
+                        "problem_description": node.problem_description,
+                        "resolution_notes": node.resolution_notes
+                    }
+                    for node in pipeline_state.problematic_nodes
+                ]
+            }
+
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump(pipeline_data, f, indent=2, ensure_ascii=False)
+
+            logger.info(f"📁 Pipeline results saved to: {filepath}")
+
+        except Exception as e:
+            logger.error(f"❌ Error saving pipeline results: {e}")

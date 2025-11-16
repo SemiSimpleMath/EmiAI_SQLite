@@ -1,0 +1,61 @@
+name: auto_planner_team_manager
+class_name: MultiAgentManager
+description: "A team manager that orchestrates agent execution for task completion."
+max_cycles: 30  # Prevent infinite loops
+role_bindings:
+  delegator: auto_planner_team::delegator
+  tool_selector: shared::tool_selector
+
+agents:
+  - name: auto_planner_team::delegator
+    class: Delegator
+  - name: auto_planner_team::planner
+    class: Planner
+  - name: auto_planner_team::final_answer
+    class: FinalAnswer
+  - name: shared::tool_arguments
+    class: Agent
+  - name: shared::writer
+    class: Agent
+  - name: shared::mathematician
+    class: Agent
+
+control_nodes:
+  - name: tool_caller
+    class: ToolCaller
+  - name: tool_result_handler
+    class: ToolResultHandler
+  - name: flow_exit_node
+    class: FlowExitNode
+  - name: manager_exit_node
+    class: ManagerExitNode
+  - name: graceful_exit_control_node
+    class: GracefulExitControlNode
+
+tools:
+  allowed_tools:
+    - get_email
+    - send_email
+    - get_calendar_events
+    - create_calendar_event
+    - create_repeating_calendar_event
+    - delete_calendar_event
+    - update_calendar_event
+    - get_todo_tasks
+    - create_todo_task
+    - delete_todo_task
+    - update_todo_task
+    - web_manager
+    - event_manager
+    - ask_user
+    - notify_user
+  except_tools: []
+
+flow_config:
+  state_map:
+    "auto_planner_team::delegator": "auto_planner_team::planner"
+    "shared::tool_arguments": "tool_caller"
+    "auto_planner_team::planner_flow_exit_node": "auto_planner_team::final_answer"
+    "auto_planner_team::final_answer": "manager_exit_node"
+    "graceful_exit": "graceful_exit_control_node"
+    "graceful_exit_control_node": "auto_planner_team::final_answer"

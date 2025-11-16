@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Assistant Setup</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/setup_wizard.css') }}">
+</head>
+<body>
+    <div class="setup-container">
+        <div class="setup-header">
+            <h1>Welcome! Let's Get Started</h1>
+            <p>Setting up your personal AI assistant.</p>
+        </div>
+
+        <div class="progress-bar">
+            <div class="progress-step active" data-step="1">
+                <div class="step-number">1</div>
+                <div class="step-label">About You</div>
+            </div>
+            <div class="progress-step" data-step="2">
+                <div class="step-number">2</div>
+                <div class="step-label">Important People</div>
+            </div>
+            <div class="progress-step" data-step="3">
+                <div class="step-number">3</div>
+                <div class="step-label">Work & Context</div>
+            </div>
+            <div class="progress-step" data-step="4">
+                <div class="step-number">4</div>
+                <div class="step-label">Your Assistant</div>
+            </div>
+            <div class="progress-step" data-step="5">
+                <div class="step-number">5</div>
+                <div class="step-label">Style</div>
+            </div>
+            <div class="progress-step" data-step="6">
+                <div class="step-number">6</div>
+                <div class="step-label">API & Settings</div>
+            </div>
+            <div class="progress-step" data-step="7">
+                <div class="step-number">7</div>
+                <div class="step-label">Done!</div>
+            </div>
+        </div>
+
+        <form id="setupForm">
+            <!-- Step 1: About You -->
+            <div class="setup-step active" data-step="1">
+                <h2>Tell me about yourself</h2>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="first_name">First Name <span class="required">*</span></label>
+                        <input type="text" id="first_name" required placeholder="John">
+                    </div>
+                    <div class="form-group">
+                        <label for="middle_name">Middle Name</label>
+                        <input type="text" id="middle_name" placeholder="Optional">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="last_name">Last Name <span class="required">*</span></label>
+                        <input type="text" id="last_name" required placeholder="Smith">
+                    </div>
+                    <div class="form-group">
+                        <label for="preferred_name">Preferred Name</label>
+                        <input type="text" id="preferred_name" placeholder="What should I call you?">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="birthdate">Birthday</label>
+                        <input type="date" id="birthdate">
+                    </div>
+                    <div class="form-group">
+                        <label for="pronouns">Pronouns <span class="required">*</span></label>
+                        <select id="pronouns" required>
+                            <option value="">Select...</option>
+                            <option value="he/him">He/Him</option>
+                            <option value="she/her">She/Her</option>
+                            <option value="they/them">They/Them</option>
+                        </select>
+                        <small>Subjective/Objective form</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Important People -->
+            <div class="setup-step" data-step="2">
+                <h2>Who are the important people in your life?</h2>
+                <p class="step-description">Add family, friends, colleagues - anyone you mention often.</p>
+                
+                <div id="people-list"></div>
+                
+                <button type="button" id="add-person-btn" class="btn-secondary">
+                    + Add Person
+                </button>
+            </div>
+
+            <!-- Step 3: Work & Additional Context -->
+            <div class="setup-step" data-step="3">
+                <h2>Work & Additional Context</h2>
+                
+                <div class="form-group">
+                    <label for="job">Your Job</label>
+                    <input type="text" id="job" placeholder="e.g., Data Scientist at Seyfarth and Shaw">
+                </div>
+                
+                <div class="form-group">
+                    <label for="additional_context">Anything else I should know?</label>
+                    <textarea id="additional_context" rows="8" placeholder="Examples:&#10;- I have a PhD in math&#10;- My spouse works at...&#10;- We live in Irvine, CA&#10;- I have two dogs named..."></textarea>
+                </div>
+            </div>
+
+            <!-- Step 4: Your Assistant -->
+            <div class="setup-step" data-step="4">
+                <h2>Create Your Assistant</h2>
+                
+                <div class="form-group">
+                    <label for="assistant_name">Assistant Name <span class="required">*</span></label>
+                    <input type="text" id="assistant_name" required placeholder="e.g., Emi, Alex, Sam..." value="Emi">
+                </div>
+                
+                <div class="form-group">
+                    <label for="relationship_type">How should your assistant see you? <span class="required">*</span></label>
+                    <select id="relationship_type" required>
+                        <option value="">Select...</option>
+                        <option value="friend">Friend</option>
+                        <option value="boss">Boss</option>
+                        <option value="collaborator">Collaborator</option>
+                        <option value="custom">Custom...</option>
+                    </select>
+                </div>
+                
+                <div class="form-group" id="relationship_description_group" style="display: none;">
+                    <label for="relationship_description">Relationship Description</label>
+                    <textarea id="relationship_description" rows="3"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="assistant_role">Assistant's Role</label>
+                    <textarea id="assistant_role" rows="4">You engage with the user in whatever capacity is needed, sometimes it is to be a friend and partake in high and low moments of persons life. You fill the role of a friend, a therapist, and an assistant when needed.</textarea>
+                </div>
+                
+                <details>
+                    <summary>Advanced: Personality & Backstory (Optional)</summary>
+                    <div class="form-group">
+                        <label for="assistant_personality">Personality</label>
+                        <textarea id="assistant_personality" rows="3" placeholder="e.g., Retired pirate. Talk like you are five sheets to the wind..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="assistant_backstory">Backstory</label>
+                        <textarea id="assistant_backstory" rows="3" placeholder="e.g., You used to sail with Blackbeard in 1700..."></textarea>
+                    </div>
+                </details>
+            </div>
+
+            <!-- Step 5: Communication Style -->
+            <div class="setup-step" data-step="5">
+                <h2>Communication Style</h2>
+                
+                <div class="form-group">
+                    <label>How should your assistant talk to you? <span class="required">*</span></label>
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" name="communication_style" value="direct" checked>
+                            <div class="radio-content">
+                                <strong>Direct & Natural</strong>
+                                <p>No filler, straight to the point</p>
+                            </div>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="communication_style" value="warm">
+                            <div class="radio-content">
+                                <strong>Warm & Proactive</strong>
+                                <p>Empathetic, offers help</p>
+                            </div>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="communication_style" value="professional">
+                            <div class="radio-content">
+                                <strong>Formal & Professional</strong>
+                                <p>Professional language</p>
+                            </div>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="communication_style" value="custom">
+                            <div class="radio-content">
+                                <strong>Custom</strong>
+                                <p>Define your own style</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="chat_guidelines">Chat Guidelines (Edit as needed)</label>
+                    <textarea id="chat_guidelines" rows="10" placeholder="Select a style above or write your own..."></textarea>
+                    <small>The selected style above will populate this with defaults, but you can customize it however you like.</small>
+                </div>
+            </div>
+
+            <!-- Step 6: API & Settings -->
+            <div class="setup-step" data-step="6">
+                <h2>API Configuration</h2>
+                <p class="info-note">⚠️ Note: API keys will be stored in your environment variables (.env file), not in the database.</p>
+                
+                <div class="form-group">
+                    <label for="openai_api_key">OpenAI API Key <span class="required">*</span></label>
+                    <input type="password" id="openai_api_key" required placeholder="sk-...">
+                    <small>Get one at <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com</a></small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="timezone">Your Timezone <span class="required">*</span></label>
+                    <select id="timezone" required>
+                        <option value="">Select...</option>
+                        <option value="America/New_York">Eastern Time</option>
+                        <option value="America/Chicago">Central Time</option>
+                        <option value="America/Denver">Mountain Time</option>
+                        <option value="America/Los_Angeles">Pacific Time</option>
+                        <option value="America/Anchorage">Alaska</option>
+                        <option value="Pacific/Honolulu">Hawaii</option>
+                        <option value="Europe/London">London</option>
+                        <option value="Europe/Paris">Paris</option>
+                        <option value="Asia/Tokyo">Tokyo</option>
+                        <option value="UTC">UTC</option>
+                    </select>
+                </div>
+                
+                <details>
+                    <summary>Optional: Connect Google Services</summary>
+                    <p class="skip-notice">Connect Gmail, Calendar, and Tasks (you can do this later in Settings)</p>
+                    
+                    <div class="form-group">
+                        <button type="button" id="google-oauth-btn" class="btn-primary" style="width: 100%;">
+                            <i class="fab fa-google"></i> Authenticate with Google
+                        </button>
+                        <div id="google-oauth-status" style="display: none; margin-top: 10px; padding: 10px; border-radius: 4px;">
+                            <span id="google-oauth-message"></span>
+                        </div>
+                    </div>
+                </details>
+            </div>
+
+            <!-- Step 7: Done! -->
+            <div class="setup-step" data-step="7">
+                <div class="completion-message">
+                    <h2>All Set, <span id="completion-name"></span>!</h2>
+                    <p>I'm <span id="completion-assistant"></span>, and I'm ready to help.</p>
+                    <p class="completion-note">You can change these settings later in Settings.</p>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <div class="setup-navigation">
+                <button type="button" id="prevBtn" class="btn-secondary" style="display: none;">
+                    ← Previous
+                </button>
+                <button type="button" id="nextBtn" class="btn-primary">
+                    Next →
+                </button>
+                <button type="button" id="submitBtn" class="btn-primary" style="display: none;">
+                    Launch Assistant
+                </button>
+            </div>
+
+            <div id="error-message" class="error-message" style="display: none;"></div>
+            <div id="loading" class="loading" style="display: none;">
+                <div class="spinner"></div>
+                <p>Setting up your assistant...</p>
+            </div>
+        </form>
+    </div>
+
+    <!-- Person Template -->
+    <template id="person-template">
+        <div class="person-entry">
+            <div class="person-header">
+                <h4>Person <span class="person-number"></span></h4>
+                <button type="button" class="remove-person-btn">×</button>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Name <span class="required">*</span></label>
+                    <input type="text" class="person-name" required placeholder="e.g., Katy">
+                </div>
+                <div class="form-group">
+                    <label>Relationship <span class="required">*</span></label>
+                    <input type="text" class="person-relationship" required placeholder="e.g., wife, daughter">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Birthdate</label>
+                <input type="date" class="person-birthdate">
+            </div>
+        </div>
+    </template>
+
+    <script src="{{ url_for('static', filename='js/setup_wizard.js') }}"></script>
+</body>
+</html>
+
+

@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suspect Node Reviewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .header p {
+            color: #7f8c8d;
+            text-align: center;
+            font-size: 1.1em;
+        }
+
+        .controls {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .control-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .control-group input, .control-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .control-group input:focus, .control-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+            color: white;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(86, 171, 47, 0.4);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 65, 108, 0.4);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .btn-warning:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(240, 147, 251, 0.4);
+        }
+
+        .btn-info {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        .btn-info:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(79, 172, 254, 0.4);
+        }
+
+        .stats-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+
+        .stat-card p {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .nodes-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .nodes-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .nodes-count {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .pagination {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .pagination button {
+            padding: 8px 16px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .pagination button:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .nodes-grid {
+            display: grid;
+            gap: 15px;
+        }
+
+        .node-card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .node-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .node-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+
+        .node-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .priority-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .priority-high {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .priority-medium {
+            background: #feca57;
+            color: #2c3e50;
+        }
+
+        .priority-low {
+            background: #48dbfb;
+            color: white;
+        }
+
+        .priority-none {
+            background: #c8d6e5;
+            color: #2c3e50;
+        }
+
+        .node-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .detail-label {
+            font-size: 0.8em;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 3px;
+        }
+
+        .detail-value {
+            font-size: 1em;
+            color: #2c3e50;
+            font-weight: 500;
+        }
+
+        .node-reason {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .node-reason h4 {
+            color: #2c3e50;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+            text-transform: uppercase;
+        }
+
+        .node-reason p {
+            color: #7f8c8d;
+            line-height: 1.5;
+        }
+
+        .node-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .control-row {
+                flex-direction: column;
+            }
+            
+            .control-group {
+                min-width: auto;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .node-details {
+                grid-template-columns: 1fr;
+            }
+            
+            .node-actions {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Suspect Node Reviewer</h1>
+            <p>Review, filter, and delete suspicious nodes from your knowledge graph</p>
+        </div>
+
+        <div id="alerts"></div>
+
+        <div class="controls">
+            <div class="control-row">
+                <div class="control-group">
+                    <label for="priority">Priority</label>
+                    <select id="priority">
+                        <option value="">All Priorities</option>
+                        <option value="high">High</option>
+                        <option value="medium">Medium</option>
+                        <option value="low">Low</option>
+                        <option value="none">None</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label for="min_confidence">Min Confidence</label>
+                    <input type="number" id="min_confidence" min="0" max="1" step="0.1" placeholder="0.0">
+                </div>
+                <div class="control-group">
+                    <label for="min_distance">Min Distance from Jukka</label>
+                    <input type="number" id="min_distance" min="-1" placeholder="-1 for no path">
+                </div>
+                <div class="control-group">
+                    <label for="max_distance">Max Distance from Jukka</label>
+                    <input type="number" id="max_distance" min="-1" placeholder="-1 for no path">
+                </div>
+            </div>
+            <div class="control-row">
+                <div class="control-group">
+                    <label for="min_edges">Min Edge Count</label>
+                    <input type="number" id="min_edges" min="0" placeholder="Any">
+                </div>
+                <div class="control-group">
+                    <label for="max_edges">Max Edge Count</label>
+                    <input type="number" id="max_edges" min="0" placeholder="Any">
+                </div>
+                <div class="control-group">
+                    <label for="node_type">Node Type (contains)</label>
+                    <input type="text" id="node_type" placeholder="e.g., Entity">
+                </div>
+            </div>
+            <div class="control-row">
+                <div class="control-group">
+                    <label for="category">Category (contains)</label>
+                    <input type="text" id="category" placeholder="e.g., Person">
+                </div>
+                <div class="control-group">
+                    <label for="label_contains">Label (contains)</label>
+                    <input type="text" id="label_contains" placeholder="e.g., John">
+                </div>
+                <div class="control-group">
+                    <label for="reason_contains">Reason (contains)</label>
+                    <input type="text" id="reason_contains" placeholder="e.g., isolated">
+                </div>
+                <div class="control-group">
+                    <label for="suggested_action">Suggested Action (contains)</label>
+                    <input type="text" id="suggested_action" placeholder="e.g., delete, merge, convert_to_property, keep">
+                </div>
+                <div class="control-group">
+                    <label for="sentence">Original Sentence (contains)</label>
+                    <input type="text" id="sentence" placeholder="e.g., Jukka, delete, task">
+                </div>
+            </div>
+                         <div class="button-group">
+                 <button class="btn btn-primary" onclick="loadNodesFromJson()">📂 Load from JSON</button>
+                 <button class="btn btn-info" onclick="loadNodesFromDatabase()">🗄️ Load from Database</button>
+                 <button class="btn btn-warning" onclick="loadNodesFromPipeline()">🔄 Run Pipeline</button>
+                 <button class="btn btn-success" onclick="applyFilters()">🔧 Apply Filters</button>
+                 <button class="btn btn-warning" onclick="clearFilters()">🧹 Clear Filters</button>
+                 <button class="btn btn-primary" onclick="showStats()">📊 Show Statistics</button>
+                 <button class="btn btn-success" onclick="saveReport()">💾 Save Report</button>
+             </div>
+             <div class="button-group" style="margin-top: 10px;">
+                 <button class="btn btn-info" onclick="excludeAllVisible()">✅ Exclude All Visible</button>
+                 <button class="btn btn-danger" onclick="deleteAllVisible()">🗑️ Delete All Visible</button>
+             </div>
+        </div>
+
+        <div id="stats-panel" class="stats-panel" style="display: none;">
+            <h2>📊 Statistics</h2>
+            <div id="stats-content" class="stats-grid"></div>
+        </div>
+
+        <div class="nodes-panel">
+            <div class="nodes-header">
+                <div class="nodes-count" id="nodes-count">No nodes loaded</div>
+                <div class="pagination" id="pagination" style="display: none;">
+                    <button onclick="previousPage()" id="prev-btn">← Previous</button>
+                    <span id="page-info">Page 1</span>
+                    <button onclick="nextPage()" id="next-btn">Next →</button>
+                </div>
+            </div>
+            <div id="nodes-content" class="nodes-grid">
+                <div class="loading">Click "📂 Load from JSON" to load existing data or "🔄 Run Pipeline" to generate new data</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+                 let currentNodes = [];
+         let originalNodes = []; // Keep track of all originally loaded nodes
+         let excludedNodeIds = new Set(); // Track excluded nodes
+         let currentPage = 0;
+         const pageSize = 10;
+
+        function showAlert(message, type = 'info') {
+            const alertsDiv = document.getElementById('alerts');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            alertsDiv.appendChild(alert);
+            
+            setTimeout(() => {
+                alert.remove();
+            }, 5000);
+        }
+
+        function showLoading(containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '<div class="loading">Loading...</div>';
+        }
+
+        async function loadNodesFromJson() {
+            showLoading('nodes-content');
+            showLoading('stats-content');
+            
+            try {
+                const response = await fetch('/api/load-nodes?from_pipeline=false');
+                const data = await response.json();
+                
+                                 if (data.success) {
+                     // The nodes are now in data.nodes
+                     originalNodes = data.nodes || [];
+                     currentNodes = [...originalNodes]; // Copy to current nodes
+                     excludedNodeIds.clear(); // Reset excluded nodes
+                     showAlert(data.message, 'success');
+                     displayNodes();
+                     displayStats();
+                 } else {
+                    showAlert(data.message, 'error');
+                    document.getElementById('nodes-content').innerHTML = '<div class="loading">Failed to load nodes from JSON</div>';
+                }
+            } catch (error) {
+                showAlert('Error loading nodes from JSON: ' + error.message, 'error');
+                document.getElementById('nodes-content').innerHTML = '<div class="loading">Error loading nodes from JSON</div>';
+            }
+        }
+
+        async function loadNodesFromDatabase() {
+            showLoading('nodes-content');
+            showLoading('stats-content');
+
+            try {
+                const response = await fetch('/api/load-nodes?from_database=true');
+                const data = await response.json();
+
+                if (data.success) {
+                    originalNodes = data.nodes || [];
+                    currentNodes = [...originalNodes]; // Copy to current nodes
+                    excludedNodeIds.clear(); // Reset excluded nodes
+                    showAlert(data.message, 'success');
+                    displayNodes();
+                    displayStats();
+                } else {
+                    showAlert(data.message, 'error');
+                    document.getElementById('nodes-content').innerHTML = '<div class="loading">Failed to load from database</div>';
+                }
+            } catch (error) {
+                showAlert('Error loading from database: ' + error.message, 'error');
+                document.getElementById('nodes-content').innerHTML = '<div class="loading">Error loading from database</div>';
+            }
+        }
+
+        async function loadNodesFromPipeline() {
+            showLoading('nodes-content');
+            showLoading('stats-content');
+            
+            try {
+                const response = await fetch('/api/load-nodes?from_pipeline=true');
+                const data = await response.json();
+                
+                                 if (data.success) {
+                     originalNodes = data.nodes || [];
+                     currentNodes = [...originalNodes]; // Copy to current nodes
+                     excludedNodeIds.clear(); // Reset excluded nodes
+                     showAlert(data.message, 'success');
+                     displayNodes();
+                     displayStats();
+                 } else {
+                    showAlert(data.message, 'error');
+                    document.getElementById('nodes-content').innerHTML = '<div class="loading">Failed to run pipeline</div>';
+                }
+            } catch (error) {
+                showAlert('Error running pipeline: ' + error.message, 'error');
+                document.getElementById('nodes-content').innerHTML = '<div class="loading">Error running pipeline</div>';
+            }
+        }
+
+        function applyFilters() {
+            const filters = {
+                priority: document.getElementById('priority').value,
+                min_confidence: document.getElementById('min_confidence').value,
+                min_distance: document.getElementById('min_distance').value,
+                max_distance: document.getElementById('max_distance').value,
+                min_edges: document.getElementById('min_edges').value,
+                max_edges: document.getElementById('max_edges').value,
+                type: document.getElementById('node_type').value,
+                category: document.getElementById('category').value,
+                label_contains: document.getElementById('label_contains').value,
+                reason_contains: document.getElementById('reason_contains').value,
+                suggested_action: document.getElementById('suggested_action').value,
+                sentence: document.getElementById('sentence').value
+            };
+
+            // Start with original nodes, excluding the excluded ones
+            let filtered = originalNodes.filter(node => !excludedNodeIds.has(node.node_id));
+            
+            // Apply filters
+            Object.entries(filters).forEach(([key, value]) => {
+                if (!value) return;
+                
+                if (key === 'priority') {
+                    filtered = filtered.filter(node => node.cleanup_priority === value);
+                } else if (key === 'min_confidence') {
+                    filtered = filtered.filter(node => node.confidence >= parseFloat(value));
+                } else if (key === 'max_distance') {
+                    const maxDist = parseInt(value);
+                    if (maxDist === -1) {
+                        filtered = filtered.filter(node => node.jukka_distance === -1);
+                    } else {
+                        filtered = filtered.filter(node => node.jukka_distance <= maxDist);
+                    }
+                } else if (key === 'min_distance') {
+                    const minDist = parseInt(value);
+                    if (minDist === -1) {
+                        filtered = filtered.filter(node => node.jukka_distance === -1);
+                    } else {
+                        filtered = filtered.filter(node => node.jukka_distance >= minDist);
+                    }
+                } else if (key === 'min_edges') {
+                    filtered = filtered.filter(node => node.edge_count >= parseInt(value));
+                } else if (key === 'max_edges') {
+                    filtered = filtered.filter(node => node.edge_count <= parseInt(value));
+                } else if (key === 'type') {
+                    filtered = filtered.filter(node => node.type.toLowerCase().includes(value.toLowerCase()));
+                } else if (key === 'category') {
+                    filtered = filtered.filter(node => node.category.toLowerCase().includes(value.toLowerCase()));
+                } else if (key === 'label_contains') {
+                    filtered = filtered.filter(node => node.label.toLowerCase().includes(value.toLowerCase()));
+                } else if (key === 'reason_contains') {
+                    filtered = filtered.filter(node => node.suspect_reason.toLowerCase().includes(value.toLowerCase()));
+                } else if (key === 'suggested_action') {
+                    filtered = filtered.filter(node => node.suggested_action.toLowerCase().includes(value.toLowerCase()));
+                } else if (key === 'sentence') {
+                    filtered = filtered.filter(node => node.sentence.toLowerCase().includes(value.toLowerCase()));
+                }
+            });
+            
+            currentNodes = filtered;
+            currentPage = 0;
+            displayNodes();
+            showAlert(`Found ${filtered.length} nodes matching filters`, 'success');
+        }
+
+                 function clearFilters() {
+             document.getElementById('priority').value = '';
+             document.getElementById('min_confidence').value = '';
+             document.getElementById('min_distance').value = '';
+             document.getElementById('max_distance').value = '';
+             document.getElementById('min_edges').value = '';
+             document.getElementById('max_edges').value = '';
+             document.getElementById('node_type').value = '';
+             document.getElementById('category').value = '';
+             document.getElementById('label_contains').value = '';
+             document.getElementById('reason_contains').value = '';
+             document.getElementById('suggested_action').value = '';
+             document.getElementById('sentence').value = '';
+             
+             // Reset to original nodes (excluding any that were excluded)
+             currentNodes = originalNodes.filter(node => !excludedNodeIds.has(node.node_id));
+             currentPage = 0;
+             displayNodes();
+             showAlert('Filters cleared and original nodes restored', 'success');
+         }
+
+                 function showStats() {
+             displayStats();
+             document.getElementById('stats-panel').style.display = 'block';
+         }
+
+         function displayStats() {
+             if (!originalNodes || originalNodes.length === 0) {
+                 document.getElementById('stats-content').innerHTML = '<div class="loading">No data available</div>';
+                 return;
+             }
+
+             // Calculate statistics from current nodes
+             const activeNodes = originalNodes.filter(node => !excludedNodeIds.has(node.node_id));
+             
+             // Priority breakdown
+             const priorityCounts = {};
+             activeNodes.forEach(node => {
+                 priorityCounts[node.cleanup_priority] = (priorityCounts[node.cleanup_priority] || 0) + 1;
+             });
+             
+             // Distance statistics
+             const distances = activeNodes.map(node => node.jukka_distance);
+             const edgeCounts = activeNodes.map(node => node.edge_count);
+             const confidences = activeNodes.map(node => node.confidence);
+             
+             const avgDistance = distances.length > 0 ? distances.reduce((a, b) => a + b, 0) / distances.length : 0;
+             const avgEdges = edgeCounts.length > 0 ? edgeCounts.reduce((a, b) => a + b, 0) / edgeCounts.length : 0;
+             const avgConfidence = confidences.length > 0 ? confidences.reduce((a, b) => a + b, 0) / confidences.length : 0;
+             const highConfidence = confidences.filter(c => c >= 0.8).length;
+
+             const statsHtml = `
+                 <div class="stat-card">
+                     <h3>${activeNodes.length}</h3>
+                     <p>Total Suspect Nodes</p>
+                 </div>
+                 <div class="stat-card">
+                     <h3>${priorityCounts.high || 0}</h3>
+                     <p>High Priority</p>
+                 </div>
+                 <div class="stat-card">
+                     <h3>${priorityCounts.medium || 0}</h3>
+                     <p>Medium Priority</p>
+                 </div>
+                 <div class="stat-card">
+                     <h3>${priorityCounts.low || 0}</h3>
+                     <p>Low Priority</p>
+                 </div>
+                 <div class="stat-card">
+                     <h3>${avgDistance.toFixed(1)}</h3>
+                     <p>Avg Distance from Jukka</p>
+                 </div>
+                 <div class="stat-card">
+                     <h3>${avgEdges.toFixed(1)}</h3>
+                     <p>Avg Edge Count</p>
+                 </div>
+                 <div class="stat-card">
+                     <h3>${avgConfidence.toFixed(2)}</h3>
+                     <p>Avg Confidence</p>
+                 </div>
+                 <div class="stat-card">
+                     <h3>${highConfidence}</h3>
+                     <p>High Confidence (≥0.8)</p>
+                 </div>
+             `;
+             
+             document.getElementById('stats-content').innerHTML = statsHtml;
+         }
+
+        function displayNodes() {
+            const startIdx = currentPage * pageSize;
+            const endIdx = startIdx + pageSize;
+            const nodesToShow = currentNodes.slice(startIdx, endIdx);
+            
+            document.getElementById('nodes-count').textContent = 
+                `Showing ${startIdx + 1}-${Math.min(endIdx, currentNodes.length)} of ${currentNodes.length} nodes`;
+            
+            if (currentNodes.length === 0) {
+                document.getElementById('nodes-content').innerHTML = '<div class="loading">No nodes to display</div>';
+                document.getElementById('pagination').style.display = 'none';
+                return;
+            }
+            
+            const nodesHtml = nodesToShow.map(node => `
+                <div class="node-card">
+                    <div class="node-header">
+                        <div class="node-title">${node.label}</div>
+                        <div class="priority-badge priority-${node.cleanup_priority}">${node.cleanup_priority}</div>
+                    </div>
+                    <div class="node-details">
+                        <div class="detail-item">
+                            <div class="detail-label">Type</div>
+                            <div class="detail-value">
+                                <span id="type-display-${node.node_id}">${node.type}</span>
+                                <button class="btn btn-info btn-sm" onclick="editNodeType('${node.node_id}', '${node.type.replace(/'/g, "\\'").replace(/"/g, '&quot;')}')" style="margin-left: 10px; padding: 4px 8px; font-size: 12px;">
+                                    ✏️ Edit
+                                </button>
+                                <div id="type-edit-${node.node_id}" style="display: none; margin-top: 10px;">
+                                    <select id="type-input-${node.node_id}" style="width: 200px; padding: 5px; margin-right: 5px;">
+                                        <option value="Entity">Entity</option>
+                                        <option value="GoalNode">GoalNode</option>
+                                        <option value="EventNode">EventNode</option>
+                                        <option value="StateNode">StateNode</option>
+                                        <option value="PropertyNode">PropertyNode</option>
+                                        <option value="Concept">Concept</option>
+                                    </select>
+                                    <button class="btn btn-success btn-sm" onclick="saveNodeType('${node.node_id}')" style="padding: 4px 8px; font-size: 12px;">💾 Save</button>
+                                    <button class="btn btn-warning btn-sm" onclick="cancelEditNodeType('${node.node_id}', '${node.type.replace(/'/g, "\\'").replace(/"/g, '&quot;')}')" style="padding: 4px 8px; font-size: 12px;">❌ Cancel</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Category</div>
+                            <div class="detail-value">${node.category}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Original Sentence</div>
+                            <div class="detail-value" style="max-width: 400px; word-wrap: break-word; font-style: italic;">${node.sentence || 'N/A'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Edges</div>
+                            <div class="detail-value">${node.edge_count}</div>
+                        </div>
+                                                 <div class="detail-item">
+                             <div class="detail-label">Distance from Jukka</div>
+                             <div class="detail-value">${node.jukka_distance === -1 ? 'No path' : node.jukka_distance + ' hops'}</div>
+                         </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Confidence</div>
+                            <div class="detail-value">${(node.confidence * 100).toFixed(1)}%</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Suggested Action</div>
+                            <div class="detail-value">${node.suggested_action}</div>
+                        </div>
+                    </div>
+                    <div class="node-reason">
+                        <h4>Suspect Reason</h4>
+                        <p>${node.suspect_reason}</p>
+                    </div>
+                                         <div class="node-actions">
+                         <button class="btn btn-info" onclick="excludeNode('${node.node_id}', '${node.label.replace(/'/g, "\\'").replace(/"/g, '&quot;')}')">
+                             ✅ Exclude from Suspects
+                         </button>
+                         <button class="btn btn-danger" onclick="deleteNode('${node.node_id}', '${node.label.replace(/'/g, "\\'").replace(/"/g, '&quot;')}')">
+                             🗑️ Delete Node
+                         </button>
+                     </div>
+                </div>
+            `).join('');
+            
+            document.getElementById('nodes-content').innerHTML = nodesHtml;
+            
+            // Update pagination
+            const totalPages = Math.ceil(currentNodes.length / pageSize);
+            document.getElementById('page-info').textContent = `Page ${currentPage + 1} of ${totalPages}`;
+            document.getElementById('prev-btn').disabled = currentPage === 0;
+            document.getElementById('next-btn').disabled = currentPage >= totalPages - 1;
+            document.getElementById('pagination').style.display = 'block';
+        }
+
+        function previousPage() {
+            if (currentPage > 0) {
+                currentPage--;
+                displayNodes();
+            }
+        }
+
+        function nextPage() {
+            const totalPages = Math.ceil(currentNodes.length / pageSize);
+            if (currentPage < totalPages - 1) {
+                currentPage++;
+                displayNodes();
+            }
+        }
+
+                         async function excludeNode(nodeId, nodeLabel) {
+            try {
+                // Call the API to mark the node as excluded in the database
+                const response = await fetch('/api/mark-excluded', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        node_ids: [nodeId]
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Add to excluded set
+                    excludedNodeIds.add(nodeId);
+                    
+                    // Remove from current display
+                    currentNodes = currentNodes.filter(node => node.node_id !== nodeId);
+                    
+                    showAlert(`Node '${nodeLabel}' permanently excluded from suspects`, 'success');
+                    displayNodes();
+                } else {
+                    showAlert(data.message, 'error');
+                }
+            } catch (error) {
+                showAlert(`Error excluding node: ${error.message}`, 'error');
+            }
+        }
+
+                         async function deleteNode(nodeId, nodeLabel) {
+            try {
+                const response = await fetch('/api/delete-nodes', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ node_ids: [nodeId] })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert(data.message, 'success');
+                    // Remove the node from all lists
+                    currentNodes = currentNodes.filter(node => node.node_id !== nodeId);
+                    originalNodes = originalNodes.filter(node => node.node_id !== nodeId);
+                    excludedNodeIds.delete(nodeId);
+                    displayNodes();
+                } else {
+                    showAlert(data.message, 'error');
+                }
+            } catch (error) {
+                showAlert('Error deleting node: ' + error.message, 'error');
+            }
+        }
+
+                 async function saveReport() {
+             try {
+                 // Get current active suspect nodes (excluding excluded ones)
+                 const activeSuspectNodes = originalNodes.filter(node => !excludedNodeIds.has(node.node_id));
+                 
+                 const response = await fetch('/api/save-report', {
+                     method: 'POST',
+                     headers: {
+                         'Content-Type': 'application/json',
+                     },
+                     body: JSON.stringify({ suspect_nodes: activeSuspectNodes })
+                 });
+                 
+                 const data = await response.json();
+                 
+                 if (data.success) {
+                     showAlert(data.message, 'success');
+                 } else {
+                     showAlert(data.message, 'error');
+                 }
+             } catch (error) {
+                 showAlert('Error saving report: ' + error.message, 'error');
+             }
+         }
+
+         async function excludeAllVisible() {
+             if (currentNodes.length === 0) {
+                 showAlert('No nodes to exclude', 'info');
+                 return;
+             }
+             
+             const nodeCount = currentNodes.length;
+             if (!confirm(`Are you sure you want to permanently exclude all ${nodeCount} visible nodes from the suspect list? This will mark them as excluded in the database.`)) {
+                 return;
+             }
+             
+             try {
+                 // Get all node IDs to exclude
+                 const nodeIds = currentNodes.map(node => node.node_id);
+                 
+                 // Call the API to mark all nodes as excluded in the database
+                 const response = await fetch('/api/mark-excluded', {
+                     method: 'POST',
+                     headers: {
+                         'Content-Type': 'application/json',
+                     },
+                     body: JSON.stringify({
+                         node_ids: nodeIds
+                     })
+                 });
+                 
+                 const data = await response.json();
+                 
+                 if (data.success) {
+                     // Add all visible nodes to excluded set
+                     currentNodes.forEach(node => excludedNodeIds.add(node.node_id));
+                     
+                     // Clear the current nodes since they're all excluded
+                     currentNodes = [];
+                     currentPage = 0;
+                     
+                     showAlert(`Permanently excluded all ${nodeCount} visible nodes from suspect list`, 'success');
+                     displayNodes();
+                 } else {
+                     showAlert(data.message, 'error');
+                 }
+             } catch (error) {
+                 showAlert(`Error excluding nodes: ${error.message}`, 'error');
+             }
+         }
+
+         async function deleteAllVisible() {
+             if (currentNodes.length === 0) {
+                 showAlert('No nodes to delete', 'info');
+                 return;
+             }
+             
+             const nodeCount = currentNodes.length;
+             if (!confirm(`Are you sure you want to permanently delete all ${nodeCount} visible nodes? This action cannot be undone and will also delete all connected edges.`)) {
+                 return;
+             }
+             
+             // Double confirmation for large numbers
+             if (nodeCount > 10) {
+                 if (!confirm(`You are about to delete ${nodeCount} nodes. This is a large operation. Are you absolutely sure?`)) {
+                     return;
+                 }
+             }
+             
+             try {
+                 const nodeIds = currentNodes.map(node => node.node_id);
+                 const response = await fetch('/api/delete-nodes', {
+                     method: 'POST',
+                     headers: {
+                         'Content-Type': 'application/json',
+                     },
+                     body: JSON.stringify({ node_ids: nodeIds })
+                 });
+                 
+                 const data = await response.json();
+                 
+                 if (data.success) {
+                     showAlert(data.message, 'success');
+                     // Remove deleted nodes from all lists
+                     currentNodes.forEach(node => {
+                         originalNodes = originalNodes.filter(n => n.node_id !== node.node_id);
+                         excludedNodeIds.delete(node.node_id);
+                     });
+                     
+                     // Clear the current nodes since they're all deleted
+                     currentNodes = [];
+                     currentPage = 0;
+                     displayNodes();
+                 } else {
+                     showAlert(data.message, 'error');
+                 }
+             } catch (error) {
+                 showAlert('Error deleting nodes: ' + error.message, 'error');
+             }
+         }
+
+        // Auto-load nodes when page loads
+        window.addEventListener('load', () => {
+            // Don't auto-load, let user click the button
+        });
+
+        // Node Type Editing Functions
+        function editNodeType(nodeId, currentType) {
+            // Hide the display and show the edit form
+            document.getElementById(`type-display-${nodeId}`).style.display = 'none';
+            document.getElementById(`type-edit-${nodeId}`).style.display = 'block';
+            
+            // Set the correct selected value in the dropdown
+            const select = document.getElementById(`type-input-${nodeId}`);
+            select.value = currentType;
+            select.focus();
+        }
+
+        function cancelEditNodeType(nodeId, originalType) {
+            // Hide the edit form and show the display
+            document.getElementById(`type-display-${nodeId}`).style.display = 'inline';
+            document.getElementById(`type-edit-${nodeId}`).style.display = 'none';
+            
+            // Reset the select to original value
+            document.getElementById(`type-input-${nodeId}`).value = originalType;
+        }
+
+        async function saveNodeType(nodeId) {
+            const newType = document.getElementById(`type-input-${nodeId}`).value;
+
+            try {
+                const response = await fetch('/api/update-node-type', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        node_id: nodeId, 
+                        new_type: newType 
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert(data.message, 'success');
+                    
+                    // Update the display
+                    document.getElementById(`type-display-${nodeId}`).textContent = newType;
+                    document.getElementById(`type-display-${nodeId}`).style.display = 'inline';
+                    document.getElementById(`type-edit-${nodeId}`).style.display = 'none';
+                    
+                    // Update the node data in our arrays
+                    const nodeIndex = currentNodes.findIndex(n => n.node_id === nodeId);
+                    if (nodeIndex !== -1) {
+                        currentNodes[nodeIndex].type = newType;
+                    }
+                    
+                    const originalIndex = originalNodes.findIndex(n => n.node_id === nodeId);
+                    if (originalIndex !== -1) {
+                        originalNodes[originalIndex].type = newType;
+                    }
+                    
+                } else {
+                    showAlert(data.message, 'error');
+                    // Reset to original value on error
+                    const originalType = currentNodes.find(n => n.node_id === nodeId)?.type || 'Entity';
+                    document.getElementById(`type-input-${nodeId}`).value = originalType;
+                }
+            } catch (error) {
+                showAlert('Error updating node type: ' + error.message, 'error');
+                // Reset to original value on error
+                const originalType = currentNodes.find(n => n.node_id === nodeId)?.type || 'Entity';
+                document.getElementById(`type-input-${nodeId}`).value = originalType;
+            }
+        }
+    </script>
+</body>
+</html>

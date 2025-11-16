@@ -1,0 +1,11 @@
+name: label
+class_name: Agent
+color: "magenta"
+llm_params:
+  llm_provider: "openai"
+  engine: "gpt-4o-mini"
+  temperature: 0.1
+allowed_tools: []
+user_context_items:
+  - news_item
+system_context_items: []

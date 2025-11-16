@@ -1,0 +1,22 @@
+name: emi_team::final_answer
+class_name: FinalAnswer
+color: "blue"
+llm_params:
+  llm_provider: "openai"
+  engine: "gpt-4o-mini"
+  temperature: 0.1
+
+allowed_tools: []  # No tools needed for this agent
+except_tools: []
+allowed_nodes: [manager_exit_node]
+
+user_context_items:
+  - date_time
+  - task
+  - information
+  - recent_history
+
+
+rag_fields:
+  task: ["chat"]
+  information: ["chat"]

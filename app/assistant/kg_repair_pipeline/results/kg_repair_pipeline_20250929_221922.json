@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-09-29T22:19:22.755164+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 1,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "38ece277-d9b9-4938-b4db-9f2309fe8859",
+      "status": "validated",
+      "problem_description": "The node 'To-do list' appears under-specified and potentially misclassified. It uses node_type 'Entity' (not among the allowed types) with category 'document'. Attributes are empty (no description/owner/metadata), and the label is generic despite context implying it is Jukka’s personal to-do list. The node has only one edge, indicating weak connectivity and likely missing relationships (e.g., maintained_by/owned_by -> Person: Jukka, links to tasks or planning artifacts). The single neighbor has the same label, suggesting a duplicate or self-referential edge that should be investigated and resolved.",
+      "priority": "low",
+      "resolution_notes": "Recommended repair actions:\n1) Verify schema and retype:\n- Confirm allowed node types/categories. If generic 'Entity' is disallowed, reclassify to an allowed type (e.g., Document, List, TaskCollection, Note) and set category accordingly (e.g., document, list).\n- If 'Entity' is allowed, still refine category to a controlled value.\n2) Resolve identity/labeling:\n- Determine intended concept. If this represents a to-do list (possibly Jukka’s), set a human-readable name/title (e.g., \"Jukka’s To‑Do List\") and keep the UUID as the node ID, not as the display label.\n- Ensure there is a distinct name/title attribute separate from the node identifier.\n3) Populate core attributes:\n- name/title, description, owner/maintainer, created_at, updated_at, source/provenance (ingestion_id/source_url), confidence, visibility, language, tags, status.\n4) Restore relationships (if the node is kept):\n- owned_by/maintained_by -> Person (e.g., Jukka, if applicable).\n- has_item/contains -> Task nodes (or links to planning artifacts).\n- part_of -> Project/Workspace/Notebook as appropriate.\n- references/derived_from -> related documents or systems of record.\n- Remove any self-referential edge if discovered unless explicitly modeled.\n5) Deduplicate/merge:\n- Search for duplicates by normalized title/name and metadata. If a 'To-do list' node exists, compare and merge, preserving the most stable ID and migrating edges/attributes; retire duplicates with redirect/alias.\n6) If enrichment fails:\n- If no reliable source or relationships can be established, deprecate or delete the node to avoid orphaned clutter.\n7) QA and governance:\n- Enforce required fields and not-null constraints for the chosen type.\n- Add validation to prevent creation of nodes with empty attributes and zero connectivity unless intentionally allowed as placeholders.\n- Audit analyzer-context mismatch to ensure tools are using the same graph snapshot."
+    }
+  ]
+}

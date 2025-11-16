@@ -1,0 +1,57 @@
+{% if task %}
+Task: {{ task }}
+{% endif %}
+
+{% if information %}
+Additional information:
+{{ information }}
+{% endif %}
+
+{% if final_answer %}
+Collected information towards final answer: {{ final_answer }}
+{% endif %}
+
+{% if summary %}
+Summary: {{ summary }}
+{% endif %}
+
+{% if recent_history %}
+Messages since last plan:
+{% for msg in recent_history %}
+  - {{ msg.sender }}: {{ msg.content }}
+{% endfor %}
+{% endif %}
+
+{% if important_links %}
+Important Links:
+{% for name, url in important_links.items() %}
+  - [{{ name }}]({{ url }})
+{% endfor %}
+{% endif %}
+
+{% if checklist %}
+Current Checklist:
+{% for item in checklist %}
+  - {{ item }}
+{% endfor %}
+{% endif %}
+
+{% if progress %}
+Current Progress:
+{% for progress_item in progress %}
+  - {{ progress_item }}
+{% endfor %}
+{% endif %}
+
+{% if last_agent %}
+Last agent that acted: {{ last_agent }}
+{% endif %}
+
+{% if last_plan %}
+Current plan that you are critiquing:
+{{ last_plan.plan }}
+Planner agent recommends:
+{{ last_plan.action }}
+{{ last_plan.action_input }}
+{% endif %}
+Begin critique!

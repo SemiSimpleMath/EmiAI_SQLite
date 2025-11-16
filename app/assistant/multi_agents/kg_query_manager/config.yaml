@@ -1,0 +1,51 @@
+name: kg_query_manager
+class_name: MultiAgentManager
+description: "A team manager specialized for knowledge graph queries and information retrieval."
+max_cycles: 80  # Prevent infinite loops
+role_bindings:
+  delegator: kg_query::delegator
+  tool_selector: shared::tool_selector
+
+agents:
+  - name: kg_query::delegator
+    class: Delegator
+  - name: kg_query::planner
+    class: Planner
+  - name: kg_query::final_answer
+    class: FinalAnswer
+  - name: shared::tool_arguments
+    class: Agent
+  - name: shared::writer
+    class: Agent
+  - name: shared::mathematician
+    class: Agent
+  - name: kg_query::find_nodes
+    class: Planner
+
+control_nodes:
+  - name: tool_caller
+    class: ToolCaller
+  - name: tool_result_handler
+    class: ToolResultHandler
+  - name: exit_node
+    class: ExitNode
+  - name: flow_exit_node
+    class: FlowExitNode
+  - name: manager_exit_node
+    class: ManagerExitNode
+  - name: graceful_exit_control_node
+    class: GracefulExitControlNode
+
+tools:
+  allowed_tools: [kg_find_node, kg_find_edges, kg_describe_node, kg_describe_edge, ask_user, kg_update_node, kg_create_node, kg_create_edge, kg_delete_node, kg_delete_edge, taxonomy_path_finder]
+  except_tools: []
+
+flow_config:
+  state_map:
+    "kg_query::delegator": "kg_query::planner"
+    "shared::tool_arguments": "tool_caller"
+    "kg_query::planner_flow_exit_node": "kg_query::final_answer"
+    "kg_query::find_nodes_flow_exit_node": "tool_result_handler"
+    "kg_query::final_answer": "manager_exit_node"
+    "graceful_exit": "graceful_exit_control_node"
+    "graceful_exit_control_node": "kg_query::final_answer"

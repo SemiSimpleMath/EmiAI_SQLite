@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-11-02T22:32:39.475516+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 1,
+  "nodes_questioned": 1,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "4e6d8cad-1eed-4687-9650-9143123de1c6",
+      "label": "Uses a calendar",
+      "status": "validated",
+      "problem_description": "The node's label 'Uses a calendar' is too long (four words), violating the guideline that labels should ideally be one or two words, with three being borderline and four being malformed. The semantic label is also not in the correct format, as it should include the entity name in parentheses. Temporal information is minimally sufficient (asserted as true on a specific date), and the description is clear and specific.",
+      "resolution_notes": "Shorten the label to something more concise, such as 'Calendar Use' or 'Calendar Usage'. Add a semantic label in the format 'Calendar Use (Jukka)'. Optionally, clarify the category if 'tool usage' is not standard. No changes needed for the description or temporal information."
+    }
+  ]
+}

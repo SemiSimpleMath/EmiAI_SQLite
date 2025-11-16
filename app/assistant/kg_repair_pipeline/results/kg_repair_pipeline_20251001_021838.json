@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-10-01T02:18:38.537933+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 0,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "38ece277-d9b9-4938-b4db-9f2309fe8859",
+      "label": "To-do list",
+      "status": "failed",
+      "problem_description": "The node likely represents a specific document (Jukka's personal task tracker). Type=Entity and category=document are appropriate. No temporal data is required. Primary issue is inconsistent and overly generic labeling that conflicts with the specific description, creating ambiguity with the concept 'To-do list'.",
+      "resolution_notes": "'UserResponse' object has no attribute 'response_type'"
+    }
+  ]
+}

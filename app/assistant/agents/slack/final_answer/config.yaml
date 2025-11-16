@@ -1,0 +1,28 @@
+name: slack::final_answer
+class_name: FinalAnswer
+color: blue
+llm_params:
+  llm_provider: openai
+  engine: gpt-4o-mini
+  temperature: 0.1
+
+allowed_tools: []
+except_tools: []
+
+user_context_items:
+  - date_time
+  - information
+  - recent_history
+  - task
+
+
+rag_fields:
+  information:
+    - chat
+    - slack
+  task:
+    - chat
+    - slack
+
+type: agent
+

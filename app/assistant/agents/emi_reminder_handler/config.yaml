@@ -1,0 +1,18 @@
+name: emi_reminder_handler
+class_name: EmiReminderHandler
+color: "white"
+llm_params:
+  llm_provider: "openai"
+  engine: "gpt-4o-mini"
+  temperature: 1
+
+system_context_items:
+  - resource_assistant_personality
+
+user_context_items:
+  - date_time
+  - reminder_data
+
+events:
+  - scheduler_event_interval
+  - scheduler_event_one_time_event

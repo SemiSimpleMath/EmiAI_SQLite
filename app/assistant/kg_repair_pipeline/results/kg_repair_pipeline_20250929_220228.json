@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-09-29T22:02:28.602222+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 1,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "38ece277-d9b9-4938-b4db-9f2309fe8859",
+      "status": "validated",
+      "problem_description": "The node 'To-do list' is typed as an Entity (category: document) with quality metrics present, but it lacks attributes, has only one edge, and uses a generic label that is not uniquely identifying. Neighborhood data shows an entity with the same label, indicating a possible duplicate or self-loop. Key relationships (e.g., to the person Jukka and to task items) appear to be missing. No temporal data is required for this node type.",
+      "priority": "medium",
+      "resolution_notes": "- Validate identity: confirm whether this node is intended to represent a document titled 'To-do list'. If yes, add a name/title attribute ('To-do list') and a proper type/category (e.g., Document or List).\n- Add essential metadata: description/summary, created_at, updated_at, source/provenance, author/owner, language, status, confidence, version or content hash, and tags.\n- Establish relationships: link authored_by/owned_by -> Person (e.g., Jukka), has_item/contains -> Task nodes, and any project/context edges (e.g., part_of Project).\n- Check for duplicates: search for nodes with similar title or content; if found, merge and deduplicate; remove or redirect any self-loops unless explicitly allowed by the schema.\n- Structural fix: ensure the node has at least one meaningful outgoing/incoming edge; if no supporting data exists after verification, consider deleting or archiving the node to avoid dangling entities.\n- Ontology alignment: replace generic Category: Entity with the correct class (Document/List) per the schema and apply required fields for that class.\n- Record data quality fields if your model uses them (quality metrics), as they are currently absent."
+    }
+  ]
+}

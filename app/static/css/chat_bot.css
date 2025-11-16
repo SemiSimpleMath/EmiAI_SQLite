@@ -1,0 +1,545 @@
+/* CSS Variables for Theming */
+:root {
+    /* Dark Theme Variables */
+    --background-color: #121212;
+    --header-footer-color: #1f1f1f;
+    --widget-background: #1e1e1e;
+    --widget-background-hover: #2a2a2a;
+    --text-color: #e0e0e0;
+    --heading-color: #1E90FF; /* Dodger Blue */
+    --accent-color: #7232c2;
+    --border-color: #333;
+    --input-background: #2c2c2c;
+    --button-text-color: #1e1e1e;
+    --hover-accent-color: #512ca3;
+    --font-family: 'Roboto', sans-serif;
+    --font-size-base: 16px;
+    --transition-speed: 0.3s;
+
+    /* Header and Footer Heights */
+    --header-height: 60px;
+    --header-shrink-height: 40px;
+    --footer-height: 60px;
+    --footer-shrink-height: 40px;
+}
+
+/* Light Theme Variables */
+[data-theme="light"] {
+    --background-color: #f4f4f4;
+    --header-footer-color: #ffffff;
+    --widget-background: #ffffff;
+    --widget-background-hover: #f0f0f0;
+    --text-color: #333333;
+    --heading-color: #FF4500; /* Orange Red */
+    --accent-color: #ffa500; /* Orange */
+    --border-color: #ccc;
+    --input-background: #ffffff;
+    --button-text-color: #ffffff;
+    --hover-accent-color: #ff8c00; /* Dark Orange */
+}
+
+/* Global Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-family);
+    font-size: var(--font-size-base);
+    background-color: var(--background-color);
+    color: var(--text-color);
+    line-height: 1.6;
+    transition: background-color var(--transition-speed), color var(--transition-speed);
+    padding-top: var(--header-height); /* Dynamic padding based on header */
+    padding-bottom: var(--footer-height); /* Dynamic padding based on footer */
+}
+
+header {
+    background-color: var(--header-footer-color);
+    color: var(--text-color);
+    padding: 0 20px; /* Horizontal padding */
+    text-align: center;
+    border-bottom: 1px solid var(--border-color);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    transition: height var(--transition-speed), all var(--transition-speed);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: var(--header-height);
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+.header-title {
+    font-size: 24px;
+    transition: all 0.5s ease;
+}
+
+header.shrink {
+    height: var(--header-shrink-height);
+    justify-content: flex-start;
+}
+
+header.shrink .header-title {
+    font-size: 14px;
+    color: var(--accent-color);
+    margin-left: 10px;
+}
+
+header.shrink #theme-toggle {
+    position: absolute;
+    top: 5px;
+    right: 10px;
+}
+
+#theme-toggle {
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    padding: 8px 12px;
+    background-color: var(--accent-color);
+    color: var(--button-text-color);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color var(--transition-speed), transform var(--transition-speed);
+    font-size: 1em;
+}
+
+#theme-toggle:hover {
+    background-color: var(--hover-accent-color);
+    transform: scale(1.05);
+}
+
+.dashboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    padding: 20px;
+}
+
+.widget {
+    background-color: var(--widget-background);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transition: transform var(--transition-speed) ease-in-out, box-shadow var(--transition-speed) ease-in-out, background-color var(--transition-speed);
+    will-change: transform, box-shadow;
+    max-height: 400px; /* Set a maximum height as per your design */
+    overflow-y: auto; /* Add vertical scrollbar if content exceeds the max height */
+}
+
+/* Custom scrollbar styles for the widgets */
+.widget::-webkit-scrollbar {
+    width: 8px;
+}
+
+.widget::-webkit-scrollbar-track {
+    background: var(--widget-background);
+}
+
+.widget::-webkit-scrollbar-thumb {
+    background-color: var(--accent-color);
+    border-radius: 4px;
+}
+
+.widget:hover {
+    transform: scale(1.05);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.35);
+    background-color: var(--widget-background-hover);
+}
+
+.widget h2 {
+    color: var(--heading-color);
+    font-size: 1.5em;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 5px;
+}
+
+.chat-area {
+    height: 250px;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    padding: 10px;
+    overflow-y: auto;
+    margin-bottom: 15px;
+    background-color: var(--input-background);
+    scroll-behavior: smooth;
+    transition: background-color var(--transition-speed), border-color var(--transition-speed);
+}
+
+.chat-form, .todo-form {
+    display: flex;
+    gap: 10px;
+}
+
+.chat-form input, .todo-form input {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--input-background);
+    color: var(--text-color);
+    transition: border-color var(--transition-speed);
+}
+
+.chat-form input::placeholder, .todo-form input::placeholder {
+    color: #a0a0a0;
+}
+
+.chat-form button, .todo-form button {
+    padding: 10px 20px;
+    border: none;
+    background-color: var(--accent-color);
+    color: var(--button-text-color);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color var(--transition-speed), transform var(--transition-speed);
+    font-size: 1em;
+}
+
+.chat-form button:hover, .todo-form button:hover {
+    background-color: var(--hover-accent-color);
+    transform: scale(1.02);
+}
+
+/* Style for textarea elements in chat-form and todo-form */
+.chat-form textarea, .todo-form textarea {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--input-background);
+    color: var(--text-color);
+    transition: border-color var(--transition-speed);
+    font-family: inherit; /* Ensures consistent font */
+    font-size: inherit;   /* Ensures consistent font size */
+    resize: none;        /* Prevents manual resizing */
+    overflow: hidden;    /* Hides scrollbar */
+}
+
+/* Placeholder styling for textarea */
+.chat-form textarea::placeholder, .todo-form textarea::placeholder {
+    color: #a0a0a0;
+}
+
+/* Focus state styling for textarea */
+.chat-form textarea:focus, .todo-form textarea:focus {
+    border-color: var(--accent-color);
+    outline: none;
+}
+
+ul {
+    list-style: none;
+}
+
+li {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+li:last-child {
+    border-bottom: none;
+}
+
+input[type="checkbox"] {
+    margin-right: 10px;
+    accent-color: var(--accent-color);
+}
+
+.weather-info p, .schedule-list li, .news-list li, .email-list li {
+    margin: 8px 0;
+}
+
+.footer {
+    /* Assuming similar styles as header */
+}
+
+/* Footer Styling */
+footer {
+    background-color: var(--header-footer-color);
+    color: var(--text-color);
+    text-align: center;
+    padding: 0 20px;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: var(--footer-height);
+    transition: height var(--transition-speed), all var(--transition-speed);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0px -2px 4px rgba(0, 0, 0, 0.2);
+}
+
+footer.shrink {
+    height: var(--footer-shrink-height);
+}
+
+footer.shrink p {
+    font-size: 0.8em;
+}
+
+footer.shrink:hover {
+    background-color: var(--hover-accent-color);
+    cursor: pointer;
+}
+
+/* Adjust body padding based on header and footer */
+body.header-shrink {
+    padding-top: var(--header-shrink-height);
+}
+
+body.footer-shrink {
+    padding-bottom: var(--footer-shrink-height);
+}
+
+/* Scrollbar Styling */
+.chat-area::-webkit-scrollbar {
+    width: 8px;
+}
+
+.chat-area::-webkit-scrollbar-track {
+    background: var(--input-background);
+}
+
+.chat-area::-webkit-scrollbar-thumb {
+    background-color: var(--accent-color);
+    border-radius: 4px;
+}
+
+/* Focus States */
+button:focus, input:focus {
+    outline: 2px dashed var(--accent-color);
+    outline-offset: 2px;
+}
+
+/* Visually Hidden (for accessibility) */
+.visually-hidden {
+    position: absolute;
+    left: -10000px;
+    top: auto;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+/* Reduced Motion Preferences */
+@media (prefers-reduced-motion: reduce) {
+    .widget, .widget:hover, #theme-toggle, button, .chat-form button, .todo-form button, header, footer {
+        transition: none;
+        transform: none;
+    }
+}
+
+/* Responsive Adjustments */
+@media (min-width: 600px) and (max-width: 1199px) {
+    .dashboard {
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    }
+}
+
+@media (max-width: 599px) {
+    .dashboard {
+        grid-template-columns: 1fr;
+    }
+
+    #theme-toggle {
+        top: 10px;
+        right: 10px;
+        padding: 6px 10px;
+    }
+
+    .widget {
+        padding: 15px;
+    }
+}
+/* Recording Button Styles */
+#record-btn-icon {
+    position: absolute;
+    top: 50%;
+    left: 20px;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--accent-color); /* Default color */
+    cursor: pointer;
+    font-size: 1.2rem;
+    transition: color var(--transition-speed), transform var(--transition-speed);
+    padding: 8px;
+    border-radius: 4px;
+    z-index: 500;
+}
+
+#record-btn-icon svg {
+    width: 24px;
+    height: 24px;
+}
+
+/* Hover State */
+#record-btn-icon:hover {
+    color: var(--hover-accent-color);
+    transform: translateY(-50%) scale(1.1);
+}
+
+/* Focus State */
+#record-btn-icon:focus {
+    /* Remove or adjust the focus color to prevent it from staying red */
+    color: var(--accent-color); /* Match default or desired color */
+    outline: none; /* Remove default outline */
+}
+
+/* Active State Styling */
+#record-btn-icon.active {
+    color: #c20000; /* Red color indicating active recording */
+}
+
+#record-btn-icon.active:hover {
+    color: #a30000; /* Darker red on hover when active */
+}
+
+
+/* Chat Bubble Styles */
+.bot-bubble {
+    width: 100%;
+    margin-right: auto;
+    background-color: #2E3F51;
+    padding: 10px;  /* Reduced padding for more compact bubbles */
+    border-radius: 15px;
+    box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+    margin-bottom: 10px; /* Reduced margin between bubbles */
+    line-height: 1;
+}
+
+.bot-bubble p {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1;
+    display: inline;
+}
+
+.user-bubble {
+    width: 100%;
+    margin-left: auto;
+    color: white;
+    background: #2854E8;
+    padding: 10px;
+    border-radius: 15px;
+    box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+    margin-bottom: 10px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+}
+
+.user-bubble p {
+    margin: 0px;
+    padding: 0px;
+    font-size: 12px;
+    line-height: 1; /* Adjusted line height for tighter spacing */
+    display: inline;
+    display: flex;
+    align-items: center;
+}
+
+/* Calendar Widget Styles */
+.calendar-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.calendar__item {
+    border-bottom: 1px solid #ccc;
+    padding: 10px;
+}
+
+.calendar__item--minimal {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+}
+
+.calendar__event-title {
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.calendar__event-time {
+    font-size: 14px;
+    color: #666;
+}
+
+.calendar__item--details {
+    margin-top: 10px;
+}
+
+/* Define the hidden class to control visibility */
+.hidden {
+    display: none !important;
+}
+
+#record-btn-icon svg {
+    transition: opacity var(--transition-speed), visibility var(--transition-speed);
+}
+
+#record-btn-icon svg:not(.hidden) {
+    display: block;
+}
+
+.calendar__item--details.show {
+    display: block;
+}
+
+.calendar__item--details p {
+    margin: 5px 0;
+    font-size: 14px;
+}
+
+.calendar__item--details a {
+    color: #007BFF;
+    text-decoration: none;
+}
+
+.calendar__item--details a:hover {
+    text-decoration: underline;
+}
+
+
+/* Calendar Navigation Styles */
+.calendar-navigation {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.calendar-navigation button {
+    background-color: #007BFF;
+    border: none;
+    color: white;
+    padding: 4px 6px;
+    margin: 0 5px;
+    font-size: 12px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: background-color 0.3s;
+}
+
+.calendar-navigation button:hover {
+    background-color: #0056b3;
+}
+
+.calendar-navigation #calendar-current-date {
+    font-size: 14px;
+    font-weight: bold;
+}

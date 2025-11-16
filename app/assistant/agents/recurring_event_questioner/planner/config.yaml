@@ -1,0 +1,25 @@
+name: recurring_event_questioner::planner
+class_name: Planner
+color: "blue"
+llm_params:
+  llm_provider: "openai"
+  engine: "gpt-5"
+  temperature: 1
+  api_key: "dummy_api_key"
+
+allowed_tools: [ask_user]
+except_tools: []
+allowed_nodes: [flow_exit_node]
+
+user_context_items:
+  - date_time
+  - event_title
+  - event_description
+  - recurrence_rule
+  - recent_history
+
+system_context_items:
+  - tool_descriptions
+  - allowed_nodes
+
+

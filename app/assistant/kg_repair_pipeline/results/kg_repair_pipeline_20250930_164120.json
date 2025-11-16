@@ -1,0 +1,21 @@
+{
+  "timestamp": "2025-09-30T16:41:20.331110+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 1,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [
+    "Questioning failed: 'ProblematicNode' object has no attribute 'node_id'",
+    "'list' object has no attribute 'get'"
+  ],
+  "processed_nodes": [
+    {
+      "node_id": "38ece277-d9b9-4938-b4db-9f2309fe8859",
+      "label": "To-do list",
+      "status": "validated",
+      "problem_description": "The node is largely well-typed as an Entity with category 'document' and has a clear, non-contradictory description. However, the label is too generic and does not reflect the specificity implied by the description (Jukka's personal tracker). This inconsistency can lead to ambiguity and mislinking with generic or other to-do list nodes. No temporal fields are required for an Entity, so no temporal issues.",
+      "resolution_notes": "- Rename label to a disambiguated form, e.g., \"Jukka's to-do list\" or \"To-do list (Jukka)\"; follow naming conventions (title case/hyphenation) used in the graph.\n- Add aliases for discoverability and variant spellings: [\"Jukka's task list\", \"Jukka task list\", \"Todo list\", \"To do list\", \"Task tracker\"].\n- Add a disambiguation note in the description clarifying this is Jukka’s personal tracker, not the general concept.\n- Improve connectivity with key relationships:\n  - owned_by / maintained_by -> Person:Jukka\n  - instance_of -> Concept: To-do list (if a concept node exists)\n  - part_of -> Jukka’s productivity system / workflow (if such node exists)\n  - used_for -> personal task management / planning (or link to existing methodology nodes, e.g., GTD, if applicable)\n  - stored_in / implemented_in -> specific app/platform node, if known (e.g., Notion, Obsidian); otherwise omit.\n- Add aliases and edges before altering metadata confidence; then consider raising importance to ~0.7 if it is indeed a central reference artifact.\n- Verify and correct the lone existing edge; the \"unknown -> unknown\" sample suggests logging or indexing issues—regenerate neighbor sample to ensure integrity."
+    }
+  ]
+}

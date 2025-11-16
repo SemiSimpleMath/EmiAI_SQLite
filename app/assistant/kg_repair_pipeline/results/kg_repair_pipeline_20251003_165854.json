@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-10-03T16:58:54.024527+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 0,
+  "nodes_questioned": 0,
+  "nodes_resolved": 1,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "8584040f-2b55-4dae-b814-d833c2657cbd",
+      "label": "Ori",
+      "status": "resolved",
+      "problem_description": "The node uses 'Ori' as both label and semantic_label, which does not follow the labeling guidelines. The label should be a descriptive type, and the semantic_label should provide context with the name in parentheses. The description is verbose and does not clearly state what or who Ori is.",
+      "resolution_notes": "Successfully delegated to kg_team: Something has gone wrong during kg_team_manager execution. Possible error: False Debug info: null"
+    }
+  ]
+}

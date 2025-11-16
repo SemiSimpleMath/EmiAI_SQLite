@@ -1,0 +1,36 @@
+name: daily_summary::email_analyzer::email_analyze
+class_name: Agent
+color: "blue"
+llm_params:
+  llm_provider: "openai"
+  engine: "gpt-5-mini"
+  temperature: 1
+  api_key: "dummy_api_key"
+
+allowed_tools:
+  - get_email
+except_tools: []
+
+user_context_items:
+  - date_time
+  - recent_history
+
+system_context_items:
+  - tool_descriptions
+  - resource_email_instructions
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

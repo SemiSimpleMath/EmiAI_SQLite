@@ -1,0 +1,28 @@
+Today is {{ date_time }}.
+{{ task }}
+{{ information }}
+
+{% if plan %}
+Overall plan to solve the task:
+    {{ plan }}
+{% endif %}
+
+{% if checklist %}
+Current Checklist:
+{{ checklist }}
+{% endif %}
+
+{% if accomplishments %}
+These are things we have already discovered.
+{% for accomplishment_item in accomplishments %}
+  - {{ accomplishment_item }}
+{% endfor %}
+{% endif %}
+
+
+{% if query_list %}
+    These are queries we have already tried:
+    {% for item in query_list %}
+        {{ item }}
+    {% endfor %}
+{% endif %}

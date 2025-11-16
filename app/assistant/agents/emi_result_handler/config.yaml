@@ -1,0 +1,19 @@
+name: emi_result_handler
+class_name: EmiResultHandler
+color: "white"
+llm_params:
+  llm_provider: "openai"
+  engine: "gpt-4o-mini"
+  temperature: 0.1
+
+user_context_items:
+  - date_time
+  - final_answer_task
+  - final_answer_answer
+  - final_answer_what_was_done
+  - final_answer_interesting_info
+  - final_answer_sources_used
+  - final_answer_data_list
+
+events:
+  - emi_result_request

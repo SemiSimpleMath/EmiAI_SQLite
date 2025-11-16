@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-09-30T16:58:02.833413+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 1,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "38ece277-d9b9-4938-b4db-9f2309fe8859",
+      "label": "To-do list",
+      "status": "validated",
+      "problem_description": "The node likely represents a specific personal document (Jukka's task list) but is labeled as a generic concept and typed only as Entity. This creates ambiguity and potential misclassification. Content is mostly adequate but could be made more objective. No temporal fields are required for a document.",
+      "resolution_notes": "- Rename label to a disambiguated instance label, e.g., \"Jukka's to-do list\" or \"To-do list (Jukka)\", per graph naming conventions.\n- Change Type from Entity to Document (or the schema's specific class for documents/personal documents) to align with Category: document.\n- Add aliases such as: \"Jukka's task list\", \"Jukka to-do list\", \"Personal to-do list\".\n- Revise description to be objective and concise, e.g., \"A personal task list maintained by Jukka to track and prioritize work and personal commitments; updated on an ongoing basis.\"\n- Improve connectivity:\n  - instance_of -> To-do list (concept) [if such a concept node exists]\n  - maintained_by/owned_by -> Jukka (Person)\n  - used_for -> Task management / Personal productivity (concepts)\n  - contains -> Task nodes (if tasks are modeled as nodes)\n  - stored_in -> the application or storage location, if known (otherwise leave unset).\n- Check for duplication: if a generic concept node named \"To-do list\" exists, ensure this node is the instance and the concept node remains separate.\n- Keep temporal fields unset (not required for a document) and note that empty attributes are acceptable.\n- Consider adding clearer provenance if available (e.g., user_provided, system_of_record), since 'processed_entity_log' is generic."
+    }
+  ]
+}

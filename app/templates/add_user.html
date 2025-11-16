@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block optional_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/register.css') }}">
+{% endblock %}
+{% block optional_header %}
+
+{% with messages = get_flashed_messages() %}
+{% if messages %}
+{% for message in messages %}
+<div>{{ message }}</div>
+{% endfor %}
+{% endif %}
+{% endwith %}
+{% endblock %}
+
+{% block content %}
+<div id="register-container">
+    <div id="register-box">
+        <h1 class="page_header">Register</h1>
+            <div class="form-container">
+                <form id="register-form" action="#" data-url="{{ url_for('add_user.add_user') }}" method="POST">
+
+                        <label for="username">Username</label>
+                        <input type="text" id="username" name="username" required>
+
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" required>
+
+                        <label for="confirm_password">Confirm Password</label>
+                        <input type="password" id="confirm_password" name="confirm_password" required>
+
+                        <div class="button-container">
+                            <button type="submit" class="btn btn-primary">Submit</button>
+                        </div>
+                </form>
+            </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/register.js') }}"></script>
+{% endblock %}
+{% endblock %}
+
+{% block optional_js %}
+{% endblock %}

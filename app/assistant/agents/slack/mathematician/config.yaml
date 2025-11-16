@@ -1,0 +1,22 @@
+name: slack::mathematician
+class_name: Agent
+color: red
+llm_params:
+  llm_provider: openai
+  engine: gpt-4o-mini
+  temperature: 0.1
+
+user_context_items:
+  - date_time
+  - information
+  - task
+
+rag_fields:
+  information:
+    - chat
+    - slack
+  task:
+    - chat
+    - slack
+structured_output: AgentForm
+

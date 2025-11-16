@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-09-30T16:52:15.486351+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 1,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "38ece277-d9b9-4938-b4db-9f2309fe8859",
+      "label": "To-do list",
+      "status": "validated",
+      "problem_description": "The node likely represents a single personal document owned by Jukka, but its generic label creates ambiguity. The description is serviceable but wordy and somewhat subjective. Type Entity with category document appears appropriate. No temporal fields are required for this node type.",
+      "resolution_notes": "- Rename label to a disambiguated form, e.g., \"Jukka's to-do list\" (or follow project casing standard, e.g., \"Jukka - To-Do List\").\n- Rewrite description to concise, neutral language, e.g., \"A personal task tracker maintained by Jukka for organizing and prioritizing work and personal tasks.\" Avoid subjective phrasing about planning style.\n- Standardize punctuation to ASCII (replace curly apostrophes) and apply consistent capitalization per naming guidelines (e.g., To-Do vs To-do).\n- Add aliases for findability: [\"Jukka's todo list\", \"To do list\", \"Todo list\", \"Task list\", \"Personal to-do list\"].\n- Add/verify key relationships:\n  - owned_by -> Person: Jukka\n  - maintained_in/hosted_on -> the tool or platform if known (e.g., Notion/Obsidian/Google Tasks); else add an attribute placeholder.\n  - tracks/organizes -> existing Task/Project nodes or a \"Personal productivity system\" node if present.\n- Review source: replace or supplement \"processed_entity_log\" with a more specific source (e.g., the actual repository/app or user-provided confirmation). If uncertain, lower confidence or add a verification note.\n- If there is also a concept-level node for the generic idea \"To-do list\", ensure this document node is clearly distinguished and not conflated (use category/document vs concept/class and explicit owner).\n- Optionally add created_on/last_updated if known, but not required."
+    }
+  ]
+}

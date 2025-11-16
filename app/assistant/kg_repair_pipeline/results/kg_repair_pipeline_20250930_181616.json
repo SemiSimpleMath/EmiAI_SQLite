@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-09-30T18:16:16.665133+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 1,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "38ece277-d9b9-4938-b4db-9f2309fe8859",
+      "label": "To-do list",
+      "status": "validated",
+      "problem_description": "The node describes a specific personal document belonging to Jukka, but the label 'To-do list' is generic and not disambiguated. This can lead to ambiguity and retrieval/confusion issues. The Type 'Entity' is very broad and may be misclassified relative to Category 'document'. Description is clear and non-contradictory; temporal fields are not applicable.",
+      "resolution_notes": "- Rename label to a disambiguated form per naming convention, e.g., \"To-do list (Jukka)\", \"Jukka - To-do list\", or \"Jukka's to-do list\".\n- Update Type from \"Entity\" to a more specific class aligned with Category, e.g., \"Document\" or \"List/Document\" (use the graph's canonical type).\n- Add aliases: [\"Jukka's to-do list\", \"Jukka task list\", \"Jukka personal to-do\", \"task list (Jukka)\"] to improve recall.\n- Add key relationships to strengthen structure: owned_by/maintained_by -> Person:Jukka; part_of -> Jukka's productivity system (if exists); contains/has_item -> Task nodes or Project nodes referenced by the list; used_for -> planning/prioritization; stored_in/hosted_on -> the tool or platform node if known.\n- Add a unique disambiguator attribute (e.g., owner_id/person_id, namespace) to prevent collisions with other to-do list nodes.\n- Optionally refine description with scope or location if known (e.g., tool/app), without inventing facts.\n- Review importance score; raise if this document is central to workflows."
+    }
+  ]
+}

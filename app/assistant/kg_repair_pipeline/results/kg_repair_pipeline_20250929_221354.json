@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-09-29T22:13:54.465563+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 1,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "38ece277-d9b9-4938-b4db-9f2309fe8859",
+      "status": "validated",
+      "problem_description": "The node 'To-do list' has structural and content issues: non-standard/misclassified type, empty attributes and no description, only one connection (likely a self-loop or duplicate to another 'To-do list' node), and lacks expected relationships to its owner and contained tasks. Quality metrics are present; temporal data is not required for this type.",
+      "priority": "medium",
+      "resolution_notes": "1) Validate existence and provenance: Check ingestion logs or source system to confirm the node’s origin and intended semantics. If no source/provenance can be found, quarantine or delete per retention policy. 2) If kept, correct schema: Change type to a domain-appropriate class (e.g., TodoList/TaskList) and category to a more specific grouping (e.g., TaskCollection). 3) Populate minimal required attributes: name/title (e.g., “To-do list”), description (if available), created_at, updated_at, source, and confidence. 4) Reconnect relationships: - OWNED_BY/CREATED_BY -> User/Person - CONTAINS/HAS_ITEM -> Task nodes belonging to this list - Optional: PART_OF -> Project, TAGGED_WITH -> Tag/Topic. 5) Deduplication: Search for other nodes with same/similar title or identifiers; if duplicates are found, merge and preserve provenance. 6) Run validation: Ensure no self-loops, required attributes present, type/category conform to schema, and edge cardinalities meet expectations. 7) If tasks or owner cannot be identified, mark the node as incomplete with low confidence or deprecate it until further data is available."
+    }
+  ]
+}

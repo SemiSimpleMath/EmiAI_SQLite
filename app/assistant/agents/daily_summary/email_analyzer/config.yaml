@@ -1,0 +1,37 @@
+name: daily_summary::email_analyzer
+class_name: Agent
+color: "blue"
+llm_params:
+  llm_provider: "openai"
+  engine: "gpt-4o-mini"
+  temperature: 0.1
+  api_key: "dummy_api_key"
+
+allowed_tools:
+  - get_email
+except_tools: []
+
+user_context_items:
+  - date_time
+  - task
+  - information
+  - recent_history
+
+system_context_items:
+  - tool_descriptions
+
+append_fields: [email_analysis, important_emails, email_insights]
+
+
+
+
+
+
+
+
+
+
+
+
+
+

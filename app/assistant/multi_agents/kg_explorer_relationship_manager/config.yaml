@@ -1,0 +1,53 @@
+name: kg_explorer_relationship_manager
+class_name: MultiAgentManager
+description: "A manager that orchestrates knowledge graph exploration focused on discovering implicit relationships through multi-hop semantic reasoning."
+max_cycles: 80  # Prevent infinite loops
+role_bindings:
+  delegator: kg_explorer::delegator
+  tool_selector: shared::tool_selector
+
+agents:
+  - name: kg_explorer::delegator
+    class: Delegator
+  - name: kg_explorer::planner_relationship
+    class: Planner
+  - name: kg_explorer::final_answer
+    class: FinalAnswer
+  - name: shared::tool_arguments
+    class: Agent
+  - name: shared::find_node
+    class: Planner
+
+control_nodes:
+  - name: tool_caller
+    class: ToolCaller
+  - name: tool_result_handler
+    class: ToolResultHandler
+  - name: exit_node
+    class: ExitNode
+  - name: flow_exit_node
+    class: FlowExitNode
+  - name: manager_exit_node
+    class: ManagerExitNode
+  - name: graceful_exit_control_node
+    class: GracefulExitControlNode
+
+tools:
+  allowed_tools:
+    - kg_find_node
+    - kg_describe_node
+    - kg_find_edge
+    - kg_describe_edge
+    - ask_user
+  except_tools: []
+
+flow_config:
+  state_map:
+    "kg_explorer::delegator": "kg_explorer::planner_relationship"
+    "shared::tool_arguments": "tool_caller"
+    "tool_caller": "tool_result_handler"
+    "kg_explorer::planner_relationship_flow_exit_node": "kg_explorer::final_answer"
+    "shared::find_node_flow_exit_node": "tool_result_handler"
+    "kg_explorer::final_answer": "manager_exit_node"
+    "graceful_exit": "graceful_exit_control_node"
+    "graceful_exit_control_node": "kg_explorer::final_answer"

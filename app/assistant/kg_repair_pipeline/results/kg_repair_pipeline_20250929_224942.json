@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-09-29T22:49:42.455831+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 1,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "38ece277-d9b9-4938-b4db-9f2309fe8859",
+      "status": "validated",
+      "problem_description": "The node 'To-do list' (Entity, document) has critical completeness issues in attributes and is weakly connected (1 edge). The only neighbor provided has the same label/type and a description, suggesting a duplicate record or self-loop, which introduces structural redundancy and potential circular reference. The label is overly generic and inconsistent with the described scope (Jukka’s personal to-do list). While quality metrics (confidence, importance, source) are present for the current node, expected document-level attributes and relationships (e.g., owner Person: Jukka) are missing.",
+      "priority": "critical",
+      "resolution_notes": "1) Verify identity and data drift: Cross-check by node ID across environments/snapshots to confirm which node is under review. If this UUID node is intended to be the “To‑do list” document, reconcile the mismatch and proceed to merge/repair.\n2) Dedup/merge: Search for a Document node titled “To‑do list” (possibly owned by Jukka). If both represent the same artifact, merge into a single canonical Document node. Preserve highest-confidence attributes, union tags, rewire edges to the canonical node, and deprecate the duplicate with a redirect/audit trail. Remove any self-loop if present on the document.\n3) Reclassify and enrich: If retained, set a specific ontology type (e.g., type=Document, category=TaskList/PersonalDocument). Populate required attributes: title (“Jukka’s To‑do list”), description/summary, created_at, updated_at, source_uri, provenance (ingested_by, source_system), confidence_score, importance/priority, status.\n4) Establish relationships: Link to Person:Jukka via owned_by; connect to Task nodes via contains_task/has_item; optionally link to Workspace/Project and Source nodes. Enforce constraint: no self-loops on Document.\n5) Clean labeling and IDs: Move the UUID to an id field; set a human-readable label/title. Apply uniqueness constraint on (normalized_title, owner) for documents.\n6) Orphan handling: If no authoritative source can provide attributes and no edges are appropriate, quarantine or delete the orphan after retention policy.\n7) Validation: Recompute edge_count, run integrity checks (no circular refs, required fields present), and update quality metadata."
+    }
+  ]
+}

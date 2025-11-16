@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-09-30T17:54:54.813690+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 1,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "38ece277-d9b9-4938-b4db-9f2309fe8859",
+      "label": "To-do list",
+      "status": "validated",
+      "problem_description": "The node likely represents a specific personal task-tracking document for Jukka. Temporal fields are not applicable for an Entity/document. The main issue is a generic, ambiguous label that does not reflect the described specificity, plus missing aliases for discoverability and disambiguation.",
+      "resolution_notes": "Recommended repairs:\n- Rename the label to be specific and unique, e.g., \"Jukka's To-Do List\" (or \"Jukka - Personal To-Do List\").\n- Add aliases to capture common variants for search/disambiguation, e.g., [\"Jukka Todo List\", \"Jukka To Do List\", \"Jukka's todo list\", \"Personal to-do list (Jukka)\", \"Task tracker (Jukka)\", \"Jukka task list\"].\n- Tighten the description to be objective and concise, e.g., \"A living personal task-tracking document maintained by Jukka for organizing and prioritizing work and personal commitments.\"\n- Improve connectivity (edge_count is low):\n  - maintained_by -> Jukka (Person)\n  - owned_by -> Jukka (Person) if distinct in your schema\n  - used_for -> Personal task management / prioritization\n  - instance_of -> Document (or category/document confirmation)\n  - located_in / stored_in -> the actual app, file, or folder if known\n  - related_to -> relevant productivity method nodes (e.g., planning framework) if present\n- Check for duplicates: search for nodes labeled \"To-do list\", \"Todo list\", \"Task list\", or similar pertaining to Jukka and merge/redirect.\n- Type refinement: if your ontology supports a specific type (Document, DigitalDocument, Note), update type from Entity to the appropriate subtype; otherwise retain Entity.\n- Optional metadata review: if this is a central reference in Jukka's workflow, consider increasing importance (e.g., 0.7-0.8); otherwise leave as is.\n- Ensure this node represents a specific document and not the general concept of to-do lists; if it is conceptual, convert/split into a Concept node and create a separate document node for Jukka's list."
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+name: daily_summary::todo_analyzer
+class_name: Agent
+color: "orange"
+llm_params:
+  llm_provider: "openai"
+  engine: "gpt-4o-mini"
+  temperature: 0.1
+  api_key: "dummy_api_key"
+
+allowed_tools:
+  - get_todo_tasks
+except_tools: []
+
+user_context_items:
+  - date_time
+  - recent_history
+
+system_context_items:
+  - tool_descriptions
+  - task
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

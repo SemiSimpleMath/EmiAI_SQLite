@@ -1,0 +1,29 @@
+{% if task %}
+Problem we are solving: {{ task }}.
+{% endif %}
+
+{% if information %}
+Information: {{ information }}
+{% endif %}
+
+{% if important_links %}
+{{ important_links }}
+{% endif %}
+
+{% if final_answer_content %}
+Final Answer Content So Far:
+{{ final_answer_content }}
+**Do not repeat this information. Instead, determine what additional details have been found in the text you are summarizing**
+{% endif %}
+
+{% if summary %}
+This is summary so far.
+Summary: {{ summary }}
+{% endif %}
+
+{% if history_to_summarize %}
+Messages we want to summarize:
+{{ history_to_summarize }}
+{% endif %}
+
+

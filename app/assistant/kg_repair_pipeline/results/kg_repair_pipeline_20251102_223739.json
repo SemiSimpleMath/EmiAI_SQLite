@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-11-02T22:37:39.771042+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 1,
+  "nodes_questioned": 1,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "a47fc178-88f7-4e47-971b-3540cbbfd384",
+      "label": "Has multiple dogs",
+      "status": "validated",
+      "problem_description": "The node 'Has multiple dogs' is intended to represent an ongoing state of pet ownership for Jukka. However, it is missing explicit start_date and end_date fields, which are required for State nodes to define the temporal extent of the state. The 'valid_during' field only provides a single assertion date, not a range. The label is also longer than recommended, bordering on malformed.",
+      "resolution_notes": "1. Add explicit start_date (when Jukka began owning multiple dogs) and, if known, end_date (when this state ended or will end). If the state is ongoing, set end_date to null or leave it open. 2. Change the label to a more concise, noun-based form such as 'Dog ownership' or 'Multiple dog ownership'. 3. Optionally, add an alias 'Has multiple dogs' for searchability, but do not use it as the primary label."
+    }
+  ]
+}

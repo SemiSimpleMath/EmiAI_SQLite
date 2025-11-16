@@ -1,0 +1,33 @@
+As the PlannerAgent, your task is to update your checklist based on the actions taken since the last plan step.
+
+#### Instructions:
+
+1. **Identify Completed Steps:**
+   - Review the messages below.
+   - Identify if any progress has been made towards completing the current step in the plan.
+   - For each completed step, provide a one-sentence summary that includes any relevant details or links.
+   - If the step was unsuccessful mark that down as well.
+   - Mark down tool used and arguments.  This way we do not repeatedly keep using same tool with same arguments.
+
+2. **Note New Information:**
+   - If new information has been discovered since the last plan step that contributes to solving the problem or even the current plan step,
+    write the information in the **'Accomplishments'** section.
+   - Make sure that information truly is new.  We don't want to repeat.
+
+3. **Update Checklist and accomplisments:**
+   - Consider the **Current Checklist** and **accomplishments** provided below.
+   - Update the checklist by marking completed steps and adding any new steps if necessary.
+   - Rewrite the whole checklist.  Do not omit completed steps.  Rather add new steps and mark incomplete steps complete when appropriate.
+   - Update the progress with any new accomplishments. Do not repeat any steps.  If something was marked as complete. Do not write it again.
+   - For accomplishments, you are appending to a list of facts and data that we have discovered that is helping us solve the task.  List the accomplishment and the new key facts.  Do not write identical accomplishments.  Only add something if it truly is new.  Otherwise leave blank.
+
+4. **Be Careful: **
+    -Were the above steps completed or were they planned? Look for evidence are there actual results or confirmations posted.
+
+
+#### Expected Output Format:
+
+Please provide your response in the following format:
+
+checklist_item: scrape website www.example.com - Complete
+accomplishment: Found the contact information for the restaurant: < Write down the discovered information >

@@ -1,0 +1,50 @@
+name: event_manager
+class_name: MultiAgentManager
+description: "A team manager that orchestrates agent execution for task completion."
+max_cycles: 50  # Prevent infinite loops
+role_bindings:
+  delegator: shared::delegator
+  tool_selector: shared::tool_selector
+
+agents:
+  - name: shared::delegator
+    class: Delegator
+  - name: shared::planner
+    class: Planner
+  - name: shared::tool_arguments
+    class: Agent
+  - name: shared::final_answer
+    class: Agent
+
+control_nodes:
+  - name: tool_caller
+    class: ToolCaller
+  - name: tool_result_handler
+    class: ToolResultHandler
+  - name: exit_node
+    class: ExitNode
+  - name: flow_exit_node
+    class: FlowExitNode
+  - name: manager_exit_node
+    class: ManagerExitNode
+  - name: graceful_exit_control_node
+    class: GracefulExitControlNode
+
+tools:
+  allowed_tools:
+    - get_scheduler_events
+    - create_scheduler_event
+    - create_repeating_scheduler_event
+    - delete_scheduler_event
+  except_tools: []
+
+flow_config:
+  state_map:
+    "shared::delegator": "shared::planner"
+    "shared::tool_arguments": "tool_caller"
+    "tool_caller": "tool_result_handler"
+    "shared::planner_flow_exit_node": "shared::final_answer"
+    "shared::final_answer": "manager_exit_node"
+    "graceful_exit": "graceful_exit_control_node"
+    "graceful_exit_control_node": "shared::final_answer"
+

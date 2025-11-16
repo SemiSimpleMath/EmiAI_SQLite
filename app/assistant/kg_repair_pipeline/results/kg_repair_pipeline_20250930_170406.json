@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-09-30T17:04:06.611336+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 1,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "38ece277-d9b9-4938-b4db-9f2309fe8859",
+      "label": "To-do list",
+      "status": "validated",
+      "problem_description": "The node represents a specific personal document, but its generic label conflicts with the specific scope described. Classification looks correct; description is clear. Main issue is naming ambiguity and lack of aliases.",
+      "resolution_notes": "- Rename label to a disambiguated form, e.g., \"Jukka's to-do list\" or \"To-do list (Jukka)\"; ensure a unique slug/canonical_name.\n- Add aliases to improve retrieval: [\"Todo list\", \"To do list\", \"TODO\", \"Task list\", \"Personal to-do list\", \"Jukka task tracker\"]. Include common hyphenation variants.\n- Improve connectivity (target at least 3-5 meaningful edges):\n  - maintained_by/owned_by -> Jukka (Person)\n  - instance_of -> To-do list (concept)\n  - hosted_on/located_in -> the app or system used (e.g., Todoist/Notion/Reminders) if known\n  - contains -> Task nodes or links to Projects/Areas\n  - related_to -> Productivity, Time management, Planning\n  - references/syncs_with -> Calendar or Project management system if applicable\n- If multiple lists exist (work vs personal), encode scope in the label or add attribute scope=personal/work; otherwise note scope=personal+work.\n- Normalize punctuation (ASCII apostrophe) and ensure consistent capitalization/style.\n- Review importance; if this is a central reference, raise importance to ~0.7-0.8.\n- Verify there is a separate concept node for the general idea of a to-do list; link via instance_of and avoid conflation/duplication. Merge duplicates if found.\n- Inspect the existing edge with unknown->unknown; fix predicate/direction and ensure proper typing.\n- Optionally add metadata: privacy_level=private and location_uri/source_system for traceability."
+    }
+  ]
+}

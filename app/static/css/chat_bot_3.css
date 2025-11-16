@@ -1,0 +1,941 @@
+/* CSS Variables for Theming */
+:root {
+    --font-family: 'Roboto', sans-serif;
+    --font-size-base: 17px; /* Updated base font size for better readability */
+    --transition-speed: 0.3s;
+
+    /* Dark Theme Variables */
+    --background-color: #0F1624; /* Darker background for a modern look */
+    --header-footer-color: #1B2230;
+    --widget-background: #1C2533;
+    --widget-background-hover: #253040;
+    --text-color: #ECEFF4; /* Lighter text for better contrast */
+    --heading-color: #88C0D0; /* Softer heading color */
+    --accent-color: #5E81AC;
+    --hover-accent-color: #4C6782;
+    --border-color: #2E3440;
+    --input-background: #1C2533;
+    --button-text-color: #ECEFF4;
+
+    /* Header and Footer Heights */
+    --header-height: 65px;
+    --header-shrink-height: 45px;
+    --footer-height: 65px;
+    --footer-shrink-height: 45px;
+}
+
+/* Light Theme Variables */
+[data-theme="light"] {
+    --background-color: #F8F9FB;
+    --header-footer-color: #FFFFFF;
+    --widget-background: #FFFFFF;
+    --widget-background-hover: #F0F2F5;
+    --text-color: #2E3440;
+    --heading-color: #2E3440;
+    --accent-color: #5E81AC;
+    --hover-accent-color: #4C6782;
+    --border-color: #D8DEE9;
+    --input-background: #FFFFFF;
+    --button-text-color: #FFFFFF;
+}
+
+/* Global Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-family);
+    font-size: var(--font-size-base);
+    background-color: var(--background-color);
+    color: var(--text-color);
+    line-height: 1.6;
+    transition: background-color var(--transition-speed), color var(--transition-speed);
+    padding-top: var(--header-height);
+    padding-bottom: var(--footer-height);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+header {
+    background-color: var(--header-footer-color);
+    color: var(--text-color);
+    padding: 0 20px;
+    text-align: center;
+    border-bottom: 1px solid var(--border-color);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    transition: height var(--transition-speed), all var(--transition-speed);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: var(--header-height);
+    box-shadow: 0px 2px 8px rgba(0,0,0,0.2); /* Softer shadow */
+}
+
+.header-title {
+    font-size: 20px; /* Reduced font size for balance */
+    font-weight: 500;
+    transition: all 0.5s ease;
+}
+
+header.shrink {
+    height: var(--header-shrink-height);
+    justify-content: flex-start;
+}
+
+header.shrink .header-title {
+    font-size: 14px;
+    color: var(--accent-color);
+    margin-left: 10px;
+    font-weight: 400;
+}
+
+header.shrink #theme-toggle {
+    position: absolute;
+    top: 5px;
+    right: 10px;
+}
+
+#mute-btn-container {
+    position: absolute;
+    top: 15px;
+    right: 80px;
+}
+
+#mute-btn-container svg {
+    cursor: pointer;
+    fill: var(--text-color);
+    transition: fill 0.3s ease;
+}
+
+#mute-btn-container svg:hover {
+    fill: var(--accent-color); /* Highlight on hover */
+}
+
+#theme-toggle {
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    padding: 8px 12px;
+    background-color: var(--accent-color);
+    color: var(--button-text-color);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color var(--transition-speed), transform var(--transition-speed);
+    font-size: 0.9em;
+    font-weight: 500;
+}
+
+#theme-toggle:hover {
+    background-color: var(--hover-accent-color);
+    transform: scale(1.04);
+}
+
+.dashboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    padding: 20px;
+}
+
+.widget {
+    background-color: var(--widget-background);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1); /* Enhanced shadow for depth */
+    transition: transform var(--transition-speed) ease-in-out, box-shadow var(--transition-speed) ease-in-out, background-color var(--transition-speed);
+    will-change: transform, box-shadow;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.widget::-webkit-scrollbar {
+    width: 8px;
+}
+
+.widget::-webkit-scrollbar-track {
+    background: var(--widget-background);
+}
+
+.widget::-webkit-scrollbar-thumb {
+    background-color: var(--accent-color);
+    border-radius: 4px;
+}
+
+.widget:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+    background-color: var(--widget-background-hover);
+}
+
+.widget h2 {
+    color: var(--heading-color);
+    font-size: 1.3em;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 5px;
+    font-weight: 500;
+}
+
+.widget.weather {
+padding: 0px;
+height: 400px;
+}
+
+.chat-area {
+    height: 250px;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    padding: 10px;
+    overflow-y: auto;
+    margin-bottom: 15px;
+    background-color: var(--input-background);
+    scroll-behavior: smooth;
+    transition: background-color var(--transition-speed), border-color var(--transition-speed);
+}
+
+.chat-form, .todo-form {
+    display: flex;
+    gap: 10px;
+}
+
+.chat-form input, .todo-form input, .chat-form textarea, .todo-form textarea {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--input-background);
+    color: var(--text-color);
+    transition: border-color var(--transition-speed);
+    font: inherit;
+}
+
+.chat-form input::placeholder, .todo-form input::placeholder,
+.chat-form textarea::placeholder, .todo-form textarea::placeholder {
+    color: #a0a0a0;
+}
+
+.chat-form button, .todo-form button {
+    padding: 10px 20px;
+    border: none;
+    background-color: var(--accent-color);
+    color: var(--button-text-color);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color var(--transition-speed), transform var(--transition-speed);
+    font-size: 0.9em;
+    font-weight: 500;
+}
+
+.chat-form button:hover, .todo-form button:hover {
+    background-color: var(--hover-accent-color);
+    transform: scale(1.02);
+}
+
+.chat-form textarea, .todo-form textarea {
+    resize: none;
+    overflow: hidden;
+}
+
+.completed {
+    text-decoration: line-through; /* Cross out completed tasks */
+    color: gray;
+}
+
+.completed-task {
+    opacity: 0.6; /* Make completed tasks appear faded */
+}
+
+input[type="checkbox"]:checked {
+    accent-color: green; /* Green checkbox for completed tasks */
+}
+
+
+ul {
+    list-style: none;
+}
+
+li {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+li:last-child {
+    border-bottom: none;
+}
+
+input[type="checkbox"] {
+    margin-right: 10px;
+    accent-color: var(--accent-color);
+}
+
+footer {
+    background-color: var(--header-footer-color);
+    color: var(--text-color);
+    text-align: center;
+    padding: 0 20px;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: var(--footer-height);
+    transition: height var(--transition-speed), all var(--transition-speed);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0px -2px 6px rgba(0,0,0,0.15); /* Softer shadow */
+    font-size: 0.9em;
+    font-weight: 400;
+}
+
+footer.shrink {
+    height: var(--footer-shrink-height);
+}
+
+footer.shrink p {
+    font-size: 0.8em;
+}
+
+footer.shrink:hover {
+    background-color: var(--hover-accent-color);
+    cursor: pointer;
+    color: #ECEFF4;
+}
+
+/* Adjust body padding based on header and footer */
+body.header-shrink {
+    padding-top: var(--header-shrink-height);
+}
+
+body.footer-shrink {
+    padding-bottom: var(--footer-shrink-height);
+}
+
+/* Scrollbar Styling */
+.chat-area::-webkit-scrollbar {
+    width: 8px;
+}
+
+.chat-area::-webkit-scrollbar-track {
+    background: var(--input-background);
+}
+
+.chat-area::-webkit-scrollbar-thumb {
+    background-color: var(--accent-color);
+    border-radius: 4px;
+}
+
+/* Focus States */
+button:focus, input:focus, textarea:focus {
+
+}
+
+/* Visually Hidden (for accessibility) */
+.visually-hidden {
+    position: absolute;
+    left: -10000px;
+    top: auto;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+/* Reduced Motion Preferences */
+@media (prefers-reduced-motion: reduce) {
+    .widget, .widget:hover, #theme-toggle, button, .chat-form button, .todo-form button, header, footer {
+        transition: none;
+        transform: none;
+    }
+}
+
+/* Responsive Adjustments */
+@media (min-width: 600px) and (max-width: 1199px) {
+    .dashboard {
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    }
+}
+
+@media (max-width: 599px) {
+    .dashboard {
+        grid-template-columns: 1fr;
+    }
+
+    #theme-toggle {
+        top: 10px;
+        right: 10px;
+        padding: 6px 10px;
+    }
+
+    .widget {
+        padding: 15px;
+    }
+}
+
+/* Recording Button Styles */
+#record-btn-icon {
+    position: absolute;
+    top: 50%;
+    left: 20px;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--accent-color);
+    cursor: pointer;
+    font-size: 1.2rem;
+    transition: color var(--transition-speed), transform var(--transition-speed);
+    padding: 8px;
+    border-radius: 4px;
+    z-index: 500;
+}
+
+#record-btn-icon svg {
+    width: 24px;
+    height: 24px;
+}
+
+#record-btn-icon:hover {
+    color: var(--hover-accent-color);
+    transform: translateY(-50%) scale(1.1);
+}
+
+#record-btn-icon:focus {
+    color: #c20000; /* Active recording color */
+    outline: none;
+}
+
+#record-btn-icon.active {
+    color: #c20000; /* Red color indicating active recording */
+}
+
+#record-btn-icon.active:hover {
+    color: #a30000; /* Darker red on hover when active */
+}
+
+/* Chat Bubble Styles */
+.bot-bubble {
+    width: 100%;
+    margin-right: auto;
+    background-color: #3B4252;
+    padding: 10px;
+    border-radius: 12px;
+    box-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+    margin-bottom: 10px;
+    line-height: 1.4;
+}
+
+.bot-bubble p {
+    margin: 0;
+    font-size: 14px;
+}
+/* Updated AI Chat Bubble (bot bubble) */
+.bot-bubble {
+  width: 100%;
+  margin-right: auto;
+  background-color: transparent;  /* Remove background */
+  box-shadow: none;               /* Remove shadow */
+  padding: 10px;
+  border-radius: 12px;
+  margin-bottom: 10px;
+  line-height: 1.4;
+  color: #FFFFFF;                 /* White text */
+}
+
+.bot-bubble p {
+  margin: 0;
+  font-size: 18px;
+}
+
+/* Updated User Chat Bubble */
+.user-bubble {
+  width: 60%;                     /* Set to 60% width */
+  margin-left: auto;
+  background: #5E81AC;
+  color: #ECEFF4;
+  padding: 10px;
+  border-radius: 12px;
+  box-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+  margin-bottom: 10px;
+  line-height: 1.4;
+  display: flex;
+  align-items: center;
+}
+
+.user-bubble p {
+  margin: 0;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+}
+
+
+/* Calendar Widget Styles */
+.calendar-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.calendar__item {
+    border-bottom: 1px solid var(--border-color);
+    padding: 10px;
+}
+
+.calendar__item--minimal {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+}
+
+.calendar__event-title {
+    font-weight: 500;
+    font-size: 16px;
+}
+
+.calendar__event-time {
+    font-size: 14px;
+    color: #888;
+}
+
+.calendar__item--details {
+    margin-top: 10px;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.calendar__item--details.show {
+    display: block;
+}
+
+.calendar__item--details p {
+    margin: 5px 0;
+}
+
+.calendar__item--details a {
+    color: var(--accent-color);
+    text-decoration: none;
+}
+
+.calendar__item--details a:hover {
+    text-decoration: underline;
+}
+
+/* Calendar Navigation Styles */
+.calendar-navigation {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.calendar-navigation button {
+    background-color: var(--accent-color);
+    border: none;
+    color: white;
+    padding: 4px 6px;
+    margin: 0 5px;
+    font-size: 12px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: background-color var(--transition-speed);
+}
+
+.calendar-navigation button:hover {
+    background-color: var(--hover-accent-color);
+}
+
+.calendar-navigation #calendar-current-date {
+    font-size: 14px;
+    font-weight: bold;
+}
+
+/* News Widget Styles */
+.news-item {
+    background-color: var(--widget-background);
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: transform var(--transition-speed), box-shadow var(--transition-speed);
+}
+
+.news-item:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+.news-item h4 {
+    font-size: 1.1em;
+    margin-bottom: 8px;
+    color: var(--heading-color);
+    font-weight: 500;
+}
+
+.news-item h3 a {
+    text-decoration: none;
+    color: var(--heading-color);
+    transition: color var(--transition-speed);
+}
+
+.news-item h3 a:hover {
+    color: var(--accent-color);
+    text-decoration: underline;
+}
+
+.news-item p {
+    margin: 8px 0;
+    line-height: 1.5;
+}
+
+.news-item .news-date {
+    font-size: 0.9em;
+    color: #888;
+    font-style: italic;
+}
+
+.news-item .news-source {
+    font-size: 0.9em;
+    font-weight: 500;
+    color: var(--accent-color);
+}
+
+/* News Actions (Thumbs Up/Down) */
+.news-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-left: 10px; /* Add some spacing from the source text */
+}
+
+.news-actions button {
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 1em; /* Smaller size for inline buttons */
+    color: var(--text-color);
+    transition: color var(--transition-speed), transform var(--transition-speed);
+    padding: 0; /* Remove any extra padding */
+}
+
+.news-actions button:hover {
+    color: var(--accent-color);
+    transform: scale(1.1); /* Slightly enlarge on hover */
+}
+
+.news-actions button.active {
+    color: var(--accent-color);
+}
+
+.news-actions button.active[data-action="down"] {
+    color: red;
+}
+
+.news-item img {
+    max-width: 100%; /* Ensure the image doesn't exceed the container's width */
+    height: auto; /* Maintain aspect ratio */
+    display: block; /* Avoid inline space issues */
+    border-radius: 4px; /* Optional: Make the image match the widget's rounded corners */
+    margin: 0 auto; /* Center the image horizontally if needed */
+    object-fit: cover; /* Adjust how the image fills the container */
+}
+
+
+/* Email Item Styles */
+.email__item {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    cursor: pointer;
+    transition: background-color var(--transition-speed), box-shadow var(--transition-speed), transform var(--transition-speed);
+    background-color: var(--widget-background);
+    position: relative;
+}
+
+.email__item:hover {
+    background-color: var(--widget-background-hover);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.email__item--minimal {
+    display: flex;
+    flex-direction: column; /* Stack vertically */
+    align-items: flex-start; /* Align items to the start */
+}
+
+
+.email__sender,
+.email__subject {
+    margin: 5px 0;
+    font-size: 14px;
+}
+
+.email__toggle-indicator {
+    font-size: 16px;
+    color: var(--accent-color);
+    transition: transform var(--transition-speed);
+}
+
+.email__item--details {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-color);
+    font-size: 14px;
+    line-height: 1.5;
+    transition: max-height var(--transition-speed) ease, padding var(--transition-speed) ease;
+    overflow: hidden;
+    max-height: 0;
+}
+
+.email__item--details:not(.hidden) {
+    max-height: 500px; /* Adjust as needed based on content */
+    padding: 10px 0;
+}
+
+.email__toggle-indicator.rotate {
+    transform: rotate(180deg);
+}
+
+/* Responsive Adjustments */
+@media (max-width: 599px) {
+    .email__item--minimal {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .email__toggle-indicator {
+        align-self: flex-end;
+    }
+}
+
+
+.feed-item .time {
+    font-size: 0.85em;
+    color: var(--border-color); /* Subtle and secondary */
+    margin-bottom: 4px;
+}
+
+.feed-item .label {
+    font-size: 1em;
+    font-weight: 500; /* Slightly lighter than bold */
+    color: var(--heading-color);
+}
+
+.feed-item .description {
+    font-size: 0.95em;
+    font-weight: 400;
+    color: var(--text-color); /* Default readable color */
+}
+
+
+.inform_user {
+    background-color: var(--widget-background); /* Matches widget theme */
+    border-left: 4px solid var(--accent-color); /* Accent color for emphasis */
+    padding: 12px 16px;
+    margin: 12px 0;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform var(--transition-speed), box-shadow var(--transition-speed);
+}
+
+.inform_user:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.inform_user h3 {
+    color: var(--heading-color);
+    font-size: 1.1em;
+    margin-bottom: 6px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.inform_user p {
+    color: var(--text-color);
+    font-size: 1em;
+    line-height: 1.4;
+}
+
+.ask_user {
+    background-color: var(--widget-background); /* Matches widget theme */
+    border-left: 4px solid var(--hover-accent-color); /* Slightly different accent for distinction */
+    padding: 12px 16px;
+    margin: 12px 0;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform var(--transition-speed), box-shadow var(--transition-speed);
+}
+
+.ask_user:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.ask_user h3 {
+    color: var(--heading-color);
+    font-size: 1.1em;
+    margin-bottom: 6px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.ask_user p {
+    color: var(--text-color);
+    font-size: 1em;
+    line-height: 1.4;
+}
+/* Chat widget default styling */
+.widget--chat {
+  position: relative; /* Make it the reference for absolutely positioned buttons */
+  transition: all 0.3s ease-in-out;
+  /* Your existing chat widget styles go here */
+}
+/* Expanded chat widget (centered and tall) */
+.widget--chat.expanded {
+  position: fixed;
+  top: 5%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90vw;
+  max-width: 800px;       /* Adjust as desired */
+  height: 50vh;
+  max-height: none;       /* Remove any inherited max-height */
+  background-color: var(--widget-background);
+  z-index: 1000;
+  padding: 20px;
+  overflow-y: auto;
+  border: none;
+  box-shadow: none;
+  transition: none;
+}
+
+
+/* Override hover effect for the expanded chat widget to maintain centering */
+.widget--chat.expanded:hover {
+  transform: translateX(-50%) !important;
+  box-shadow: none !important;
+  background-color: var(--widget-background) !important;
+
+
+}
+
+/* In expanded chat, override the fixed chat area height */
+.widget--chat.expanded .chat-area {
+  /* Adjust 150px to account for any header, footer, or input area inside the widget */
+  height: calc(50vh - 150px);
+}
+
+
+/* Button styling (placed inside the chat widget) */
+/* Style for both expand and close buttons inside the chat widget */
+#expand-chat-btn,
+#close-chat-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: var(--accent-color); /* A contrasting accent color */
+  padding: 5px;
+  font-size: 1.4rem;
+  cursor: pointer;
+  color: var(--button-text-color); /* Typically a light color like white */
+  z-index: 1001;
+  transition: background-color 0.3s ease;
+}
+
+/* Slightly enlarge the close icon */
+#close-chat-btn {
+  font-size: 1.6rem;
+}
+
+/* Change the background on hover for added emphasis */
+#expand-chat-btn:hover,
+#close-chat-btn:hover {
+  background-color: var(--hover-accent-color);
+}
+
+/* Override hover effect for the chat widget */
+.widget--chat:hover {
+  transform: none !important;
+  box-shadow: none !important;
+  background-color: var(--widget-background) !important;
+}
+
+
+/* Specific sizes for icons */
+#expand-chat-btn {
+  font-size: 1.4rem;
+}
+#close-chat-btn {
+  font-size: 1.6rem;
+}
+
+/* Hide elements with the "hidden" class */
+.hidden {
+  display: none !important;
+}
+
+
+.arrow-btn {
+  background-color: var(--accent-color);
+  border: none;
+  color: white;
+  padding: 4px 6px;
+  margin: 0 5px;
+  font-size: 12px;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: background-color var(--transition-speed);
+}
+
+.arrow-btn:hover {
+  background-color: var(--hover-accent-color);
+}
+
+
+/* Agent Output Section Styling */
+.task, .answer, .interesting_info, .methods, .sources, .meta_data {
+  background-color: var(--widget-background);
+  border-left: 4px solid var(--accent-color);
+  padding: 16px;
+  margin: 20px 0;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  transition: background-color var(--transition-speed), box-shadow var(--transition-speed);
+}
+
+.task h3, .answer h3, .interesting_info h3, .methods h3, .sources h3, .meta_data h3 {
+  color: var(--heading-color);
+  margin-bottom: 10px;
+  font-size: 1.1em;
+  font-weight: 600;
+}
+
+.task p, .answer p, .interesting_info p, .sources p {
+  margin-bottom: 8px;
+  font-size: 1em;
+  color: var(--text-color);
+}
+
+.methods ol, .meta_data ul {
+  padding-left: 20px;
+  margin: 8px 0;
+}
+
+.methods li, .meta_data li {
+  margin-bottom: 6px;
+  font-size: 0.95em;
+}

@@ -1,0 +1,22 @@
+{
+  "backup_date": "2025-08-17T11:00:24.954689",
+  "tables": {
+    "Node Types": {
+      "filename": "kg_backup_20250817_110023\\node_types_backup_20250817_110023.json",
+      "record_count": 70
+    },
+    "Edge Types": {
+      "filename": "kg_backup_20250817_110023\\edge_types_backup_20250817_110023.json",
+      "record_count": 545
+    },
+    "Nodes": {
+      "filename": "kg_backup_20250817_110023\\nodes_backup_20250817_110023.json",
+      "record_count": 807
+    },
+    "Edges": {
+      "filename": "kg_backup_20250817_110023\\edges_backup_20250817_110023.json",
+      "record_count": 1161
+    }
+  },
+  "total_records": 2583
+}

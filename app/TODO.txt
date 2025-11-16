@@ -1,0 +1,113 @@
+
+
+-Lots of features to implement for Emi idle time
+    -engage in banter
+
+
+
+     - Unit tests
+     -Should keep track of statistics like how many tokens it took to find the answer
+     - How many llm calls did it take to find the answer.
+
+
+Agent team should gracefully giveup if they exceed threshold of actions with no result. done
+
+
+Implement event/state monitoring so we can have routines trigger from events occuring or system being in particualr state. Working on it.
+
+
+Hypothetical situations:
+
+Remind me to get milk: geographical trigger: you are near the store right now.
+
+Need to create a routine manager. Not sure if this will be super set of event manager or sub to event manager
+or a separate entitity entirely.
+
+Create, When was the last time you... agent asks you out of the blue fun questions
+
+Implement a request from the agents to an agent that monitors states or events occurring . The agent group will place
+a request to listen for something and then get a response.  I suppose this is very much related to ask_user and
+possibly state based events.  eg. agent group: please let me know when at least 3 new emails have come in.  please let me know
+if price of bitcoin exceeds 100k
+
+For events there should be simple tool event where we just call the tool directly without going through the agents
+maybe even sequence of tool calls.
+
+
+# persistent events.  need a sql database DONE
+
+
+diagnostic tools where all managers can report info on their agents and tools
+
+
+i migh have fucked up search1 it looks at results 1 by 1 instead of looking at all and picking best ones.
+
+#
+# # app/assistant/global_tool_registry.py
+#
+# from pydantic import BaseModel, Field
+# from typing import Dict, Any, Optional, Type
+#
+# # Define argument schemas for each tool
+# class GooglePlacesArguments(BaseModel):
+#     location: str
+#     radius: Optional[int] = 1000
+#     type: Optional[str] = "restaurant"
+#
+# class YelpFusionArguments(BaseModel):
+#     location: str
+#     term: Optional[str] = "restaurants"
+#     limit: Optional[int] = 10
+#
+
+# class SerpApiArguments(BaseModel):
+#     query: str
+#     engine: Optional[str] = "google"
+#
+# class FoursquarePlacesArguments(BaseModel):
+#     near: str
+#     query: Optional[str] = "food"
+#     limit: Optional[int] = 5
+#
+# class GoogleCustomSearchArguments(BaseModel):
+#     query: str
+#     num: Optional[int] = 10
+#
+# class TwilioArguments(BaseModel):
+#     to: str
+#     from_: str = Field(..., alias='from')  # 'from' is a reserved keyword
+#     message: str
+#
+# class NewsAPIArguments(BaseModel):
+#     query: Optional[str] = ""
+#     sources: Optional[str] = ""
+#     language: Optional[str] = "en"
+#
+# class FlightAwareArguments(BaseModel):
+#     flight_number: str
+#     date: Optional[str] = None
+#
+# class SpotifyWebAPIArguments(BaseModel):
+#     action: str  # e.g., "play", "pause", "search"
+#     query: Optional[str] = None
+#
+
+# class CoinGeckoArguments(BaseModel):
+#     cryptocurrency: str
+#     vs_currency: Optional[str] = "usd"
+#
+
+
+# class SlackArguments(BaseModel):
+#     channel: str
+#     message: str
+#
+# class ClearbitArguments(BaseModel):
+#     email: Optional[str] = None
+#     domain: Optional[str] = None
+#
+
+
+
+
+

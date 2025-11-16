@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-10-03T03:08:05.193874+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 0,
+  "nodes_questioned": 0,
+  "nodes_resolved": 1,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "b9d94a25-d9b9-4200-93ae-d5e5cb232c67",
+      "label": "Likes Mexican cuisine",
+      "status": "resolved",
+      "problem_description": "The node has issues with both its label and semantic_label. The label is not a minimal type and is instead a phrase describing the state. The semantic_label is overly generic and does not follow the expected format of providing context with names in parentheses. Temporal information is sufficient for a State node.",
+      "resolution_notes": "Successfully delegated to kg_team: Something has gone wrong during kg_team_manager execution. Possible error: False Debug info: null"
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+#register_user.py
+from werkzeug.security import generate_password_hash
+from flask import Blueprint, render_template
+from flask import request, jsonify
+from app.assistant.database.db_instance import db
+from app.models.user_login import UserLogin
+from sqlalchemy.inspection import inspect
+
+add_user_bp = Blueprint('add_user', __name__)
+serve_registration_page_bp = Blueprint('serve_registration_page', __name__)
+
+def print_row_contents(row):
+    if row is not None:
+        for column in inspect(row).mapper.column_attrs:
+            print(f"{column.key}: {getattr(row, column.key)}")
+    else:
+        print("\nRow is None.")
+
+def create_user(username, email, password):
+    try:
+        # Check if username is available
+        if UserLogin.query.filter_by(username=username).first():
+            return {'success': False, 'message': 'Username is already taken'}
+        hashed_password = generate_password_hash(password)
+
+        new_user = UserLogin(username=username, email=email, password_hash=hashed_password)
+
+        db.session.add(new_user)
+        db.session.commit()
+
+
+        # Commit all changes including the new user and their default settings
+        db.session.commit()
+        print_row_contents(new_user)
+
+
+        return {'success': True, 'message': 'User created successfully'}
+
+    except Exception as e:
+        db.session.rollback()
+        return {'success': False, 'message': f'Error creating user: {e}'}
+
+@serve_registration_page_bp.route('/registration', methods=['POST','GET'])
+def serve_registration_page():
+    return render_template("add_user.html")
+
+@add_user_bp.route('/add_user', methods=['POST'])
+def add_user():
+    data = request.json
+    new_username = data.get('username')
+    new_email = data.get('email', 'noemails@yet')  # Default to a temporary email if not provided
+    password = data.get('password')
+
+    result = create_user(new_username, new_email, password)
+
+    if result['success']:
+        return jsonify(result), 201  # 201 Created
+    else:
+        return jsonify(result), 400  # 400 Bad Request or another appropriate status code
+
+
+

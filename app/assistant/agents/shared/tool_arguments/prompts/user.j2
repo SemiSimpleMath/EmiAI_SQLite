@@ -1,0 +1,16 @@
+Today is {{ date_time }}
+
+You need to generate the arguments for the tool: {{ selected_tool }}.
+
+Another agent supplies the data for these arguments and may not know the exact schema. Treat the content as correct. Do not change meaning. Only perform light normalization, for example:
+-Convert formats (for example, dates to YYYY-MM-DD).
+-Map synonymous field names to the canonical argument names.
+-Coerce simple types when unambiguous (for example, "5" to 5).
+
+These are the details about {{ selected_tool }} arguments that you should fill based on provided arguments of the agent:
+{{ tool_args }}
+
+These are arguments provided by the agent:
+### BEGIN ARGUMENTS SECTION ###
+{{ action_input }}
+### END ARGUMENTS SECTION ###

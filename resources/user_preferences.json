@@ -1,0 +1,20 @@
+{
+  "reminders": {
+    "preferred_count": 3,
+    "typical_times": [
+      "few hours before",
+      "2 hours before",
+      "1 hour before",
+      "30 mins before",
+      "10 minutes before"
+    ]
+  },
+  "calendar": {
+    "reminder_preferences": "multiple reminders for infrequent events"
+  },
+  "context_notes": [
+    "Woodbridge is for Peter",
+    "South Lake is for Annika"
+  ]
+}
+

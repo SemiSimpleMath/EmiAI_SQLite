@@ -1,0 +1,21 @@
+{
+  "timestamp": "2025-09-30T16:31:44.688015+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 1,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [
+    "Questioning failed: 'ProblematicNode' object has no attribute 'node_id'",
+    "'list' object has no attribute 'get'"
+  ],
+  "processed_nodes": [
+    {
+      "node_id": "38ece277-d9b9-4938-b4db-9f2309fe8859",
+      "label": "To-do list",
+      "status": "validated",
+      "problem_description": "The node likely represents a specific personal document but is labeled generically and typed too broadly. Missing aliases reduce discoverability. Minor description refinements would improve clarity.",
+      "resolution_notes": "1) Rename label to a specific instance title, e.g., “Jukka’s To‑Do List” (use consistent hyphenation for “to‑do”). 2) Update type to a more specific class per schema (e.g., Document > PersonalDocument > TaskList/ToDoList) while keeping category=document. 3) Add aliases focused on owner-specific discovery, e.g., [“Jukka’s task list”, “Jukka’s task tracker”, “Jukka todo list”]; avoid overly generic aliases that could collide (e.g., just “to‑do list”). 4) Tighten description to be objective and scoped to the instance, e.g., “Personal task list maintained by Jukka for organizing and prioritizing work and personal tasks; used as a central planning reference.” 5) Add/verify relationships: owned_by/maintained_by -> Person:Jukka; instance_of -> Concept: To‑do list; optionally contains -> Task nodes; stored_in -> Platform/App if known (e.g., Notion/Trello). 6) Add metadata: created_at, updated_at, language, privacy_level (likely private), source/provenance, and confidence. 7) Disambiguate if this was intended as a generic concept: create/retain a Concept node “To‑do list” and make this node the instance “Jukka’s To‑Do List”; retarget edges accordingly. 8) Check for duplicates and merge as needed; enforce consistent capitalization/hyphenation across label and aliases."
+    }
+  ]
+}

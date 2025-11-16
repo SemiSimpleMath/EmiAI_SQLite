@@ -1,0 +1,338 @@
+{% extends 'base.html' %}
+
+{% block optional_css %}
+<!-- External CSS -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/chat_bot_4.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/weather.css') }}">
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+<!-- Font Awesome for Icons -->
+<link
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+        rel="stylesheet"
+        crossorigin="anonymous"
+        referrerpolicy="no-referrer"
+/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+{% endblock %}
+
+{% block content %}
+<!-- Header Section -->
+<header id="header">
+  <!-- Hamburger Menu Button -->
+  <button id="menu-toggle-btn" class="menu-toggle-btn" aria-label="Toggle Menu">
+    <i class="fas fa-bars"></i>
+  </button>
+
+  <h1 class="header__title">{{ assistant_name }}</h1>
+  
+  <!-- Chat Mode Indicator -->
+  <div id="mode-indicator" class="mode-indicator"></div>
+  
+  <div id="mute-btn-container">
+    <!-- Mute Icon -->
+    <i class="fas fa-volume-down" id="mute-icon"></i>
+    <!-- Unmute Icon -->
+    <i class="fas fa-volume-mute hidden" id="unmute-icon"></i>
+  </div>
+
+  <!-- Dropdown Menu -->
+  <div id="dropdown-menu" class="dropdown-menu hidden">
+    <ul class="menu-list">
+      <li class="menu-item">
+        <button id="menu-theme-toggle" class="menu-btn">
+          <i class="fas fa-sun"></i>
+          <span>Light/Dark Mode</span>
+        </button>
+      </li>
+      <li class="menu-item">
+        <button id="menu-speak-mode" class="menu-btn" aria-pressed="false">
+          <i class="fas fa-microphone"></i>
+          <span>Speak Mode: Off</span>
+        </button>
+      </li>
+      <li class="menu-item">
+        <a href="/daily_summary" target="_blank" class="menu-btn">
+          <i class="fas fa-calendar-day"></i>
+          <span>Daily Summary</span>
+        </a>
+      </li>
+      <li class="menu-item menu-submenu">
+        <button class="menu-btn submenu-toggle">
+          <i class="fas fa-tools"></i>
+          <span>Dev Tools</span>
+          <i class="fas fa-chevron-down submenu-arrow"></i>
+        </button>
+        <ul class="submenu">
+          <li class="submenu-item">
+            <a href="/taxonomy_webviewer" target="_blank" class="menu-btn">
+              <i class="fas fa-sitemap"></i>
+              <span>Taxonomy Web Viewer</span>
+            </a>
+          </li>
+          <li class="submenu-item">
+            <a href="/kg-visualizer" target="_blank" class="menu-btn">
+              <i class="fas fa-project-diagram"></i>
+              <span>KG Visualizer</span>
+            </a>
+          </li>
+          <li class="submenu-item">
+            <a href="/entity_cards" target="_blank" class="menu-btn">
+              <i class="fas fa-address-card"></i>
+              <span>Entity Cards Editor</span>
+            </a>
+          </li>
+          <li class="submenu-item">
+            <button id="menu-ngrok-toggle" class="menu-btn" data-active="false">
+              <i class="fas fa-globe"></i>
+              <span>Start Ngrok</span>
+            </button>
+          </li>
+        </ul>
+      </li>
+      <li class="menu-item menu-submenu">
+        <button class="menu-btn submenu-toggle">
+          <i class="fas fa-user-circle"></i>
+          <span>Preferences</span>
+          <i class="fas fa-chevron-down submenu-arrow"></i>
+        </button>
+        <ul class="submenu">
+          <li class="submenu-item">
+            <a href="/preferences/general" class="menu-btn">
+              <i class="fas fa-user"></i>
+              <span>User</span>
+            </a>
+          </li>
+        </ul>
+      </li>
+      <li class="menu-item menu-submenu">
+        <button class="menu-btn submenu-toggle">
+          <i class="fas fa-cogs"></i>
+          <span>Settings</span>
+          <i class="fas fa-chevron-down submenu-arrow"></i>
+        </button>
+        <ul class="submenu">
+          <li class="submenu-item">
+            <a href="/settings/features" class="menu-btn">
+              <i class="fas fa-toggle-on"></i>
+              <span>Features</span>
+            </a>
+          </li>
+          <li class="submenu-item">
+            <a href="/settings/assistant" class="menu-btn">
+              <i class="fas fa-robot"></i>
+              <span>Assistant</span>
+            </a>
+          </li>
+          <li class="submenu-item">
+            <a href="/settings/api-keys" class="menu-btn">
+              <i class="fas fa-key"></i>
+              <span>API Keys</span>
+            </a>
+          </li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+</header>
+
+<!-- Main Dashboard -->
+<div class="dashboard">
+  <!-- Chat Widget -->
+  <section class="widget widget--chat" aria-labelledby="chat-heading">
+    <h2 id="chat-heading">Chat</h2>
+    <!-- Audio Elements -->
+    <audio
+            id="chat-bot-audio"
+            preload="auto"
+            style="display:none"
+    ></audio>
+
+    <audio id="notificationSound" src="{{ url_for('static', filename='sounds/youve-got-mail-sound.mp3') }}" preload="auto"></audio>
+    <!-- Chat Area -->
+    <div class="chat-area" role="log" aria-live="polite" id="chat-box">
+      <!-- Existing Chat Messages will appear here -->
+    </div>
+    <!-- Chat Form -->
+    <form class="chat-form" aria-label="Send a message">
+      <label for="chat-input" class="visually-hidden">Message input</label>
+      <textarea
+              id="chat-input"
+              placeholder="Enter Your Message"
+              required
+              autocomplete="off"
+              aria-label="Message input"
+              rows="1"
+              style="resize: none;"
+      ></textarea>
+      <button type="button" id="record-btn-icon" aria-label="Start Recording">
+        <!-- Microphone Icon (Record Off) -->
+        <i class="fa-solid fa-microphone" id="record-btn-off"></i>
+
+        <!-- Stop Icon (Record On) -->
+        <i class="fa-solid fa-stop hidden" id="record-btn-on"></i>
+      </button>
+
+
+
+    </form>
+    <!-- Audio Playback Buttons -->
+    <div class="chat-box-header">
+    </div>
+  </section>
+
+  <aside class="widget widget--feed" aria-labelledby="feed-heading">
+    <h2 id="feed-heading">Feed</h2>
+    <ul id="feed-list" class="feed-list">
+      <!-- Feed items will be dynamically added here -->
+    </ul>
+  </aside>
+
+  <aside class="widget widget--todo" aria-labelledby="todo-heading">
+    <h2 id="todo-heading">ToDo List</h2>
+    <ul id="todo-list" class="todo-list">
+      <!-- Dynamic To-Do Items Will Be Injected Here -->
+    </ul>
+    <!-- To-Do Item Template (Hidden) -->
+    <template id="todo-item-template">
+      <li class="todo-item">
+        <label class="todo-label">
+          <input type="checkbox">
+          <span class="todo-task"></span>
+        </label>
+        <div class="todo-meta">
+          <span class="todo-due"></span>
+          <span class="todo-notes"></span>
+        </div>
+      </li>
+    </template>
+
+  </aside>
+
+  <!-- Calendar Widget -->
+  <section class="widget widget--calendar" aria-labelledby="calendar-heading">
+    <h2 id="calendar-heading">Calendar</h2>
+    <!-- Calendar Navigation -->
+    <div class="calendar-navigation">
+      <button id="calendar-prev-btn" aria-label="Previous Day">&lt;</button>
+      <span id="calendar-current-date">{{ current_date }}</span>
+      <button id="calendar-next-btn" aria-label="Next Day">&gt;</button>
+    </div>
+    <ul id="calendar-list" class="calendar-list">
+      <!-- Dynamic Calendar Events Will Be Injected Here -->
+    </ul>
+    <!-- Calendar Item Template (Hidden) -->
+    <template id="calendar-item-template">
+      <li class="calendar__item">
+        <div class="calendar__item--minimal">
+          <span class="calendar__event-title"></span>
+          <span class="calendar__event-time"></span>
+        </div>
+        <div class="calendar__item--details hidden">
+          <!-- Detailed fields will be injected here by JavaScript -->
+        </div>
+      </li>
+    </template>
+  </section>
+
+  <!-- Reminders Widget (Scheduler) -->
+  <section class="widget widget--scheduler" aria-labelledby="scheduler-heading">
+    <h2 id="scheduler-heading">Reminders</h2>
+    <!-- Navigation -->
+    <div class="scheduler-navigation">
+      <button id="scheduler-prev-btn" aria-label="Previous Day">&lt;</button>
+      <span id="scheduler-current-date"></span>
+      <button id="scheduler-next-btn" aria-label="Next Day">&gt;</button>
+    </div>
+    <!-- Reminder Items List -->
+    <ul id="scheduler-list" class="scheduler-list">
+      <!-- Dynamic reminder items will be injected here -->
+    </ul>
+    <!-- Scheduler Item Template -->
+    <template id="scheduler-item-template">
+      <li class="scheduler__item">
+        <div class="scheduler__item--minimal" tabindex="0" role="button" aria-expanded="false" aria-controls="scheduler-details">
+          <span class="scheduler__task-title"></span>
+          <span class="scheduler__task-deadline"></span>
+        </div>
+        <div class="scheduler__item--details hidden" id="scheduler-details">
+          <!-- Detailed information will be injected here -->
+        </div>
+      </li>
+    </template>
+  </section>
+
+
+  <!-- News Widget -->
+  <section class="widget widget--news" aria-labelledby="news-heading">
+    <h2>Latest News</h2>
+    <div id="news-widget" class="widget--news">
+    </div>
+  </section>
+
+  <!-- Weather Widget -->
+  <section class="widget weather">
+    {% include 'weather_widget.html' %}
+  </section>
+
+  <section class="widget widget--email" aria-labelledby="email-heading">
+    <h2 id="email-heading">Email</h2>
+    <ul id="email-list" class="email-list">
+      <!-- Dynamic Email Items Will Be Injected Here -->
+    </ul>
+
+    <template id="email-item-template">
+      <li class="email__item">
+        <div class="email__item--minimal">
+          <div class="email__meta">
+            <span class="email__sender">Sender: Unknown</span>
+            <span class="email__subject">No subject</span>
+          </div>
+          <span class="email__toggle-indicator">▼</span>
+        </div>
+        <div class="email__item--details hidden">
+          <!-- More detailed info goes here -->
+        </div>
+      </li>
+    </template>
+  </section>
+
+
+</div>
+
+<!-- Footer Section -->
+<footer id="footer">
+  <p>&copy; 2025 EmiAI Dashboard. All rights reserved.</p>
+</footer>
+{% endblock %}
+
+{% block optional_js %}
+<!-- jQuery Library -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"
+        crossorigin="anonymous"></script>
+<!-- Socket.IO -->
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"
+        crossorigin="anonymous"></script>
+<!-- External JavaScript -->
+<script>
+  // only on iOS Safari
+  if (/iP(hone|ad|od)/.test(navigator.userAgent)) {
+    const player = document.getElementById('chat-bot-audio');
+    const SILENT =
+      "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=";
+    function unlock() {
+      player.src = SILENT;
+      player.play()
+        .then(()=>{ player.pause(); player.src = ""; })
+        .catch(e=>console.warn("Audio unlock failed", e));
+      document.removeEventListener("touchend", unlock, true);
+    }
+    document.addEventListener("touchend", unlock, true);
+  }
+</script>
+<script src="{{ url_for('static', filename='js/emi.js') }}"></script>
+<script src="{{ url_for('static', filename='js/weather.js') }}"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Swiper/10.2.0/swiper-bundle.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Swiper/10.2.0/swiper-bundle.min.js"></script>
+<script src="{{ url_for('static', filename='js/mobile_swiper.js') }}"></script>
+{% endblock %}

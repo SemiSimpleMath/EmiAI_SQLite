@@ -1,0 +1,22 @@
+name: slack::casual_chat_writer
+class_name: Agent
+color: red
+llm_params:
+  llm_provider: openai
+  engine: gpt-4o-mini
+  temperature: 0.1
+user_context_items:
+  - date_time
+  - information
+  - task
+  - entity_summary
+rag_fields:
+  information:
+    - chat
+    - slack
+  task:
+    - chat
+    - slack
+type: agent
+structured_output: AgentForm
+

@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block optional_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/forms.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+{% endblock %}
+
+{% block content %}
+<div id="login-container">
+  <div id="login-box">
+    <h1>Login</h1>
+    {% if error %}
+    <p class="error">{{ error }}</p>
+    {% endif %}
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    {% for message in messages %}
+    <div>{{ message }}</div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+    <form id="login-form" action="#" method="POST" data-url="{{ url_for('login.login') }}">
+      <label for="username">Username:</label>
+      <input type="text" name="username" id="username" required>
+
+      <label for="password">Password:</label>
+      <input type="password" name="password" id="password" required>
+
+      <input type="submit" value="Login" class="form-button">
+    </form>
+    <div id="response-message"></div>
+    <p>Don't have an account? <a href="{{ url_for('serve_registration_page.serve_registration_page') }}">Register here</a></p>
+  </div>
+</div>
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/login.js') }}"></script>
+{% endblock %}
+
+{% endblock %}
+

@@ -1,0 +1,26 @@
+name: context_generator::final_answer
+class_name: FinalAnswer
+color: blue
+llm_params:
+  engine: gpt-4o-mini
+  llm_provider: openai
+  temperature: 0.1
+allowed_tools: []
+except_tools: []
+user_context_items:
+- date_time
+- task
+- information
+- summary
+- final_answer_content
+- recent_history
+- checklist
+- accomplishments
+- visited_links
+- important_links
+rag_fields:
+  information:
+  - chat
+  task:
+  - chat
+type: agent

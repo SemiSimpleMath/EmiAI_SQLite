@@ -1,0 +1,83 @@
+name: daily_summary_manager
+class_name: MultiAgentManager
+description: "A manager that creates comprehensive daily summaries including calendar events, todo tasks, web information, and scheduling recommendations."
+max_cycles: 50  # Prevent infinite loops
+role_bindings:
+  delegator: daily_summary::delegator
+  tool_selector: shared::tool_selector
+
+agents:
+  - name: daily_summary::delegator
+    class: Delegator
+  - name: daily_summary::planner
+    class: Planner
+  - name: daily_summary::calendar_analyzer
+    class: Agent
+  - name: daily_summary::todo_analyzer
+    class: Agent
+  - name: daily_summary::email_analyzer::email_fetch
+    class: Agent
+  - name: daily_summary::email_analyzer::email_analyze
+    class: Agent
+  - name: daily_summary::web_gatherer
+    class: Agent
+  - name: daily_summary::schedule_optimizer
+    class: Agent
+  - name: daily_summary::final_answer
+    class: FinalAnswer
+  - name: shared::tool_arguments
+    class: Agent
+  - name: shared::writer
+    class: Agent
+  - name: shared::mathematician
+    class: Agent
+
+control_nodes:
+  - name: tool_caller
+    class: ToolCaller
+  - name: tool_result_handler
+    class: ToolResultHandler
+  - name: exit_node
+    class: ExitNode
+  - name: flow_exit_node
+    class: FlowExitNode
+  - name: manager_exit_node
+    class: ManagerExitNode
+  - name: graceful_exit_control_node
+    class: GracefulExitControlNode
+
+tools:
+  allowed_tools:
+    - get_calendar_events
+    - get_todo_tasks
+    - create_todo_task
+    - update_todo_task
+    - get_email
+    - send_email
+    - search_web
+    - scrape_url
+    - rag_query
+    - web_manager
+    - event_manager
+    - ask_user
+    - notify_user
+  except_tools: []
+
+flow_config:
+  state_map:
+    "daily_summary::delegator": "daily_summary::planner"
+    "shared::tool_arguments": "tool_caller"
+    "tool_caller": "tool_result_handler"
+    "daily_summary::email_analyzer::email_fetch": "daily_summary::email_analyzer::email_analyze"
+    "daily_summary::calendar_analyzer_flow_exit_node": "tool_result_handler"
+    "daily_summary::todo_analyzer_flow_exit_node": "tool_result_handler"
+    "daily_summary::email_analyzer::email_analyze_flow_exit_node": "tool_result_handler"
+    "daily_summary::web_gatherer_exit": "tool_result_handler"
+
+    
+    # Planner exit goes to final_answer (not tool_result_handler since it's the main orchestrator)
+    "daily_summary::planner_flow_exit_node": "daily_summary::final_answer"
+    
+    "daily_summary::final_answer": "manager_exit_node"
+    "graceful_exit": "graceful_exit_control_node"
+    "graceful_exit_control_node": "daily_summary::final_answer"

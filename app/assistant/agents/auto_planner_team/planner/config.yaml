@@ -1,0 +1,36 @@
+name: auto_planner_team::planner
+class_name: Planner
+color: "green"
+llm_params:
+  llm_provider: "openai"
+  engine: "gpt-5"
+  temperature: 1
+  api_key: "dummy_api_key"
+
+allowed_tools: all
+except_tools: [emi_team]
+allowed_nodes: [shared::writer, shared::mathematician, auto_planner_team::final_answer]
+
+user_context_items:
+  - date_time
+  - task
+  - information
+  - recent_history
+  - checklist
+  - action_count
+  - entity_summary
+  - entity_metadata
+
+
+
+rag_fields:
+  task: ["chat"]
+  information: ["chat"]
+
+system_context_items:
+  - tool_descriptions
+  - allowed_nodes
+  - task
+
+
+

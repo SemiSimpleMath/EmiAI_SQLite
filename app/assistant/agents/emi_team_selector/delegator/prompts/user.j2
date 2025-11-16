@@ -1,0 +1,13 @@
+{% if last_plan and plan_status != "New tool result. Consult PlannerAgent." %}
+Current plan:
+{{ last_plan.plan }}
+Planner agent recommends:
+{{ last_plan.action }}
+{{ last_plan.action_input }}
+{% endif %}
+
+{% if plan_status %}
+Current Plan Status: {{ plan_status }}
+{% else %}
+No plan yet! Call PlannerAgent
+{% endif %}

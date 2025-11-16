@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-09-30T18:32:08.919189+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 1,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "38ece277-d9b9-4938-b4db-9f2309fe8859",
+      "label": "To-do list",
+      "status": "validated",
+      "problem_description": "This node models a specific personal document but uses a generic label, lacks aliases, and has minor naming normalization issues. Type=Entity and category=document are appropriate; temporal data is not required for this node type. Description is generally clear.",
+      "resolution_notes": "Recommended repairs:\n- Rename for specificity and disambiguation per naming conventions, e.g., \"Jukka's To-Do List\" or \"To-Do List (Jukka)\". Keep current label as an alias if needed.\n- Add aliases to capture common variants: [\"Todo list\", \"To do list\", \"To-do list\", \"Jukka's todo list\", \"Jukka's task list\", \"Personal to-do list\"].\n- Normalize punctuation and casing: replace smart quotes with ASCII apostrophes; ensure consistent hyphenation (\"to-do\") and title casing per graph style.\n- Strengthen connectivity:\n  - maintained_by/owned_by -> Person:Jukka (create/link to the Person node).\n  - instance_of -> Concept: To-do list (or DocumentType: list) if such nodes exist.\n  - is_about -> Personal tasks/Commitments (if nodes exist and appropriate).\n  - stored_in/hosted_on -> the actual tool/app or repository once known (e.g., Notion/Todoist/etc.).\n- Improve provenance metadata: update source to a specific origin (e.g., app name, file path, or URL) rather than generic processed_entity_log; add source_detail if supported.\n- Consider adding a sensitivity/privacy flag or access control attribute if your schema supports it, as this is a personal document.\n- Verify there is no duplicate node; merge if an existing \"Jukka's to-do list\"-type node already exists.\n- Optionally add a brief note in the description indicating where it is maintained (tool/location) once confirmed."
+    }
+  ]
+}

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assistant Settings</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/setup_wizard.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="setup-container">
+        <div class="setup-header">
+            <h1>Assistant Settings</h1>
+            <p>Customize your assistant's personality and style</p>
+            <a href="/chat_bot" class="back-link"><i class="fas fa-arrow-left"></i> Back to Chat</a>
+        </div>
+
+        <form id="assistantSettingsForm">
+            <!-- Your Assistant -->
+            <div class="settings-section">
+                <h2>Your Assistant</h2>
+                
+                <div class="form-group">
+                    <label for="assistant_name">Assistant Name <span class="required">*</span></label>
+                    <input type="text" id="assistant_name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="relationship_type">How should your assistant see you? <span class="required">*</span></label>
+                    <select id="relationship_type" required>
+                        <option value="">Select...</option>
+                        <option value="friend">Friend</option>
+                        <option value="boss">Boss</option>
+                        <option value="collaborator">Collaborator</option>
+                        <option value="custom">Custom...</option>
+                    </select>
+                </div>
+                
+                <div class="form-group" id="relationship_description_group" style="display: none;">
+                    <label for="relationship_description">Relationship Description</label>
+                    <textarea id="relationship_description" rows="3"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="assistant_role">Assistant's Role</label>
+                    <textarea id="assistant_role" rows="4"></textarea>
+                </div>
+                
+                <details>
+                    <summary>Advanced: Personality & Backstory (Optional)</summary>
+                    <div class="form-group">
+                        <label for="assistant_personality">Personality</label>
+                        <textarea id="assistant_personality" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="assistant_backstory">Backstory</label>
+                        <textarea id="assistant_backstory" rows="3"></textarea>
+                    </div>
+                </details>
+            </div>
+
+            <!-- Communication Style -->
+            <div class="settings-section">
+                <h2>Communication Style</h2>
+                
+                <div class="form-group">
+                    <label>How should your assistant talk to you? <span class="required">*</span></label>
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" name="communication_style" value="direct">
+                            <div class="radio-content">
+                                <strong>Direct & Natural</strong>
+                                <p>No filler, straight to the point</p>
+                            </div>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="communication_style" value="warm">
+                            <div class="radio-content">
+                                <strong>Warm & Proactive</strong>
+                                <p>Empathetic, offers help</p>
+                            </div>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="communication_style" value="professional">
+                            <div class="radio-content">
+                                <strong>Formal & Professional</strong>
+                                <p>Professional language</p>
+                            </div>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="communication_style" value="custom">
+                            <div class="radio-content">
+                                <strong>Custom</strong>
+                                <p>Define your own style</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="chat_guidelines">Chat Guidelines (Edit as needed)</label>
+                    <textarea id="chat_guidelines" rows="10"></textarea>
+                </div>
+            </div>
+
+            <!-- Save Button -->
+            <div class="settings-actions">
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-save"></i> Save Changes
+                </button>
+            </div>
+
+            <div id="error-message" class="error-message" style="display: none;"></div>
+            <div id="success-message" class="success-message" style="display: none;"></div>
+            <div id="loading" class="loading" style="display: none;">
+                <div class="spinner"></div>
+                <p>Saving...</p>
+            </div>
+        </form>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/assistant_settings.js') }}"></script>
+</body>
+</html>
+
+

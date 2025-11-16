@@ -1,0 +1,11 @@
+name: tool_feedback
+class_name: Agent
+color: "white"
+llm_params:
+  llm_provider: "openai"
+  engine: "gpt-4o-mini"
+  temperature: 0.5
+
+user_context_items:
+  - date_time
+  - agent_input

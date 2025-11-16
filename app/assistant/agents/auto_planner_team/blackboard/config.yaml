@@ -1,0 +1,28 @@
+name: auto_planner_team::blackboard
+class_name: Blackboard
+color: "blue"
+llm_params:
+  "llm_provider": "openai"
+  engine: "gpt-4o-mini"
+  temperature: 0.1
+
+allowed_tools: []
+except_tools: []
+
+user_context_items:
+  - task
+  - history_to_summarize
+  - important_links
+  - final_answer_content
+  - summary
+
+system_context_items: []
+
+append_fields:
+  - summary
+  - final_answer_content
+  - important_links
+
+rag_fields:
+  task: ["chat"]
+  information: ["chat"]

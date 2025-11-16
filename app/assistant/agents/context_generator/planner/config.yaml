@@ -1,0 +1,33 @@
+name: context_generator::planner
+class_name: Planner
+color: green
+llm_params:
+  api_key: dummy_api_key
+  engine: gpt-5
+  llm_provider: openai
+  temperature: 1
+allowed_tools: all
+except_tools:
+- emi_team
+allowed_nodes:
+- shared::writer
+- shared::mathematician
+- emi_team::final_answer
+- context_generator::planner_done
+user_context_items:
+- date_time
+- task
+- information
+- recent_history
+- checklist
+- achievements
+rag_fields:
+  information:
+  - chat
+  task:
+  - chat
+system_context_items:
+- tool_descriptions
+- allowed_nodes
+- task
+type: agent

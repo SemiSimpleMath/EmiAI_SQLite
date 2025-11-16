@@ -1,0 +1,24 @@
+name: kg_explorer::planner_relationship
+class_name: Planner
+color: "purple"
+llm_params:
+  llm_provider: "openai"
+  engine: "gpt-5"
+  temperature: 1
+  api_key: "dummy_api_key"
+
+allowed_tools: [kg_describe_node]
+allowed_nodes: [shared::find_node, flow_exit_node]
+except_tools: []
+
+user_context_items:
+  - date_time
+  - task
+  - information
+  - recent_history
+  - checklist
+  - action_count
+
+system_context_items:
+  - tool_descriptions
+  - allowed_nodes

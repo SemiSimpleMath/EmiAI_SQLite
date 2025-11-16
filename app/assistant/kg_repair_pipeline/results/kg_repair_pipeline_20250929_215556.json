@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-09-29T21:55:56.818556+00:00",
+  "nodes_identified": 1,
+  "nodes_validated": 1,
+  "nodes_questioned": 0,
+  "nodes_resolved": 0,
+  "nodes_skipped": 0,
+  "errors": [],
+  "processed_nodes": [
+    {
+      "node_id": "38ece277-d9b9-4938-b4db-9f2309fe8859",
+      "status": "validated",
+      "problem_description": "The node is problematic. It uses a generic node_type ('Entity') that violates the allowed type set and lacks essential descriptive/structural information. It has only one connection, no attributes, and a generic label, making it weakly connected and ambiguous. A neighbor node with the same label likely represents the same document (Jukka’s to-do list), indicating duplication that should be resolved. Expected relationships to its owner (Jukka) and contained tasks are missing.",
+      "priority": "low",
+      "resolution_notes": "- Validate schema: confirm whether type/category = “Entity” is allowed. If disallowed, determine intended concrete type (e.g., Document, TaskList, Person, Organization) from ingestion logs or source mapping and retype accordingly.\n- Provenance recovery: look up this node’s source by its internal ID/UUID in ingestion logs and/or source system. If a source record exists, hydrate attributes: name/title, description, created_at/updated_at, source_uri/source_id, provenance, and confidence.\n- Connectivity: attach required edges per schema for the resolved type (e.g., owner/created_by Person, contains Task items, part_of Collection/Workspace). If the intended relationships cannot be established, flag for review.\n- Duplicate check: run dedup using canonical keys (source_id, title+source, content hash). If a true duplicate exists, merge according to canonicalization rules (choose survivor, consolidate attributes with provenance and confidence, redirect edges, remove duplicate).\n- Label hygiene: if “label” is expected to be human-readable, populate a proper display_name/title and move the UUID to an id/external_id field.\n- Quarantine or delete: if no provenance or intended type can be recovered and the node remains attribute-less and unconnected, mark for deletion to reduce noise.\n- Prevent recurrence: add ingestion validation to reject creation of nodes with disallowed generic types or with zero attributes and zero edges unless explicitly marked as temporary placeholders with a TTL."
+    }
+  ]
+}
