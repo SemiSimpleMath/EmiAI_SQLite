@@ -50,9 +50,18 @@ class TaxonomyManager:
             # Generate embedding for search text
             query_embedding = self.kg_utils.create_embedding(text)
             
-            # Get all taxonomy entries (with optional parent filter)
-            query = self.session.query(Taxonomy).filter(Taxonomy.label_embedding.isnot(None))
+            # Use ChromaDB for fast similarity search
+            from app.assistant.kg_core.chroma_embedding_manager import get_chroma_manager
+            chroma = get_chroma_manager()
             
+            # Search ChromaDB for similar taxonomy entries
+            similar_taxonomy = chroma.search_similar_taxonomy(
+                query_embedding,
+                k=k * 3,  # Get more candidates for filtering
+                threshold=0.0  # No threshold, we'll filter by parent later
+            )
+            
+            # If parent filter specified, filter to subtree
             if parent_filter is not None:
                 # Get subtree IDs using recursive query
                 from sqlalchemy import text as sql_text
@@ -66,28 +75,28 @@ class TaxonomyManager:
                     SELECT id FROM subtree
                 """)
                 result = self.session.execute(subtree_query, {"parent_id": parent_filter})
-                subtree_ids = [row[0] for row in result]
-                query = query.filter(Taxonomy.id.in_(subtree_ids))
+                subtree_ids = set(row[0] for row in result)
+                
+                # Filter results to only include subtree
+                similar_taxonomy = [
+                    (tax_id, sim, label) 
+                    for tax_id, sim, label in similar_taxonomy 
+                    if tax_id in subtree_ids
+                ]
             
-            all_taxonomy = query.all()
+            # Take top k results
+            top_matches = similar_taxonomy[:k]
             
-            if not all_taxonomy:
-                return []
-            
-            # Calculate similarity for each taxonomy entry (Python-based like existing KG code)
+            # Fetch actual Taxonomy objects
             similarities = []
-            for tax in all_taxonomy:
-                if tax.label_embedding is not None:
-                    sim = self.kg_utils.cosine_similarity(query_embedding, tax.label_embedding)
+            for tax_id, sim, label in top_matches:
+                tax = self.session.query(Taxonomy).filter(Taxonomy.id == tax_id).first()
+                if tax:
                     similarities.append((tax, sim))
-            
-            # Sort by similarity descending and take top k
-            similarities.sort(key=lambda x: x[1], reverse=True)
-            top_matches = similarities[:k]
             
             # Format results
             candidates = []
-            for tax, sim in top_matches:
+            for tax, sim in similarities:
                 candidates.append({
                     "id": tax.id,
                     "label": tax.label,
@@ -149,19 +158,22 @@ class TaxonomyManager:
                         "existing_taxonomy": existing
                     }
             
-            # Generate embedding
-            embedding = self.kg_utils.create_embedding(normalized_label)
-            
-            # Create entry
+            # Create entry (embedding will be stored in ChromaDB)
             tax = Taxonomy(
                 label=normalized_label,
                 description=description or f"Created via safe taxonomy creation",
                 parent_id=parent_id,
-                label_embedding=embedding
+                # Note: label_embedding is now a @property that reads from ChromaDB
             )
             
             self.session.add(tax)
-            self.session.flush()
+            self.session.commit()  # Commit immediately - SQLite single-writer
+            
+            # Store embedding in ChromaDB
+            from app.assistant.kg_core.chroma_embedding_manager import get_chroma_manager
+            chroma = get_chroma_manager()
+            embedding = self.kg_utils.create_embedding(normalized_label)
+            chroma.store_taxonomy_embedding(tax.id, normalized_label, embedding)
             
             logger.info(f"Created taxonomy safely: {normalized_label} (id={tax.id})")
             
@@ -353,7 +365,7 @@ class TaxonomyManager:
         )
         
         self.session.add(link)
-        self.session.flush()
+        self.session.commit()  # Commit immediately - SQLite single-writer
         
         logger.info(f"✨ Created taxonomy link: node={node_id}, taxonomy={taxonomy_id}, count=1, conf={confidence:.2f}")
         
@@ -558,7 +570,7 @@ class TaxonomyManager:
             self.session.add(suggestion)
             logger.info(f"💾 Saved new taxonomy suggestion: '{suggested_type}' (parent candidate: {parent_candidate_id})")
         
-        self.session.flush()
+        self.session.commit()  # Commit immediately - SQLite single-writer
     
     def get_top_suggestions(self, limit: int = 10) -> List[Dict]:
         """

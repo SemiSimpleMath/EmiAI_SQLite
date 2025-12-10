@@ -169,7 +169,7 @@ Boot up routine
 */
 
 async function fetchRepoData() {
-    console.log("At render repo route")
+    console.log("📦 Fetching repo data from /render_repo_route...");
     try {
         const response = await fetch('/render_repo_route', {
             method: 'POST',
@@ -180,16 +180,26 @@ async function fetchRepoData() {
         });
 
         if (!response.ok) {
+            console.error(`❌ HTTP error fetching repo data! Status: ${response.status}`);
             throw new Error(`HTTP error! Status: ${response.status}`);
         }
 
         const data = await response.json();
+        console.log("📦 Repo data response:", data);
 
         if (data.success && data.repo_data) {
+            const itemCount = data.repo_data.widget_data ? data.repo_data.widget_data.length : 0;
+            console.log(`✅ Processing ${itemCount} repo items`);
             processRepoData(data.repo_data);
+        } else {
+            console.warn("⚠️ Repo data response was not successful or missing repo_data:", data);
+            if (data.message) {
+                console.error("   Server message:", data.message);
+            }
         }
     } catch (error) {
-        console.error("Error fetching repo data:", error);
+        console.error("🛑 Error fetching repo data:", error);
+        console.error("   This may indicate the backend is not running or there's a database issue.");
     }
 }
 
@@ -2247,6 +2257,54 @@ function setupMenuToggle() {
         });
     }
     
+    // Menu Quiet Mode Toggle
+    const menuQuietBtn = document.getElementById('menu-quiet-mode');
+    if (menuQuietBtn) {
+        // Load initial state
+        fetch('/api/settings/quiet-mode')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    const isEnabled = data.quiet_mode.enabled;
+                    updateQuietModeUI(isEnabled);
+                }
+            })
+            .catch(err => console.error('Error loading quiet mode state:', err));
+        
+        menuQuietBtn.addEventListener('click', async () => {
+            try {
+                const response = await fetch('/api/settings/quiet-mode/toggle', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateQuietModeUI(data.enabled);
+                    showNotification(data.message, 'success');
+                } else {
+                    showNotification(data.message || 'Failed to toggle quiet mode', 'error');
+                }
+            } catch (error) {
+                console.error('Error toggling quiet mode:', error);
+                showNotification('Error toggling quiet mode', 'error');
+            }
+        });
+        
+        function updateQuietModeUI(isEnabled) {
+            const span = menuQuietBtn.querySelector('span');
+            const icon = menuQuietBtn.querySelector('i');
+            if (span) {
+                span.textContent = isEnabled ? 'Quiet Mode: On' : 'Quiet Mode: Off';
+            }
+            if (icon) {
+                icon.className = isEnabled ? 'fas fa-moon' : 'fas fa-moon';
+            }
+            menuQuietBtn.setAttribute('aria-pressed', isEnabled);
+            menuQuietBtn.classList.toggle('active', isEnabled);
+        }
+    }
+    
     // Ngrok Toggle
     const ngrokBtn = document.getElementById('menu-ngrok-toggle');
     if (ngrokBtn) {
@@ -2354,12 +2412,25 @@ function renderCalendarEvents() {
         return;
     }
 
-    // Sort events by start time
+    // Sort events: all-day events first, then by start time (earliest first)
     events.sort((a, b) => {
+        // All-day events always come first
+        const aAllDay = a.is_all_day === true;
+        const bAllDay = b.is_all_day === true;
+        
+        if (aAllDay && !bAllDay) return -1;  // a is all-day, b is not → a first
+        if (!aAllDay && bAllDay) return 1;   // b is all-day, a is not → b first
+        
+        // Both are same type, sort by start time
         const getStartTime = event => {
-            if (event.start_time) {
+            // Check various possible field names for start time
+            if (event.start && typeof event.start === 'string') {
+                // Most common: flat ISO string from backend
+                return new Date(event.start).getTime();
+            } else if (event.start_time) {
                 return new Date(event.start_time).getTime();
             } else if (event.start && typeof event.start === 'object' && event.start.dateTime) {
+                // Google Calendar format
                 return new Date(event.start.dateTime).getTime();
             } else if (event.start_dateTime) {
                 return new Date(event.start_dateTime).getTime();
@@ -2385,24 +2456,28 @@ function renderCalendarEvents() {
 
         const timeOptions = { hour: 'numeric', minute: '2-digit' };
 
-        let eventStartTime = "No Start Time";
-        if (event.start && typeof event.start === 'string') {
-            eventStartTime = new Date(event.start).toLocaleTimeString([], timeOptions);
-        }
+        // Handle all-day events
+        if (event.is_all_day === true) {
+            if (minimalTime) {
+                minimalTime.textContent = "All Day";
+            }
+        } else {
+            let eventStartTime = "No Start Time";
+            if (event.start && typeof event.start === 'string') {
+                eventStartTime = new Date(event.start).toLocaleTimeString([], timeOptions);
+            }
 
-        let eventEndTime = null;
-        if (event.end && typeof event.end === 'string') {
-            eventEndTime = new Date(event.end).toLocaleTimeString([], timeOptions);
-}
+            let eventEndTime = null;
+            if (event.end && typeof event.end === 'string') {
+                eventEndTime = new Date(event.end).toLocaleTimeString([], timeOptions);
+            }
 
-
-
-        const timeText = eventEndTime ? `${eventStartTime} - ${eventEndTime}` : eventStartTime;
-        if (minimalTime) {
-            if (eventEndTime) {
-                minimalTime.innerHTML = `${eventStartTime}<br>${eventEndTime}`;
-            } else {
-                minimalTime.textContent = eventStartTime;
+            if (minimalTime) {
+                if (eventEndTime) {
+                    minimalTime.innerHTML = `${eventStartTime}<br>${eventEndTime}`;
+                } else {
+                    minimalTime.textContent = eventStartTime;
+                }
             }
         }
 

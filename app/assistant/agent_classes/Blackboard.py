@@ -19,43 +19,50 @@ class Blackboard(Agent):
         Handles blackboard summarization when enough messages have accumulated.
         """
         self._set_agent_busy()
-        self._update_blackboard_state(message)
-
-
-        if not self.blackboard.time_to_summarize():
-            self._set_agent_idle()
-            return None
-
-        # Store the incoming message (typically from Planner)
-        self._store_incoming_message(message)
-
         try:
-            messages = self.construct_prompt(message)
+            self._update_blackboard_state(message)
+
+            if not self.blackboard.time_to_summarize():
+                return None
+
+            # Store the incoming message (typically from Planner)
+            self._store_incoming_message(message)
+
+            try:
+                messages = self.construct_prompt(message)
+            except Exception as e:
+                print(f"[{self.name}] Error during prompt construction: {e}")
+                logger.error(f"[{self.name}] Error during prompt construction: {e}")
+                return None
+            print("\n\n----- BLACKBOARD DEBUG -----")
+            print(messages, f"{self.name} Summarization Input")
+
+            print("\n\n\n\n")
+
+            schema = self.config.get('structured_output')
+            result = self._run_llm_with_schema(messages, schema)
+
+            if result is None:
+                return None
+
+            try:
+                self._process_summary_result(result)
+            except Exception as e:
+                logger.error(f"[{self.name}] Error processing LLM result: {e}")
+                raise
+
+            return result
         except Exception as e:
-            print(f"[{self.name}] Error during prompt construction: {e}")
-            logger.error(f"[{self.name}] Error during prompt construction: {e}")
-            self._set_agent_idle()
-            return None
-        print("\n\n----- BLACKBOARD DEBUG -----")
-        print(messages, f"{self.name} Summarization Input")
-
-        print("\n\n\n\n")
-
-        schema = self.config.get('structured_output')
-        result = self._run_llm_with_schema(messages, schema)
-
-        if result is None:
-            self._set_agent_idle()
-            return None
-
-        try:
-            self._process_summary_result(result)
-        except Exception as e:
-            logger.error(f"[{self.name}] Error processing LLM result: {e}")
+            logger.error(f"[{self.name}] Unhandled exception in action_handler: {e}")
+            print(f"🛑 [{self.name}] action_handler exception: {e}")
             raise
-
-        self._set_agent_idle()
-        return result
+        finally:
+            # ALWAYS release the busy lock, even on exceptions
+            try:
+                self._set_agent_idle()
+            except Exception as e:
+                logger.error(f"[{self.name}] Failed to release busy lock: {e}")
+                print(f"🛑 [{self.name}] Failed to release busy lock: {e}")
 
     def _process_summary_result(self, result_dict):
         """

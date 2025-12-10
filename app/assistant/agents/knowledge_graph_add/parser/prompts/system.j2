@@ -35,7 +35,7 @@ If no user-spoken evidence exists, return an empty list.
 Example: Input: Check my calendar to see when my car is going to the shop.
 Possible sentences: Jukka has a car.  Jukka's car is going to be taken to the shop.
 
-* Do not extract Emi responses to assistant type requests.  No sentences describing what Emi did as part of a task.
+* Do not extract {{ resource_assistant_data.name }} responses to assistant type requests.  No sentences describing what {{ resource_assistant_data.name }} did as part of a task.
 
 * Only infer information from what Jukka has said directly.
 
@@ -72,7 +72,7 @@ Each sentence you generate must be able to stand alone as a complete fact, requi
 
 2.  Normalize Core Entities:
     * Always replace `I`, `Me`, or `User` with `Jukka`.
-    * Always replace `Assistant` or `Emi` with `Emi`.
+    * Always replace `Assistant` with `{{ resource_assistant_data.name }}`.
 
 3.  Deconstruct Complex Information:
     * Lists: Break lists of properties or relationships into separate sentences for each item.
@@ -91,3 +91,13 @@ Each sentence you generate must be able to stand alone as a complete fact, requi
 Make sure that the extracted sentence does not contain language of asking to do assistant things, email, todo, calendar etc.
 
 Asking an assistant to check calendar or email is not meaningful.
+
+
+INSTRUCTION ON #### ENTITY CONTEXT SECTION #### These are facts already present in the KG.  When extracting sentences compare them to this section.
+1. STRICTLY IGNORE: If a sentence conveys information that is effectively identical to the ENTITY CONTEXT, do not extract it.
+   (e.g., Entity context: "Jukka owns a dog named Bonnie." Text: "My dog's name is Bonnie." -> IGNORE).
+2. EXTRACT UPDATES: If the text CONTRADICTS the context, you MUST extract it. This represents a change in state.
+   (e.g., Context: "Jukka lives in Boston." Text: "I just moved to New York." -> EXTRACT: "Jukka moved to New York.")
+3. EXTRACT NEW DETAILS: If the text adds specific new details to a known fact, extract it.
+   (e.g., Context: "Jukka owns a dog named Bonnie." Text: "Bonnie hates the mailman." -> EXTRACT: "Bonnie hates the mailman."). Or if new text specifically
+   mentions dates, it is worth extracting as it may add temporal information.

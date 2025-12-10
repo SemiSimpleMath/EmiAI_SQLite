@@ -19,7 +19,11 @@ def save_chat_messages(blackboard, db_session=None, force_test_db=False):
         own_session = True
 
     try:
-        chat_messages = [msg for msg in blackboard.get_messages() if msg.is_chat]
+        chat_messages = [
+            msg for msg in blackboard.get_messages() 
+            if msg.is_chat 
+            and msg.sub_data_type not in ["agent_notification", "entity_card_injection", "history_summary"]
+        ]
 
         if not chat_messages:
             logger.info("No chat messages to save.")

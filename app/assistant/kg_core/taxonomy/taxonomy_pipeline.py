@@ -187,7 +187,7 @@ def assign_taxonomy(
                 last_seen=datetime.utcnow()
             )
             session.add(new_link)
-            session.flush()  # Flush immediately to prevent autoflush conflicts
+            session.commit()  # Commit immediately - SQLite single-writer
             logger.info(f"Created new taxonomy link for node {node_id}")
             
     except Exception as e:

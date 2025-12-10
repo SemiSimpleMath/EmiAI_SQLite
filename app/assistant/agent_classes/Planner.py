@@ -44,7 +44,8 @@ class Planner(Agent):
             if not isinstance(summary_val, str):
                 try:
                     summary_val = json.dumps(summary_val, ensure_ascii=False)
-                except Exception:
+                except Exception as e:
+                    logger.debug(f"[{self.name}] Could not JSON serialize summary, using str(): {e}")
                     summary_val = str(summary_val)
 
             summary_msg = Message(

@@ -88,15 +88,10 @@ def install_dependencies():
         print(f"❌ ERROR: Failed to install dependencies: {e}")
         return False
     
-    # Download spaCy language model (critical)
-    try:
-        print("\n   Downloading spaCy language model...")
-        subprocess.run([python_cmd, "-m", "spacy", "download", "en_core_web_sm"], check=True)
-        print("✅ spaCy model installed")
-        return True
-    except subprocess.CalledProcessError as e:
-        print(f"❌ ERROR: Failed to download spaCy model: {e}")
-        return False
+    # Skip spaCy for alpha (not needed without KG)
+    print("\n⏸️  spaCy model download skipped (not needed for alpha)")
+    print("   Knowledge Graph features disabled in this release")
+    return True
 
 def check_credentials():
     """Check if required credential files exist"""
@@ -159,7 +154,7 @@ def initialize_database():
     try:
         python_cmd = get_python_command()
         
-        # Create a temporary script to initialize the database
+        # Create a temporary script to initialize the database (skip KG tables for alpha)
         init_script = """
 import sys
 sys.path.insert(0, '.')
@@ -168,9 +163,7 @@ print("   Creating core application tables...")
 from app.database.table_initializer import initialize_always_on_tables
 initialize_always_on_tables()
 
-print("   Creating knowledge graph tables...")
-from app.database.table_initializer import initialize_kg_tables
-initialize_kg_tables()
+print("   ⏸️  Knowledge graph tables skipped (disabled in alpha)")
 """
         
         # Run using venv Python
@@ -205,45 +198,10 @@ def seed_taxonomy():
     """Seed the taxonomy from the official ontology"""
     print_step(7, 8, "Seeding taxonomy ontology...")
     
-    try:
-        python_cmd = get_python_command()
-        
-        # Create a temporary script to seed taxonomy
-        seed_script = """
-import sys
-sys.path.insert(0, '.')
-
-from app.assistant.kg_core.kg_setup.seed_taxonomy_from_ontology import main as seed_main
-seed_main()
-"""
-        
-        # Run using venv Python
-        result = subprocess.run(
-            [python_cmd, "-c", seed_script],
-            capture_output=True,
-            text=True,
-            encoding='utf-8',
-            errors='replace',
-            check=True
-        )
-        
-        if result.stdout:
-            print(result.stdout)
-        
-        print("✅ Taxonomy seeded successfully")
-        return True
-    except subprocess.CalledProcessError as e:
-        print(f"❌ ERROR: Failed to seed taxonomy: {e}")
-        if e.stdout:
-            print("STDOUT:", e.stdout)
-        if e.stderr:
-            print("STDERR:", e.stderr)
-        return False
-    except Exception as e:
-        print(f"❌ ERROR: Failed to seed taxonomy: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
+    # Skip taxonomy seeding for alpha
+    print("⏸️  Taxonomy seeding skipped (disabled in alpha)")
+    print("   Knowledge Graph and Taxonomy features will be enabled in future releases")
+    return True
 
 def create_default_resources():
     """Create default resource files if they don't exist"""
@@ -254,6 +212,7 @@ def create_default_resources():
     # Check if critical resource files exist
     required_resources = [
         "resource_user_data.json",
+        "resource_assistant_data.json",
         "resource_assistant_personality_data.json",
         "resource_chat_guidelines_data.json"
     ]

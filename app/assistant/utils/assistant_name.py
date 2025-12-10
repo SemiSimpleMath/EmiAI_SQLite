@@ -7,7 +7,7 @@ from typing import Optional
 
 def get_assistant_name() -> str:
     """
-    Get the assistant's name from resource_assistant_personality_data.json
+    Get the assistant's name from resource_assistant_data.json
     Falls back to 'Emi' if not found
     
     Returns:
@@ -15,12 +15,12 @@ def get_assistant_name() -> str:
     """
     try:
         resources_dir = Path(__file__).resolve().parents[3] / 'resources'
-        personality_file = resources_dir / 'resource_assistant_personality_data.json'
+        assistant_data_file = resources_dir / 'resource_assistant_data.json'
         
-        if personality_file.exists():
-            with open(personality_file, 'r') as f:
-                personality_data = json.load(f)
-                return personality_data.get('name', 'Emi')
+        if assistant_data_file.exists():
+            with open(assistant_data_file, 'r') as f:
+                assistant_data = json.load(f)
+                return assistant_data.get('name', 'Emi')
         
         return 'Emi'
     except Exception as e:

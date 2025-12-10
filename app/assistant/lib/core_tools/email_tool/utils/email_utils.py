@@ -2,6 +2,7 @@
 
 from datetime import datetime, timezone, timedelta
 from email.utils import parsedate_to_datetime
+from email import message_from_string
 
 from app.assistant.lib.core_tools.email_tool.utils.gmail_api_client import GmailAPIClient
 from app.assistant.lib.core_tools.email_tool.utils.email_processor import EmailProcessor
@@ -42,16 +43,30 @@ class EmailUtils:
         For repo_update=False (agent queries):
           - Do not touch the repo at all. Just return processed_emails.
         """
-        # Build Gmail query
-        # Convert start_date from IMAP format (DD-MMM-YYYY) to Gmail format (YYYY/MM/DD)
-        gmail_start_date = self._convert_to_gmail_date(start_date)
-        gmail_end_date = None
+        # Build Gmail query using unix timestamps (more precise than date strings)
+        start_ts = None
+        end_ts = None
+        gmail_start_date = None
+        
+        if start_timestamp:
+            # Convert to unix timestamp
+            start_ts = int(start_timestamp.timestamp())
+            logger.debug(f"Using start timestamp: {start_ts} ({start_timestamp})")
+        else:
+            # Fallback to date string if no timestamp provided
+            gmail_start_date = self._convert_to_gmail_date(start_date)
+            logger.debug(f"Using start date string: {gmail_start_date}")
+        
         if end_timestamp:
-            gmail_end_date = end_timestamp.strftime('%Y/%m/%d')
+            # Gmail's "before:" is exclusive, so add 1 second to make it inclusive
+            end_ts = int(end_timestamp.timestamp()) + 1
+            logger.debug(f"Using end timestamp: {end_ts} ({end_timestamp} + 1 second)")
         
         query = self.gmail_client.build_query(
             start_date=gmail_start_date,
-            end_date=gmail_end_date,
+            end_date=None,
+            start_timestamp=start_ts,
+            end_timestamp=end_ts,
             unseen=unseen,
             search_string=search_string
         )
@@ -75,8 +90,10 @@ class EmailUtils:
                 full_email = self.gmail_client.fetch_full_email(email_meta["uid"])
                 if not full_email:
                     continue
-                    
-                email_metadata = EmailProcessor.extract_metadata(full_email["raw_email"])
+                
+                # Parse raw email string into EmailMessage object
+                email_message = message_from_string(full_email["raw_email"])
+                email_metadata = EmailProcessor.extract_metadata(email_message)
                 
                 date_received_str = email_metadata.get("date_received", "")
                 if date_received_str and date_received_str != "[No Date]":
@@ -118,12 +135,29 @@ class EmailUtils:
                 full_email = self.gmail_client.fetch_full_email(email_meta["uid"])
                 if not full_email:
                     continue
-                email_metadata = EmailProcessor.extract_metadata(full_email["raw_email"])
+                # Parse raw email string into EmailMessage object
+                email_message = message_from_string(full_email["raw_email"])
+                email_metadata = EmailProcessor.extract_metadata(email_message)
                 filtered_emails.append((email_meta, full_email, email_metadata))
         
         logger.info(f"📧 AFTER timestamp filter: {len(filtered_emails)} emails (skipped {skipped_outside_timerange} outside range)")
         
-        # Step 2: Now parse only the emails that passed the timestamp filter
+        # Step 2: Mark ALL filtered emails as read (for maintenance tool only)
+        # Do this BEFORE parsing to avoid wasting time on emails we'll mark as read anyway
+        if repo_update:
+            logger.info(f"📧 Marking {len(filtered_emails)} emails as read...")
+            for email_meta, full_email, email_metadata in filtered_emails:
+                subject = email_metadata.get("subject", "No Subject")
+                try:
+                    self.gmail_client.mark_as_read(email_meta["uid"])
+                    logger.info(f"✅ Marked email as read: {subject[:50]}")
+                except Exception as e:
+                    logger.error(f"❌ Failed to mark email as read: {subject[:50]} - Error: {e}")
+                    # If this is a scope error, provide helpful guidance
+                    if "insufficientPermissions" in str(e) or "insufficient authentication scopes" in str(e):
+                        logger.error("⚠️  OAUTH SCOPE MISSING: Delete token.pickle and re-authenticate to get gmail.modify scope")
+        
+        # Step 3: Now parse only the emails that passed the timestamp filter
         processed_emails = []
         email_ids = []
         skipped_low_importance = 0
@@ -133,7 +167,9 @@ class EmailUtils:
 
         for email_meta, full_email, email_metadata in filtered_emails:
             # Now extract body and parse (we already have metadata from filtering step)
-            email_body = EmailProcessor.extract_email_body(full_email["raw_email"])
+            # Parse raw email string into EmailMessage object
+            email_message = message_from_string(full_email["raw_email"])
+            email_body = EmailProcessor.extract_email_body(email_message)
 
             agent_msg = Message(agent_input=email_body)
             result_data = summary_agent.action_handler(agent_msg)
@@ -167,11 +203,12 @@ class EmailUtils:
                 )
                 continue
 
+            # Filter by importance - low importance emails are already marked as read but not stored
             if importance < 5:
                 skipped_low_importance += 1
                 logger.info(
-                    f"Skipping email {email_meta['uid']} with importance {importance} (< 5): "
-                    f"{email_data.get('subject', 'No Subject')}"
+                    f"⏭️  Skipping storage for email {email_meta['uid']} with importance {importance} (< 5): "
+                    f"{email_data.get('subject', 'No Subject')} (already marked as read)"
                 )
                 continue
 

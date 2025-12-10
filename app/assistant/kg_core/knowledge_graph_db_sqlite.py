@@ -68,6 +68,33 @@ class Node(Base):
     outgoing_edges = relationship("Edge", back_populates="source_node", foreign_keys="Edge.source_id")
     incoming_edges = relationship("Edge", back_populates="target_node", foreign_keys="Edge.target_id")
     
+    @property
+    def label_embedding(self):
+        """
+        Get label embedding from ChromaDB.
+        If not found, compute and store it.
+        """
+        from app.assistant.kg_core.chroma_embedding_manager import get_chroma_manager
+        from app.assistant.kg_core.knowledge_graph_utils import KnowledgeGraphUtils
+        from app.models.base import get_session
+        
+        chroma = get_chroma_manager()
+        
+        # Try to get from ChromaDB first
+        embedding = chroma.get_node_embedding(str(self.id))
+        
+        # If not found, compute and store
+        if embedding is None:
+            session = get_session()
+            try:
+                kg_utils = KnowledgeGraphUtils(session)
+                embedding = kg_utils.create_embedding(self.label)
+                chroma.store_node_embedding(str(self.id), self.label, embedding)
+            finally:
+                session.close()  # Always close the session!
+        
+        return embedding
+    
     __table_args__ = (
         Index('ix_kg_nodes_label', 'label'),
         Index('ix_kg_nodes_node_type', 'node_type'),
@@ -110,6 +137,36 @@ class Edge(Base):
     # ORM relationships
     source_node = relationship("Node", back_populates="outgoing_edges", foreign_keys=[source_id])
     target_node = relationship("Node", back_populates="incoming_edges", foreign_keys=[target_id])
+    
+    @property
+    def sentence_embedding(self):
+        """
+        Get sentence embedding from ChromaDB.
+        If not found, compute and store it.
+        """
+        if not self.sentence:
+            return None
+        
+        from app.assistant.kg_core.chroma_embedding_manager import get_chroma_manager
+        from app.assistant.kg_core.knowledge_graph_utils import KnowledgeGraphUtils
+        from app.models.base import get_session
+        
+        chroma = get_chroma_manager()
+        
+        # Try to get from ChromaDB first
+        embedding = chroma.get_edge_embedding(str(self.id))
+        
+        # If not found, compute and store
+        if embedding is None:
+            session = get_session()
+            try:
+                kg_utils = KnowledgeGraphUtils(session)
+                embedding = kg_utils.create_embedding(self.sentence)
+                chroma.store_edge_embedding(str(self.id), self.sentence, embedding)
+            finally:
+                session.close()  # Always close the session!
+        
+        return embedding
     
     __table_args__ = (
         UniqueConstraint('source_id', 'target_id', 'relationship_type', name='uq_edge_unique'),

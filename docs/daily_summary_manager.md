@@ -164,7 +164,6 @@ tools:
     - get_todo_tasks
     - search_web
     - scrape_url
-    - rag_query
     # ... other tools
 ```
 

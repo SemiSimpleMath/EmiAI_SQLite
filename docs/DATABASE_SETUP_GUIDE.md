@@ -125,7 +125,7 @@ The new approach ensures:
 
 After setup:
 1. Start Flask app: `python run_flask.py`
-2. View KG Visualizer: http://localhost:5000/kg-visualizer
-3. View Taxonomy Viewer: http://localhost:5000/taxonomy_webviewer
+2. View KG Visualizer: http://localhost:8000/kg-visualizer
+3. View Taxonomy Viewer: http://localhost:8000/taxonomy_webviewer
 4. Process messages to build knowledge graph
 

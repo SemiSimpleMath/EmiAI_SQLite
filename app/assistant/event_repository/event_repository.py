@@ -2,6 +2,7 @@
 
 
 from datetime import datetime, timezone
+import time
 
 from pydantic import BaseModel
 from sqlalchemy import func
@@ -14,12 +15,16 @@ from app.assistant.utils.pydantic_classes import Message
 import hashlib
 import json
 
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError, OperationalError
 from app.models.base import get_session
 from app.assistant.database.db_handler import EventRepository
 
 from app.assistant.utils.logging_config import get_logger
 logger = get_logger(__name__)
+
+# Retry configuration for database locking
+MAX_RETRIES = 3
+RETRY_DELAY_SECONDS = 0.5  # Start with 500ms, will exponentially backoff
 
 class EventRepositoryManager:
     def __init__(self, session_factory=get_session):
@@ -51,61 +56,84 @@ class EventRepositoryManager:
         """
         if event_id is None:
             event_id = id  # For non-repeating events
-        session = self.session_factory()
-        try:
-            # Compute the hash of event_data for change detection.
-            if isinstance(event_data, BaseModel):
-                event_data = event_data.model_dump()
+        
+        # Compute the hash of event_data for change detection.
+        if isinstance(event_data, BaseModel):
+            event_data = event_data.model_dump()
 
-            event_json = json.dumps(event_data, sort_keys=True)
-            event_hash = hashlib.sha256(event_json.encode()).hexdigest()
+        event_json = json.dumps(event_data, sort_keys=True)
+        event_hash = hashlib.sha256(event_json.encode()).hexdigest()
 
-            logger.debug("store_event called with id=%s, event_id=%s, data_hash=%s, data_type=%s",
-                         id, event_id, event_hash, data_type)
+        logger.debug("store_event called with id=%s, event_id=%s, data_hash=%s, data_type=%s",
+                     id, event_id, event_hash, data_type)
 
-            # Query by both the composite unique id and external event_id.
-            existing_event = session.query(EventRepository).filter_by(id=id, event_id=event_id).one_or_none()
+        # Retry logic for database locking
+        last_exception = None
+        for attempt in range(MAX_RETRIES):
+            session = self.session_factory()
+            try:
+                # Query by both the composite unique id and external event_id.
+                existing_event = session.query(EventRepository).filter_by(id=id, event_id=event_id).one_or_none()
 
-            if existing_event:
-                # If the data hasn't changed, skip updating.
-                if existing_event.data_hash == event_hash:
-                    logger.debug("No changes detected for event with id=%s", id)
-                    updated = False
+                if existing_event:
+                    # If the data hasn't changed, skip updating.
+                    if existing_event.data_hash == event_hash:
+                        logger.debug("No changes detected for event with id=%s", id)
+                        updated = False
+                    else:
+                        # Update the existing event.
+                        existing_event.data = event_data
+                        existing_event.data_hash = event_hash
+                        existing_event.created_at = datetime.now(timezone.utc)
+                        session.commit()
+                        logger.debug("Updated event with id=%s", id)
+                        updated = True
                 else:
-                    # Update the existing event.
-                    existing_event.data = event_data
-                    existing_event.data_hash = event_hash
-                    existing_event.created_at = datetime.now(timezone.utc)
+                    # Insert a new event.
+                    event = EventRepository(
+                        id=id,
+                        event_id=event_id,
+                        data=event_data,
+                        data_type=data_type,
+                        data_hash=event_hash
+                    )
+                    session.add(event)
                     session.commit()
-                    logger.debug("Updated event with id=%s", id)
+                    logger.debug("Inserted new event with id=%s", id)
                     updated = True
-            else:
-                # Insert a new event.
-                event = EventRepository(
-                    id=id,
-                    event_id=event_id,
-                    data=event_data,
-                    data_type=data_type,
-                    data_hash=event_hash
-                )
-                session.add(event)
-                session.commit()
-                logger.debug("Inserted new event with id=%s", id)
-                updated = True
 
-            # Track this event as seen for the given data_type.
-            if data_type not in self.tracked_events:
-                self.tracked_events[data_type] = set()
-            self.tracked_events[data_type].add(id)
+                # Track this event as seen for the given data_type.
+                if data_type not in self.tracked_events:
+                    self.tracked_events[data_type] = set()
+                self.tracked_events[data_type].add(id)
 
-            return id, updated
+                return id, updated
 
-        except SQLAlchemyError as e:
-            session.rollback()
-            logger.error("Error storing event: %s", e)
-            raise
-        finally:
-            session.close()
+            except OperationalError as e:
+                session.rollback()
+                # Check if it's a database lock error
+                if "database is locked" in str(e):
+                    last_exception = e
+                    delay = RETRY_DELAY_SECONDS * (2 ** attempt)  # Exponential backoff
+                    logger.warning(
+                        "Database locked on attempt %d/%d for event id=%s. Retrying in %.2fs...",
+                        attempt + 1, MAX_RETRIES, id, delay
+                    )
+                    time.sleep(delay)
+                    continue
+                else:
+                    logger.error("Error storing event: %s", e)
+                    raise
+            except SQLAlchemyError as e:
+                session.rollback()
+                logger.error("Error storing event: %s", e)
+                raise
+            finally:
+                session.close()
+        
+        # All retries exhausted
+        logger.error("Failed to store event after %d retries: %s", MAX_RETRIES, last_exception)
+        raise last_exception
 
     def get_event_by_id(self, event_id: str) -> dict:
         """

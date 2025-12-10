@@ -3,10 +3,10 @@ Entity Card Injection Service
 Handles intelligent injection of entity cards into chat and team calls with duplicate detection
 """
 
-import re
 from typing import List, Set, Optional, Tuple
 from app.models.base import get_session
 from app.assistant.entity_management.entity_cards import get_entity_card_for_prompt_injection
+from app.assistant.entity_management.entity_catalog import get_entity_catalog
 from app.assistant.ServiceLocator.service_locator import DI
 from app.assistant.utils.logging_config import get_logger
 
@@ -20,86 +20,85 @@ class EntityCardInjector:
     
     def __init__(self):
         self.injected_entities: Set[str] = set()  # Track injected entities in current session
-        self.entity_name_pattern = re.compile(r'\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b')  # Match capitalized names
     
-    def detect_entities_in_text(self, text: str) -> List[str]:
+    def _tokenize_text(self, text: str) -> List[str]:
         """
-        Detect potential entity names in text using simple pattern matching
-        Returns list of potential entity names found (including alias matches)
+        Tokenize and normalize user text into a list of tokens used for matching.
+        Rules:
+        - Lowercase
+        - Strip leading and trailing punctuation
+        - Strip possessive 's or 's at the end of a token
         """
         if not text:
             return []
-        
-        # Find all capitalized words/phrases that could be entity names
-        potential_entities = self.entity_name_pattern.findall(text)
-        
-        # Filter out common words that shouldn't be entities
-        common_words = {
-            'I', 'You', 'The', 'This', 'That', 'What', 'When', 'Where', 'Why', 'How',
-            'Yes', 'No', 'Please', 'Thank', 'Hello', 'Goodbye', 'Okay', 'Sure',
-            'Today', 'Tomorrow', 'Yesterday', 'Now', 'Then', 'Here', 'There'
-        }
-        
-        # Filter out common words and short names (likely not entities)
-        entities = []
-        for entity in potential_entities:
-            if (entity not in common_words and 
-                len(entity) > 2 and  # Avoid very short names
-                not entity.lower() in ['the', 'and', 'or', 'but', 'for', 'with', 'from']):
-                entities.append(entity)
-        
-        # Now check for alias matches and get the canonical entity names
-        canonical_entities = []
-        for entity in entities:
-            canonical_name = self.find_entity_by_name_or_alias(entity)
-            if canonical_name:
-                canonical_entities.append(canonical_name)
-        
-        return list(set(canonical_entities))  # Remove duplicates
-    
-    def find_entity_by_name_or_alias(self, entity_name: str) -> Optional[str]:
+        tokens: List[str] = []
+        # Work on lowercase
+        lowered = text.lower()
+        raw_tokens = lowered.split()
+
+        print("JUKKA DEGBUG: ", text)
+
+        for raw in raw_tokens:
+            token = raw
+            # Strip leading punctuation
+            while token and not token[0].isalnum():
+                token = token[1:]
+            # Strip trailing punctuation except apostrophe
+            while token and not token[-1].isalnum() and token[-1] not in ("'", "'"):
+                token = token[:-1]
+            if not token:
+                continue
+            # Handle possessive on the last characters
+            if token.endswith("'s") or token.endswith("'s"):
+                token = token[:-2]
+            if token:
+                tokens.append(token)
+        return tokens
+
+    def detect_entities_in_text(self, text: str) -> List[str]:
         """
-        Find the canonical entity name by checking both entity names and aliases
-        Returns the canonical entity name if found, None otherwise
+        Detect entity names present in the given text using the preloaded EntityCatalog.
+        Matching rules:
+        - Exact match on normalized single tokens or multi word phrases
+        - Case insensitive
+        - Allow possessive for the last word (Jukka's -> Jukka)
+        - Do not match inside larger words (RAG does not match Ragged)
         """
-        try:
-            session = get_session()
-            
-            # First, try to get the entity card directly by name
-            card_content = get_entity_card_for_prompt_injection(session, entity_name)
-            if card_content:
-                session.close()
-                return entity_name  # Found by exact name
-            
-            # If not found by exact name, search for aliases
-            from app.assistant.entity_management.entity_cards import search_entity_cards
-            
-            # Search for entity cards that might match this name as an alias
-            matching_cards = search_entity_cards(session, entity_name, limit=10)
-            
-            for card in matching_cards:
-                # Check if the entity name matches any of the aliases
-                if card.aliases:
-                    for alias in card.aliases:
-                        if entity_name.lower() == alias.lower():
-                            session.close()
-                            return card.entity_name  # Return canonical name
-                
-                # Also check original aliases
-                if card.original_aliases:
-                    for alias in card.original_aliases:
-                        if entity_name.lower() == alias.lower():
-                            session.close()
-                            return card.entity_name  # Return canonical name
-            
-            session.close()
-            return None
-            
-        except Exception as e:
-            import traceback
-            logger.error(f"Error finding entity by name or alias '{entity_name}': {type(e).__name__}: {e}")
-            logger.error(f"Traceback: {traceback.format_exc()}")
-            return None
+        if not text:
+            return []
+
+        catalog = get_entity_catalog()
+        tokens = self._tokenize_text(text)
+        if not tokens:
+            return []
+
+        found: Set[str] = set()
+
+        # Single word matches
+        for t in tokens:
+            if t in catalog.single_word_index:
+                found.update(catalog.single_word_index[t])
+
+        # Multi word phrase matches
+        n = len(tokens)
+        if catalog.phrase_lengths:
+            for i in range(n):
+                for length in catalog.phrase_lengths:
+                    if i + length > n:
+                        continue
+                    key = tuple(tokens[i : i + length])
+                    entity_map = catalog.multi_word_index.get(length)
+                    if not entity_map:
+                        continue
+                    canonical_names = entity_map.get(key)
+                    if canonical_names:
+                        found.update(canonical_names)
+
+        # Return canonical entity names without duplicates
+        result = sorted(found)
+        if result:
+            logger.info(f"🎯 Detected entities: {result}")
+        return result
 
     def get_entity_card_content(self, entity_name: str) -> Optional[str]:
         """
@@ -166,7 +165,7 @@ class EntityCardInjector:
         
         for entity_name in detected_entities:
             # Check if we should inject this entity
-            should_inject = self._should_inject_entity(entity_name, context_type)
+            should_inject = self.should_inject_entity(entity_name, context_type)
             
             if should_inject:
                 card_content = self.get_entity_card_content(entity_name)

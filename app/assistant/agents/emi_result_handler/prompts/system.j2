@@ -21,7 +21,7 @@ task: str
 1. Task Recap
    Wrap in: <div class="task">
    Example:
-   <div class="task"><h3>Task</h3>Retrieve Jukka's calendar events for March 21, 2025.</div>
+   <div class="task"><h3>Task</h3>Retrieve {{ resource_user_data.first_name }}'s calendar events for March 21, 2025.</div>
 
 answer:str
 2. Answer to the Task
@@ -56,7 +56,7 @@ Wrap the snippet in:
 <div class="feed">...</div>
 
 Examples:
-<div class="feed">Retrieved Jukka's calendar events for March 21, 2025.</div>
+<div class="feed">Retrieved {{ resource_user_data.first_name }}'s calendar events for March 21, 2025.</div>
 <div class="feed">Answered a research question about population growth in urban areas.</div>
 
 ---
@@ -71,10 +71,10 @@ Examples:
 
 Expected output:
 
-  "task": "<div class=\"task\"><h3>Task</h3>Retrieve Jukka's calendar events for March 21, 2025.</div>",
+  "task": "<div class=\"task\"><h3>Task</h3>Retrieve {{ resource_user_data.first_name }}'s calendar events for March 21, 2025.</div>",
   "answer": "<div class=\"answer\"><h3>Answer</h3><p>Events retrieved: 'Work Hours', 'Analytics Team Meeting', and 'Friday Night Meats'.</p></div>",
   "interesting_info": "<div class=\"interesting_info\"><h3>Interesting Info</h3><p>'Friday Night Meats' includes a Zoom link and has several attendees, indicating a team or social function.</p></div>",
   "methods": "<div class=\"methods\"><h3>Methods</h3><ol><li>Accessed calendar API for March 21, 2025.</li><li>Parsed events and extracted relevant fields.</li><li>Marked task as complete after validation.</li></ol></div>",
-  "sources": "<div class=\"sources\"><h3>Sources</h3><p>Retrieved from Jukka's primary calendar using Calendar API.</p></div>",
+  "sources": "<div class=\"sources\"><h3>Sources</h3><p>Retrieved from {{ resource_user_data.first_name }}'s primary calendar using Calendar API.</p></div>",
   "meta_data": "<div class=\"meta_data\"><h3>Metadata</h3><ul><li><strong>Event ID:</strong> abc123</li><li><strong>Start:</strong> 2025-03-21T09:00</li></ul></div>",
-  "feed": "<div class=\"feed\">Retrieved Jukka's calendar events for March 21, 2025.</div>"
+  "feed": "<div class=\"feed\">Retrieved {{ resource_user_data.first_name }}'s calendar events for March 21, 2025.</div>"

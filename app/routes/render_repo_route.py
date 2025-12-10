@@ -22,60 +22,89 @@ def render_repo_route():
         event_repo = EventRepositoryManager()
         categories = ["calendar", "scheduler", "email", "weather", "todo_task", "news"]
         widget_data = []
+        
+        category_counts = {}
+        errors = []
 
         for category in categories:
-            events = event_repo.search_events(data_type=category)
-            events = json.loads(events)  # Convert JSON string to dict
-            if category == "scheduler":
-                print(f"🔍 Scheduler: Loaded {len(events)} events before filtering")
-                #print("\n\n\n", events)
-                # Get current UTC time
-                current_datetime_utc = datetime.now(timezone.utc)
+            try:
+                events = event_repo.search_events(data_type=category)
+                events = json.loads(events)  # Convert JSON string to dict
+                if category == "scheduler":
+                    print(f"🔍 Scheduler: Loaded {len(events)} events before filtering")
+                    #print("\n\n\n", events)
+                    # Get current UTC time
+                    current_datetime_utc = datetime.now(timezone.utc)
 
-                # Filter out past events before any processing
-                filtered_events = []
+                    # Filter out past events before any processing
+                    filtered_events = []
+                    for event in events:
+                        event_data = event.get("data", {})
+                        occurrence_str = event_data.get("occurrence") or event_data.get("start_date")
+
+                        if occurrence_str:
+                            try:
+                                occurrence_dt_utc = datetime.fromisoformat(occurrence_str).astimezone(timezone.utc)
+
+                                # Only keep events that occur in the future
+                                if occurrence_dt_utc >= current_datetime_utc:
+                                    event['data']['occurrence'] = occurrence_str
+                                    filtered_events.append(event)
+                            except ValueError as e:
+                                print(f"⚠️ Scheduler: Could not parse occurrence '{occurrence_str}': {e}")
+                                continue
+
+                    events = filtered_events  # Only pass valid events
+
+                    events = summarize_repeating_events(events)
+
                 for event in events:
-                    event_data = event.get("data", {})
-                    occurrence_str = event_data.get("occurrence") or event_data.get("start_date")
+                    data = event["data"]
+                    if category in ["calendar", "scheduler", "email", "weather", "news"]:
+                        payload = data.get("event_payload", {})
+                        if "title" not in data and "title" in payload:
+                            data["title"] = payload["title"]
 
-                    if occurrence_str:
-                        occurrence_dt_utc = datetime.fromisoformat(occurrence_str).astimezone(timezone.utc)
+                    widget_data.append({
+                        "data": data,
+                        "data_type": event["data_type"],
+                    })
+                
+                category_counts[category] = len(events)
+                
+            except Exception as e:
+                print(f"🛑 Error loading {category}: {e}")
+                current_app.logger.error(f"Error loading {category}: {e}")
+                errors.append(f"{category}: {str(e)}")
+                category_counts[category] = 0
 
-                        # Only keep events that occur in the future
-                        if occurrence_dt_utc >= current_datetime_utc:
-                            event['data']['occurrence'] = occurrence_str
-                            filtered_events.append(event)
-
-                events = filtered_events  # Only pass valid events
-
-                events = summarize_repeating_events(events)
-
-            for event in events:
-                data = event["data"]
-                if category in ["calendar", "scheduler", "email", "weather", "news"]:
-                    payload = data.get("event_payload", {})
-                    if "title" not in data and "title" in payload:
-                        data["title"] = payload["title"]
-
-                widget_data.append({
-                    "data": data,
-                    "data_type": event["data_type"],
-                })
-
-
+        # Log what we're returning
+        total_items = len(widget_data)
+        print(f"📦 render_repo_route returning {total_items} items: {category_counts}")
+        current_app.logger.info(f"render_repo_route returning {total_items} items: {category_counts}")
+        
+        if errors:
+            print(f"⚠️ render_repo_route had errors: {errors}")
+            current_app.logger.warning(f"render_repo_route had partial errors: {errors}")
 
         # Construct a UserMessage in the required format
         repo_message = {
             "widget_data": widget_data
         }
-
-        #print("\n\n\nREPO MESSAGE: , ", repo_message, "\n\n\n")
-
-        return jsonify({'success': True, 'repo_data': repo_message}), 200
+        
+        # Return success even with partial errors, but include error info
+        response = {'success': True, 'repo_data': repo_message}
+        if errors:
+            response['warnings'] = errors
+        
+        return jsonify(response), 200
 
     except Exception as e:
         current_app.logger.error(f"Error retrieving repo data: {e}")
-        return jsonify({'success': False, 'message': 'Error retrieving repo data'}), 500
+        print(f"🛑 render_repo_route ERROR: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Error retrieving repo data: {str(e)}'}), 500
 
 def summarize_repeating_events(events: list) -> list:
     """

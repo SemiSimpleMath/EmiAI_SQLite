@@ -3,6 +3,7 @@ from flask import Flask
 from flask_socketio import SocketIO
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
+from sqlalchemy import event
 from app.assistant.database.db_instance import db
 from app.bootstrap import initialize_services
 
@@ -14,6 +15,20 @@ logger = get_logger(__name__)
 # Initialize SocketIO with threading
 socketio = SocketIO(async_mode='threading')
 
+
+def _set_sqlite_pragma_flask(dbapi_conn, connection_record):
+    """
+    Set SQLite pragmas for Flask-SQLAlchemy connections.
+    This ensures the scheduler and other Flask-SQLAlchemy users have the same
+    WAL mode and busy_timeout settings as the rest of the application.
+    """
+    cursor = dbapi_conn.cursor()
+    cursor.execute("PRAGMA journal_mode=WAL")
+    cursor.execute("PRAGMA busy_timeout=30000")  # 30 second timeout
+    cursor.execute("PRAGMA synchronous=NORMAL")
+    cursor.close()
+
+
 def create_app(config_class="config.DevelopmentConfig"):
     app = Flask(__name__)
     app.config.from_object(config_class)
@@ -23,6 +38,13 @@ def create_app(config_class="config.DevelopmentConfig"):
     # No login required for this version
     socketio.init_app(app, cors_allowed_origins="*", async_mode='threading')
     db.init_app(app)
+    
+    # CRITICAL: Add PRAGMA settings to Flask-SQLAlchemy engine
+    # Without this, scheduler connections don't have WAL mode or busy_timeout!
+    with app.app_context():
+        engine = db.engine
+        event.listen(engine, "connect", _set_sqlite_pragma_flask)
+        logger.info("✅ SQLite PRAGMA settings applied to Flask-SQLAlchemy engine")
 
     with app.app_context():
         # Initialize database tables by feature group
@@ -59,7 +81,8 @@ def create_app(config_class="config.DevelopmentConfig"):
         entity_cards_editor_bp,
         kg_visualizer_bp,
         taxonomy_viewer_bp,
-        google_oauth_bp
+        google_oauth_bp,
+        health_check_bp
     )
     
     # Import ngrok route
@@ -74,8 +97,11 @@ def create_app(config_class="config.DevelopmentConfig"):
     # Import preferences route
     from .routes.preferences import preferences_bp
     
-    # Import graph visualizer API
-    from .graph_visualizer.api import graph_api
+    # Import graph visualizer API (only if chromadb available - disabled in alpha)
+    try:
+        from .graph_visualizer.api import graph_api
+    except ImportError:
+        graph_api = None
     
     app.register_blueprint(index_route_bp)
     app.register_blueprint(main_bp)
@@ -89,15 +115,21 @@ def create_app(config_class="config.DevelopmentConfig"):
     app.register_blueprint(ask_user_route_bp)
     app.register_blueprint(daily_summary_route_bp)
     app.register_blueprint(entity_cards_editor_bp)
-    app.register_blueprint(kg_visualizer_bp)
-    app.register_blueprint(taxonomy_viewer_bp)
+    app.register_blueprint(health_check_bp)
+    
+    # KG/Taxonomy/Graph Visualizer routes - only register if available (disabled in alpha)
+    # All of these require chromadb/sentence-transformers
+    if kg_visualizer_bp is not None:
+        app.register_blueprint(kg_visualizer_bp)
+    if taxonomy_viewer_bp is not None:
+        app.register_blueprint(taxonomy_viewer_bp)
+    if graph_api is not None:
+        app.register_blueprint(graph_api)
+    
     app.register_blueprint(google_oauth_bp)
     app.register_blueprint(ngrok_route_bp)
     app.register_blueprint(user_settings_bp)
     app.register_blueprint(setup_bp)
     app.register_blueprint(preferences_bp)
-    
-    # Register graph visualizer API
-    app.register_blueprint(graph_api)
 
     return app, socketio

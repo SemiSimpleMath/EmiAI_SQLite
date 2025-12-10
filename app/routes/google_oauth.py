@@ -20,6 +20,7 @@ SCOPES = [
     'https://www.googleapis.com/auth/calendar',
     'https://www.googleapis.com/auth/gmail.readonly',
     'https://www.googleapis.com/auth/gmail.send',
+    'https://www.googleapis.com/auth/gmail.modify',  # Required to mark emails as read
     'https://www.googleapis.com/auth/tasks'
 ]
 
@@ -99,8 +100,8 @@ def start_oauth():
         # Generate authorization URL
         authorization_url, state = flow.authorization_url(
             access_type='offline',
-            include_granted_scopes='true',
-            prompt='consent'  # Force consent screen to ensure refresh token
+            include_granted_scopes='false',  # Don't include previously granted scopes - force re-consent for all scopes
+            prompt='consent'  # Force consent screen to show all requested scopes
         )
         
         # Store state in session for security

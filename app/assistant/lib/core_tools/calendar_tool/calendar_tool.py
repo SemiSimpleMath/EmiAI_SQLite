@@ -113,8 +113,14 @@ class CalendarTool(BaseTool):
                     original = arguments[key]
                     # Convert to UTC and format as RFC3339 with 'Z' suffix
                     utc_dt = local_to_utc(arguments[key])
-                    arguments[key] = utc_dt.isoformat().replace('+00:00', 'Z')
-                    logger.debug(f"Converted {key}: {original} -> {arguments[key]}")
+                    iso_str = utc_dt.isoformat()
+                    # Ensure timezone is present - if naive, add 'Z'
+                    if utc_dt.tzinfo is None:
+                        logger.warning(f"Converted datetime for {key} is naive! Adding 'Z' suffix.")
+                        arguments[key] = iso_str + 'Z'
+                    else:
+                        arguments[key] = iso_str.replace('+00:00', 'Z')
+                    logger.debug(f"Converted {key}: {original} -> {arguments[key]} (tzinfo={utc_dt.tzinfo})")
 
             handler_method = getattr(self, f"handle_{tool_name}", None)
             if not handler_method:
@@ -395,6 +401,10 @@ class CalendarTool(BaseTool):
                     )
 
             start_utc, end_utc = normalize_start_end(event)
+            
+            # Detect all-day events: Google Calendar uses 'date' for all-day, 'dateTime' for timed
+            start_info = event.get("start", {})
+            is_all_day = "date" in start_info and "dateTime" not in start_info
 
             parsed_event = {
                 "id": event_id,
@@ -404,6 +414,7 @@ class CalendarTool(BaseTool):
                 "end": end_utc,
                 "link": event.get("htmlLink"),
                 "is_recurring": is_recurring,
+                "is_all_day": is_all_day,
                 "recurring_event_id": recurring_event_id,
                 "recurrence_rule": recurrence_rule,
                 "participants": [
@@ -430,9 +441,17 @@ class CalendarTool(BaseTool):
             # Enforce stable 7 day window: repo will match current fetch set
             self.repo_manager.sync_events_with_server(list(server_ids), "calendar")
 
+        # Create human-readable summary
+        event_count = len(result_events)
+        recurring_count = sum(1 for e in result_events if e.get('is_recurring'))
+        summary = f"Found {event_count} calendar event{'s' if event_count != 1 else ''}"
+        if recurring_count > 0:
+            summary += f" ({recurring_count} recurring)"
+        summary += f" from {start_iso} to {end_iso}"
+
         return ToolResult(
             result_type="calendar_events",
-            content="",
+            content=summary,
             data_list=result_events,
         )
 

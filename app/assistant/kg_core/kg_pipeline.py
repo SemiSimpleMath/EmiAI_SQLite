@@ -641,11 +641,11 @@ def process_nodes(
             logger.exception("Failed to create node: %s", label)
             raise
 
-    # Ensure DB IDs are populated
+    # Ensure DB IDs are populated and release lock
     try:
-        kg_utils.session.flush()
+        kg_utils.session.commit()  # Commit instead of flush - SQLite single-writer
     except Exception:
-        logger.exception("Session flush failed")
+        logger.exception("Session commit failed")
         raise
 
     return {"node_map": node_map, "edges": edges}

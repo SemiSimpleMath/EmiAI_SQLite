@@ -55,6 +55,12 @@ def initialize_services(app):
     ServiceLocator.register("resource_manager", resource_manager)
     resource_manager.load_all_from_directory("resources")
 
+    # Initialize Entity Catalog for fast entity detection
+    from app.assistant.entity_management.entity_catalog import EntityCatalog
+    entity_catalog = EntityCatalog.instance()
+    ServiceLocator.register("entity_catalog", entity_catalog)
+    logger.info("✅ Entity catalog initialized")
+
     # Initialize scheduler service (auto-starts via TimingEngine.__init__)
     # APScheduler's BackgroundScheduler runs in its own background threads automatically
     scheduler_service = SchedulerService(app)

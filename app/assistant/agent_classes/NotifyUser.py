@@ -18,42 +18,52 @@ class NotifyUser(Agent):
 
     def action_handler(self, message: Message):
         self._set_agent_busy()
-        self.blackboard = Blackboard() # make sure we use local blackboard
-        print("notify_user", message)
-        tool_result = message.tool_result
-        print("notify_user, tool_result", tool_result)
-        notify_info = tool_result.content
-        print("notify_user, notify_info", notify_info)
-
-        self.blackboard.update_state_value('notify_info', notify_info)
-
         try:
-            messages = self.construct_prompt(message)
+            self.blackboard = Blackboard() # make sure we use local blackboard
+            print("notify_user", message)
+            tool_result = message.tool_result
+            print("notify_user, tool_result", tool_result)
+            notify_info = tool_result.content
+            print("notify_user, notify_info", notify_info)
+
+            self.blackboard.update_state_value('notify_info', notify_info)
+
+            try:
+                messages = self.construct_prompt(message)
+            except Exception as e:
+                logger.error(f"[{self.name}] Error during prompt construction: {e}")
+                return None
+
+            schema = self.config.get('structured_output')
+            result = self._run_llm_with_schema(messages, schema)
+
+            # Add the original user message to the global blackboard for history
+            user_chat_msg = Message(
+                data_type="user_msg", 
+                content=message.agent_input, 
+                is_chat=True,
+                role='user'  # Set the role for user messages
+            )
+            DI.global_blackboard.add_msg(user_chat_msg)
+
+            try:
+                result = self.process_llm_result(result)
+            except Exception as e:
+                logger.error(f"[{self.name}] Error processing LLM result: {e}")
+                raise
+
+            return result
         except Exception as e:
-            logger.error(f"[{self.name}] Error during prompt construction: {e}")
-            self._set_agent_idle()
-            return None
-
-        schema = self.config.get('structured_output')
-        result = self._run_llm_with_schema(messages, schema)
-
-        # Add the original user message to the global blackboard for history
-        user_chat_msg = Message(
-            data_type="user_msg", 
-            content=message.agent_input, 
-            is_chat=True,
-            role='user'  # Set the role for user messages
-        )
-        DI.global_blackboard.add_msg(user_chat_msg)
-
-        try:
-            result = self.process_llm_result(result)
-        except Exception as e:
-            logger.error(f"[{self.name}] Error processing LLM result: {e}")
+            logger.error(f"[{self.name}] Unhandled exception in action_handler: {e}")
+            print(f"🛑 [{self.name}] action_handler exception: {e}")
             raise
-
-        self._set_agent_idle()
-        return result
+        finally:
+            # ALWAYS release the busy lock, even on exceptions
+            try:
+                self._set_agent_idle()
+            except Exception as e:
+                logger.error(f"[{self.name}] Failed to release busy lock: {e}")
+                print(f"🛑 [{self.name}] Failed to release busy lock: {e}")
 
     def process_llm_result(self, response):
         print("Notify user llm response", response)

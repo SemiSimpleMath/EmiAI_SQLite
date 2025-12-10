@@ -162,13 +162,21 @@ class DataConversionModule:
 
             formatted_events.append(event_details)
 
+        # Build response with summary from tool_result.content
+        result = {}
+        if tool_result.content:
+            result["summary"] = tool_result.content
+        
         if level == "full":
-            return {"events": formatted_events}
+            result["events"] = formatted_events
+            return result
         elif level == "summary":
-            return {"events": formatted_events}  # Includes only non-empty fields
+            result["events"] = formatted_events  # Includes only non-empty fields
+            return result
         elif level == "minimal":
             minimal_events = [{"event_id": e["event_id"], "title": e["title"]} for e in formatted_events]
-            return {"events": minimal_events}
+            result["events"] = minimal_events
+            return result
 
         return {}
 
@@ -319,20 +327,53 @@ class DataConversionModule:
 
     @staticmethod
     def _convert_scrape(tool_result: ToolResult, level: str) -> Dict:
-        scraped_content = tool_result.content
-        data_list = tool_result.data_list[:]  # copy the list
+        """
+        Convert scrape tool results.
+
+        Assumes:
+        - tool_result.content is the extracted or full page text.
+        - tool_result.data_list is a list of items, each with:
+          - url: str
+          - description: str
+        """
+        scraped_content = tool_result.content or ""
+        raw_links = tool_result.data_list or []
+
         found_links = []
-        if data_list:
-            # Assume the first item is metadata and skip it.
-            for link_item in data_list[1:]:
-                for link_url, link_sum in link_item.items():
-                    found_links.append({"link": link_url, "description": link_sum})
+        for item in raw_links:
+            # Support both dicts and objects with attributes
+            if isinstance(item, dict):
+                url_val = item.get("url")
+                desc_val = item.get("description", "")
+            else:
+                url_val = getattr(item, "url", None)
+                desc_val = getattr(item, "description", "") or ""
+
+            if not url_val:
+                continue
+
+            found_links.append(
+                {
+                    "url": url_val,
+                    "description": desc_val,
+                }
+            )
+
         if level == "full":
-            return {"found_links": found_links, "scraped_content": scraped_content}
+            return {
+                "scraped_content": scraped_content,
+                "links": found_links,
+            }
         elif level == "summary":
-            return {"scraped_content": scraped_content, "links": found_links}
+            return {
+                "scraped_content": scraped_content,
+                "links": found_links,
+            }
         elif level == "minimal":
-            return {"content": scraped_content}
+            # Minimal view: just content, trimmed if you want to keep it short
+            return {
+                "content": scraped_content,
+            }
         return {}
 
     @staticmethod

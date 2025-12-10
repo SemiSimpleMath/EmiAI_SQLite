@@ -9,6 +9,7 @@ import logging
 import queue
 import threading
 from logging.handlers import QueueHandler, QueueListener, RotatingFileHandler
+import platform
 
 log_queue = queue.Queue()
 log_listener = None
@@ -109,7 +110,11 @@ def setup_logger(name, level=None, log_file="project.log"):
 
     with log_lock:
         if log_listener is None:
-            file_handler = RotatingFileHandler(log_file, maxBytes=1048576, backupCount=3, encoding='utf-8')
+            # Use larger file size on Windows to avoid rotation issues
+            if platform.system() == 'Windows':
+                file_handler = RotatingFileHandler(log_file, maxBytes=10485760, backupCount=2, encoding='utf-8', delay=True)
+            else:
+                file_handler = RotatingFileHandler(log_file, maxBytes=1048576, backupCount=3, encoding='utf-8', delay=True)
             file_handler.setFormatter(LOG_FORMATTER)
 
             console_handler = UnicodeStreamHandler(sys.stdout)
@@ -147,13 +152,26 @@ def get_maintenance_logger(name: str, level=None):
         process_id = os.getpid()
         log_file = os.path.join(logs_dir, f"maintenance_{process_id}.log")
         
-        # Create a rotating file handler (no console handler)
-        file_handler = RotatingFileHandler(
-            log_file, 
-            maxBytes=1048576,  # 1MB
-            backupCount=3, 
-            encoding='utf-8'
-        )
+        # Create file handler - on Windows, use larger file size to avoid frequent rotation issues
+        # Windows has aggressive file locking that prevents rotation when multiple threads are writing
+        if platform.system() == 'Windows':
+            # Use 10MB on Windows to reduce rotation frequency (file locking issues)
+            file_handler = RotatingFileHandler(
+                log_file, 
+                maxBytes=10485760,  # 10MB (10x larger to avoid frequent rotation)
+                backupCount=2,      # Keep fewer backups
+                encoding='utf-8',
+                delay=True
+            )
+        else:
+            # Use 1MB on Unix-like systems (no file locking issues)
+            file_handler = RotatingFileHandler(
+                log_file, 
+                maxBytes=1048576,  # 1MB
+                backupCount=3, 
+                encoding='utf-8',
+                delay=True
+            )
         file_handler.setFormatter(LOG_FORMATTER)
         logger.addHandler(file_handler)
     

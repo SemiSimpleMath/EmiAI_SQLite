@@ -40,6 +40,13 @@ class ToolRegistry:
         for tool_dir in self.tools_dir.iterdir():
             if tool_dir.is_dir():
                 tool_name = tool_dir.name
+                
+                # Skip tools that have a .disabled file in their directory
+                disabled_marker = tool_dir / ".disabled"
+                if disabled_marker.exists():
+                    logger.info(f"Skipping disabled tool: {tool_name}")
+                    continue
+                
                 try:
                     tool_class = self.load_tool_class(tool_dir, tool_name)
                     tool_args = self.load_tool_args(tool_dir, tool_name)

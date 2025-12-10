@@ -7,7 +7,7 @@ from app.assistant.ServiceLocator.service_locator import DI
 from app.assistant.utils.pydantic_classes import Message, UserMessage, UserMessageData
 from app.assistant.agent_classes.Agent import Agent
 from app.assistant.utils.time_utils import get_local_time_str
-from app.assistant.entity_management.simple_entity_matcher import simple_entity_matcher
+from app.assistant.entity_management.entity_card_injector import EntityCardInjector
 from app.assistant.utils.assistant_name import get_assistant_name
 
 from app.assistant.utils.logging_config import get_logger
@@ -44,6 +44,10 @@ class EmiAgent(Agent):
         user_prompt_template = self.config.get("prompts", {}).get("user", "")
         if not user_prompt_template:
             logger.error(f"[{self.name}] No user prompt found.")
+            print(f"\n{'=' * 80}")
+            print(f"🛑 FATAL: EmiAgent '{self.name}' has no user prompt configured")
+            print(f"   Check the agent's config.yaml for 'prompts.user'")
+            print(f"{'=' * 80}\n")
             exit(1)
             return f"No user prompt available for {self.name}."
         prompt_injections = self.config.get("user_context_items", {})
@@ -52,7 +56,8 @@ class EmiAgent(Agent):
             try:
                 user_context = self.generate_injections_block(prompt_injections, message)
             except Exception as e:
-                print(f"Error: {e}")
+                logger.error(f"[{self.name}] Error generating injections: {e}")
+                print(f"🛑 [{self.name}] Error generating injections: {e}")
                 raise e
         else:
             user_context = {}
@@ -176,7 +181,63 @@ class EmiAgent(Agent):
         if message and message.agent_input:
             context["incoming_message"] = message.agent_input.strip()
 
-        # First pass: Handle entity card injection (must happen before history)
+        # Check if any entity_* fields are requested (like entity_summary, entity_aliases, etc.)
+        entity_keys = [key for key in prompt_injections if key.startswith("entity_")]
+        
+        # If entity fields requested, detect entities and create persistent injection messages
+        if entity_keys:
+            user_input = message.agent_input.strip() if message and message.agent_input else None
+            if user_input:
+                # Find entities in the user's input using EntityCatalog
+                injector = EntityCardInjector()
+                detected_entities = injector.detect_entities_in_text(user_input)
+                if detected_entities:
+                    logger.info(f"Found entities in user input: {detected_entities}")
+                    
+                    # Check which entities are already in history to avoid duplicates
+                    existing_entities = set()
+                    for msg in self.blackboard.get_messages():
+                        if msg.sub_data_type == "entity_card_injection":
+                            # Get entity name from message metadata if available
+                            if hasattr(msg, 'metadata') and msg.metadata and 'entity_name' in msg.metadata:
+                                existing_entities.add(msg.metadata['entity_name'])
+                            # Fallback: extract from content (for backward compatibility)
+                            elif msg.content and msg.content.startswith("[Entity Context -"):
+                                try:
+                                    entity_name_start = msg.content.find("[Entity Context - ") + 17
+                                    entity_name_end = msg.content.find("]:", entity_name_start)
+                                    if entity_name_end > entity_name_start:
+                                        existing_entity = msg.content[entity_name_start:entity_name_end]
+                                        existing_entities.add(existing_entity)
+                                except Exception as e:
+                                    logger.debug(f"[{self.name}] Could not parse entity name from message: {e}")
+                    
+                    # Create separate injection messages for each entity (avoiding duplicates)
+                    for entity_name in detected_entities:
+                        if entity_name in existing_entities:
+                            logger.info(f"Skipping duplicate injection for entity: {entity_name}")
+                            continue
+                            
+                        # Get entity card content
+                        card_content = injector.get_entity_card_content(entity_name)
+                        if card_content:
+                            injection_msg = Message(
+                                data_type="agent_msg",
+                                sub_data_type="entity_card_injection",
+                                sender=self.name,
+                                receiver=None,
+                                content=f"[Entity Context - {entity_name}]:\n{card_content}",
+                                timestamp=datetime.now(timezone.utc),
+                                role='assistant',
+                                is_chat=True,
+                                metadata={'entity_name': entity_name},
+                                test_mode=message.test_mode
+                            )
+                            # Add to blackboard (which is already global_blackboard for EmiAgent)
+                            self.blackboard.add_msg(injection_msg)
+                            logger.info(f"Created injection message for entity: {entity_name}")
+        
+        # Now process all context items
         for key in prompt_injections:
             # Handle resources (like parent class does)
             if key.startswith("resource_"):
@@ -187,59 +248,8 @@ class EmiAgent(Agent):
                 context[key] = resolved_value
                 continue
             
-            if key == "entity_injection":
-                # Get the user's input from message.content (the actual user chat)
-                user_input = message.agent_input.strip() if message and message.agent_input else None
-                if user_input:
-                    # Find entities in the user's input using simple substring matching
-                    detected_entities = simple_entity_matcher.find_entities_in_text(user_input)
-                    if detected_entities:
-                        logger.info(f"Found entities in user input: {detected_entities}")
-                        
-                        # Check which entities are already in history to avoid duplicates
-                        existing_entities = set()
-                        for msg in self.blackboard.get_messages():
-                            if msg.sub_data_type == "entity_card_injection":
-                                # Get entity name from message metadata if available
-                                if hasattr(msg, 'metadata') and msg.metadata and 'entity_name' in msg.metadata:
-                                    existing_entities.add(msg.metadata['entity_name'])
-                                # Fallback: extract from content (for backward compatibility)
-                                elif msg.content and msg.content.startswith("[Entity Context -"):
-                                    try:
-                                        entity_name_start = msg.content.find("[Entity Context - ") + 17
-                                        entity_name_end = msg.content.find("]:", entity_name_start)
-                                        if entity_name_end > entity_name_start:
-                                            existing_entity = msg.content[entity_name_start:entity_name_end]
-                                            existing_entities.add(existing_entity)
-                                    except:
-                                        pass
-                        
-                        # Create separate injection messages for each entity (avoiding duplicates)
-                        for entity_name in detected_entities:
-                            if entity_name in existing_entities:
-                                logger.info(f"Skipping duplicate injection for entity: {entity_name}")
-                                continue
-                                
-                            # Check if we should inject this entity
-                            if simple_entity_matcher.should_inject_entity(entity_name, "chat"):
-                                card_content = simple_entity_matcher.get_entity_card_content(entity_name)
-                                if card_content:
-                                    injection_msg = Message(
-                                        data_type="agent_msg",
-                                        sub_data_type="entity_card_injection",
-                                        sender=self.name,
-                                        receiver=None,
-                                        content=f"[Entity Context - {entity_name}]:\n{card_content}",
-                                        timestamp=datetime.now(timezone.utc),
-                                        role='assistant',
-                                        is_chat=True,
-                                        metadata={'entity_name': entity_name},
-                                        test_mode=message.test_mode
-                                    )
-                                    # Add to blackboard (which is already global_blackboard for EmiAgent)
-                                    self.blackboard.add_msg(injection_msg)
-                                    logger.info(f"Created injection message for entity: {entity_name}")
-
+            # Skip entity_* keys - they don't go in context, entities are in history
+            if key.startswith("entity_"):
                 continue
 
             if key == "tool_descriptions":

@@ -11,7 +11,12 @@ user_context_items:
 - text
 - original_message_timestamp
 - entity_summary
-system_context_items: []
+system_context_items:
+- resource_assistant_data
 type: agent
+
+# Detect entities in the text field for entity card injection
+entity_detection_keys:
+  - text
 
 

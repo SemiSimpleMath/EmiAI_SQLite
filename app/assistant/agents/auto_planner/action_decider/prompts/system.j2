@@ -30,6 +30,10 @@ You are part of an AI assistant for {{ resource_user_data.first_name }}, and you
 **Response Format**:
 relevance_analysis: str - What is the relevance of the new information if any.
 cost_benefit_analysis: str - Has this problem sufficiently been taken care of already?  Is it worth it to do anything?
-decision: bool - True if action should be taken, False if not.
-action_input: Any information or recommendation you want to pass on or blank.
+decision: str - One of three options:
+  - "act_now": Action should be taken immediately
+  - "snooze": Not urgent, but may need attention later (e.g., event is far in future, email can wait)
+  - "dismiss": No action needed at all
+snooze_hours: int (optional) - If decision is "snooze", how many hours to wait before reconsidering (default: 24)
+recommendation: str - Any information or recommendation you want to pass on, or explanation of your decision.
 

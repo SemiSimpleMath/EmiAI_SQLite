@@ -1,20 +1,48 @@
 # rag_utils.py
 import re
 
-import numpy as np
-import spacy
 from app.models.base import get_session
 from app.assistant.database.db_handler import RAGDatabase
-from sentence_transformers import SentenceTransformer
 
 from app.assistant.utils.logging_config import get_logger
 logger = get_logger(__name__)
 
-# Load spaCy model only once
-nlp = spacy.load("en_core_web_sm")
+# Lazy loading for optional dependencies (not available in alpha)
+_nlp = None
+_embedding_model = None
+_numpy = None
 
-# Load embedding model
-embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+def _get_nlp():
+    """Lazy load spaCy model"""
+    global _nlp
+    if _nlp is None:
+        try:
+            import spacy
+            _nlp = spacy.load("en_core_web_sm")
+        except ImportError:
+            logger.warning("spaCy not available - RAG features disabled")
+            raise ImportError("spaCy not installed. RAG features require spaCy.")
+    return _nlp
+
+def _get_embedding_model():
+    """Lazy load embedding model"""
+    global _embedding_model
+    if _embedding_model is None:
+        try:
+            from sentence_transformers import SentenceTransformer
+            _embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+        except ImportError:
+            logger.warning("sentence-transformers not available - RAG features disabled")
+            raise ImportError("sentence-transformers not installed. RAG features require sentence-transformers.")
+    return _embedding_model
+
+def _get_numpy():
+    """Lazy load numpy"""
+    global _numpy
+    if _numpy is None:
+        import numpy as np
+        _numpy = np
+    return _numpy
 
 
 # ---------------------------------------------------------
@@ -30,10 +58,16 @@ def strip_speaker_prefix(text):
             return message.strip()
     return text.strip()
 
-def query_rag_database(query_text, scopes=None, top_k=3, threshold=0.35, chunk_size=1):  # Reduced threshold from 0.45 to 0.35, chunk_size from 2 to 1
+def query_rag_database(query_text, scopes=None, top_k=3, threshold=0.35, chunk_size=1):
     """
     Query RAG database with semantic search using chunked processing for better performance.
+    Requires spacy and sentence-transformers.
     """
+    # Get lazy-loaded dependencies
+    nlp = _get_nlp()
+    embedding_model = _get_embedding_model()
+    np = _get_numpy()
+    
     doc = nlp(query_text)
     sentences = [sent.text.strip() for sent in doc.sents]
     merged_results = {}
@@ -83,6 +117,11 @@ def query_rag_database(query_text, scopes=None, top_k=3, threshold=0.35, chunk_s
 
 
 def _query_rag_database(query_text, scopes=None, top_k=3, relevance_threshold=0.5):
+    """Query RAG database. Requires sentence-transformers."""
+    # Get lazy-loaded dependencies
+    embedding_model = _get_embedding_model()
+    np = _get_numpy()
+    
     session = get_session()
     try:
         if not scopes:

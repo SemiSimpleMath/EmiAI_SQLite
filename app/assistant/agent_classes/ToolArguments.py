@@ -17,67 +17,78 @@ class ToolArguments(Agent):
         self.tool_name = None
         self.tool_type = None
     def action_handler(self, message: Message):
-
-        self.blackboard.update_state_value("next_agent", None)
-
-        # Update last acting agent
-        self.blackboard.update_state_value('last_agent', self.name)
-
-        logger.debug(f"[{self.name}] Handling tool/agent argument selection.")
-
-        selected_node = self.blackboard.get_state_value("selected_tool")
-        if not selected_node:
-            logger.error(f"[{self.name}] No tool or agent selected to generate arguments for.")
-            return
-
+        self._set_agent_busy()
         try:
-            messages = self.construct_prompt(message)
-        except Exception as e:
-            logger.error(f"[{self.name}] Error during prompt construction: {e}")
-            exit(1)
+            self.blackboard.update_state_value("next_agent", None)
 
-        # 🔀 Determine if it's a tool, agent, or control node
-        if self.tool_registry.get_tool(selected_node):
-            schema = self.tool_registry.get_tool_form(selected_node)
-            self.tool_type = "Tool"
-        elif self.agent_registry.get_agent_config(selected_node):
-            agent_config = self.agent_registry.get_agent_config(selected_node)
-            # Check if it's a control node
-            if agent_config.get("type") == "control_node":
-                # It's a control node - no arguments needed, just pass it through
-                logger.info(f"[{self.name}] '{selected_node}' is a control node, no arguments needed.")
-                self.blackboard.update_state_value("tool_arguments", {})
+            # Update last acting agent
+            self.blackboard.update_state_value('last_agent', self.name)
+
+            logger.debug(f"[{self.name}] Handling tool/agent argument selection.")
+
+            selected_node = self.blackboard.get_state_value("selected_tool")
+            if not selected_node:
+                logger.error(f"[{self.name}] No tool or agent selected to generate arguments for.")
                 return
-            else:
-                # It's a local agent - check if it has an input schema
-                schema = self.agent_registry.get_agent_input_form(selected_node)
-                if schema:
-                    # Agent has input schema - generate arguments
-                    logger.info(f"[{self.name}] '{selected_node}' is a local agent with input schema, generating arguments.")
-                    self.tool_type = "Agent"
-                else:
-                    # Agent has no input schema - no arguments needed
-                    logger.info(f"[{self.name}] '{selected_node}' is a local agent without input schema, no arguments needed.")
+
+            try:
+                messages = self.construct_prompt(message)
+            except Exception as e:
+                logger.error(f"[{self.name}] Error during prompt construction: {e}")
+                exit(1)
+
+            # 🔀 Determine if it's a tool, agent, or control node
+            if self.tool_registry.get_tool(selected_node):
+                schema = self.tool_registry.get_tool_form(selected_node)
+                self.tool_type = "Tool"
+            elif self.agent_registry.get_agent_config(selected_node):
+                agent_config = self.agent_registry.get_agent_config(selected_node)
+                # Check if it's a control node
+                if agent_config.get("type") == "control_node":
+                    # It's a control node - no arguments needed, just pass it through
+                    logger.info(f"[{self.name}] '{selected_node}' is a control node, no arguments needed.")
                     self.blackboard.update_state_value("tool_arguments", {})
                     return
-        else:
-            logger.error(f"[{self.name}] '{selected_node}' is neither a tool nor a registered agent.")
-            return
+                else:
+                    # It's a local agent - check if it has an input schema
+                    schema = self.agent_registry.get_agent_input_form(selected_node)
+                    if schema:
+                        # Agent has input schema - generate arguments
+                        logger.info(f"[{self.name}] '{selected_node}' is a local agent with input schema, generating arguments.")
+                        self.tool_type = "Agent"
+                    else:
+                        # Agent has no input schema - no arguments needed
+                        logger.info(f"[{self.name}] '{selected_node}' is a local agent without input schema, no arguments needed.")
+                        self.blackboard.update_state_value("tool_arguments", {})
+                        return
+            else:
+                logger.error(f"[{self.name}] '{selected_node}' is neither a tool nor a registered agent.")
+                return
 
-        if not schema:
-            logger.info(f"[{self.name}] No argument schema found for '{selected_node}' returning None.")
-            return
+            if not schema:
+                logger.info(f"[{self.name}] No argument schema found for '{selected_node}' returning None.")
+                return
 
-        result = self._run_llm_with_schema(messages, schema)
+            result = self._run_llm_with_schema(messages, schema)
 
-        try:
-            result = self.process_llm_result(result)
+            try:
+                result = self.process_llm_result(result)
+            except Exception as e:
+                logger.error(f"Error processing result: {e}")
+                raise
+
+            return result
         except Exception as e:
-            logger.error(f"Error processing result: {e}")
+            logger.error(f"[{self.name}] Unhandled exception in action_handler: {e}")
+            print(f"🛑 [{self.name}] action_handler exception: {e}")
             raise
-
-        self._set_agent_idle()
-        return result
+        finally:
+            # ALWAYS release the busy lock, even on exceptions
+            try:
+                self._set_agent_idle()
+            except Exception as e:
+                logger.error(f"[{self.name}] Failed to release busy lock: {e}")
+                print(f"🛑 [{self.name}] Failed to release busy lock: {e}")
 
 
 

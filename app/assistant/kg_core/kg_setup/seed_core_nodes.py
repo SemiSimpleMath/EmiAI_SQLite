@@ -38,7 +38,7 @@ def seed_core_nodes():
             jukka_node = existing_jukka
         else:
             jukka_node = Node(
-                id=uuid.uuid4(),
+                id=str(uuid.uuid4()),  # SQLite requires UUID as string
                 label="Jukka",
                 node_type="Entity",
                 aliases=["user", "Jukka Virtanen", "Jukka Tapio Virtanen", "Jukka T. Virtanen", "JTV", "J.T.V."],
@@ -87,7 +87,7 @@ def seed_core_nodes():
             emi_node = existing_emi
         else:
             emi_node = Node(
-                id=uuid.uuid4(),
+                id=str(uuid.uuid4()),  # SQLite requires UUID as string
                 label="Emi",
                 node_type="Entity",
                 aliases=["Emi AI", "Emi_AI", "assistant", "AI Assistant"],
@@ -131,7 +131,7 @@ def seed_core_nodes():
             state_node = existing_state
         else:
             state_node = Node(
-                id=uuid.uuid4(),
+                id=str(uuid.uuid4()),  # SQLite requires UUID as string
                 label="Emi Assists Jukka",
                 node_type="State",
                 description="Emi serves as Jukka's AI assistant, helping with tasks, information, and conversation.",
@@ -178,7 +178,7 @@ def seed_core_nodes():
         
         if not existing_jukka_edge:
             jukka_edge = Edge(
-                id=uuid.uuid4(),
+                id=str(uuid.uuid4()),  # SQLite requires UUID as string
                 source_id=jukka_node.id,
                 target_id=state_node.id,
                 relationship_type="is_assisted",
@@ -207,7 +207,7 @@ def seed_core_nodes():
         
         if not existing_emi_edge:
             emi_edge = Edge(
-                id=uuid.uuid4(),
+                id=str(uuid.uuid4()),  # SQLite requires UUID as string
                 source_id=emi_node.id,
                 target_id=state_node.id,
                 relationship_type="assists",

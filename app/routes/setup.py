@@ -24,6 +24,7 @@ def get_setup_status():
     resources_dir = Path(__file__).resolve().parents[2] / 'resources'
     return {
         'resource_user_data': (resources_dir / 'resource_user_data.json').exists(),
+        'resource_assistant_data': (resources_dir / 'resource_assistant_data.json').exists(),
         'resource_assistant_personality': (resources_dir / 'resource_assistant_personality_data.json').exists(),
         'resource_relationship_config': (resources_dir / 'resource_relationship_config.json').exists(),
         'resource_chat_guidelines': (resources_dir / 'resource_chat_guidelines_data.json').exists(),
@@ -138,10 +139,16 @@ def complete_setup():
         with open(resources_dir / 'resource_user_data.json', 'w') as f:
             json.dump(user_data, f, indent=2)
         
-        # 2. Create resource_assistant_personality.json
-        assistant_personality = {
+        # 2. Create resource_assistant_data.json (assistant's name - core identity)
+        assistant_data = {
             'name': data['assistant_name']
         }
+        
+        with open(resources_dir / 'resource_assistant_data.json', 'w') as f:
+            json.dump(assistant_data, f, indent=2)
+        
+        # 3. Create resource_assistant_personality_data.json (personality & backstory)
+        assistant_personality = {}
         
         if data.get('assistant_personality'):
             assistant_personality['personality'] = data['assistant_personality']
@@ -152,7 +159,7 @@ def complete_setup():
         with open(resources_dir / 'resource_assistant_personality_data.json', 'w') as f:
             json.dump(assistant_personality, f, indent=2)
         
-        # 3. Create resource_relationship_config.json
+        # 4. Create resource_relationship_config.json
         relationship_config = {
             'type': data['relationship_type'],
             'description': data.get('relationship_description', ''),
@@ -162,7 +169,7 @@ def complete_setup():
         with open(resources_dir / 'resource_relationship_config.json', 'w') as f:
             json.dump(relationship_config, f, indent=2)
         
-        # 4. Create resource_chat_guidelines.json
+        # 5. Create resource_chat_guidelines.json
         chat_guidelines = {
             'style': data.get('communication_style', 'direct'),
             'guidelines': data.get('chat_guidelines', '')
@@ -260,6 +267,7 @@ def reset_setup():
         # Delete resource files
         files_to_delete = [
             'resource_user_data.json',
+            'resource_assistant_data.json',
             'resource_assistant_personality_data.json',
             'resource_relationship_config.json',
             'resource_chat_guidelines_data.json'

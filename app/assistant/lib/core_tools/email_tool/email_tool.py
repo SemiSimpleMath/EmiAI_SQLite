@@ -32,8 +32,15 @@ class EmailTool(BaseTool):
             return
 
         # No longer need IMAP credentials - Gmail API uses OAuth
-        self.email_utils = EmailUtils()
-        self.init_done = True
+        try:
+            self.email_utils = EmailUtils()
+            self.init_done = True
+        except FileNotFoundError as e:
+            # OAuth token missing - log and skip initialization
+            logger.warning(f"[EmailTool] Cannot initialize: {e}")
+            logger.warning("[EmailTool] Email fetching will be skipped until OAuth is configured.")
+            # Don't set init_done so it will try again next time
+            raise
 
     # app/assistant/lib/core_tools/email_tool/email_tool.py
 

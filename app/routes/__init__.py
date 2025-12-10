@@ -11,6 +11,15 @@ from .agent_flow import agent_flow_route_bp
 from .ask_user_route import ask_user_route_bp
 from .daily_summary import daily_summary_route_bp
 from .entity_cards_editor import entity_cards_editor_bp
-from .kg_visualizer import kg_visualizer_bp
-from .taxonomy_viewer import taxonomy_viewer_bp
 from .google_oauth import google_oauth_bp
+from .health_check import health_check_bp
+
+# KG/Taxonomy/Graph Visualizer routes - only import if dependencies available (disabled in alpha)
+# These all require sentence-transformers/chromadb which are not in alpha
+try:
+    from .kg_visualizer import kg_visualizer_bp
+    from .taxonomy_viewer import taxonomy_viewer_bp
+except ImportError as e:
+    # sentence-transformers/chromadb not available - KG/Taxonomy features disabled
+    kg_visualizer_bp = None
+    taxonomy_viewer_bp = None

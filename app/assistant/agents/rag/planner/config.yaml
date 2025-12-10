@@ -17,8 +17,6 @@ user_context_items:
 - achievements
 system_context_items:
 - allowed_nodes
-rag_fields:
-  task: ["chat"]
-  information: ["chat"]
+
 type: agent
 

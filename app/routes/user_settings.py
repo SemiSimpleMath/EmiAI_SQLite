@@ -360,3 +360,134 @@ def reset_settings():
             'message': f'Error resetting settings: {str(e)}'
         }), 500
 
+
+# Quiet Mode Routes
+
+@user_settings_bp.route('/api/settings/quiet-mode', methods=['GET'])
+def get_quiet_mode():
+    """Get quiet mode settings"""
+    try:
+        settings_manager = get_settings_manager()
+        quiet_mode = settings_manager.get('quiet_mode', {})
+        
+        return jsonify({
+            'success': True,
+            'quiet_mode': quiet_mode
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error retrieving quiet mode settings: {str(e)}'
+        }), 500
+
+
+@user_settings_bp.route('/api/settings/quiet-mode/toggle', methods=['POST'])
+def toggle_quiet_mode():
+    """Toggle quiet mode on/off"""
+    try:
+        settings_manager = get_settings_manager()
+        current_status = settings_manager.get('quiet_mode.enabled', False)
+        new_status = not current_status
+        
+        settings_manager.set('quiet_mode.enabled', new_status)
+        notify_settings_changed()
+        
+        return jsonify({
+            'success': True,
+            'enabled': new_status,
+            'message': f'Quiet mode {"enabled" if new_status else "disabled"}'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error toggling quiet mode: {str(e)}'
+        }), 500
+
+
+@user_settings_bp.route('/api/settings/quiet-mode/universal', methods=['PUT'])
+def update_universal_quiet_hours():
+    """Update universal quiet hours"""
+    try:
+        data = request.get_json()
+        start = data.get('start')
+        end = data.get('end')
+        
+        if not start or not end:
+            return jsonify({
+                'success': False,
+                'message': 'Start and end times are required'
+            }), 400
+        
+        settings_manager = get_settings_manager()
+        settings_manager.set('quiet_mode.universal_hours.start', start)
+        settings_manager.set('quiet_mode.universal_hours.end', end)
+        notify_settings_changed()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Universal quiet hours updated',
+            'universal_hours': {
+                'start': start,
+                'end': end
+            }
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error updating universal quiet hours: {str(e)}'
+        }), 500
+
+
+@user_settings_bp.route('/api/settings/quiet-mode/feature/<feature>', methods=['PUT'])
+def update_feature_quiet_hours(feature):
+    """Update per-feature quiet hours"""
+    try:
+        data = request.get_json()
+        enabled = data.get('enabled', False)
+        start = data.get('start')
+        end = data.get('end')
+        
+        settings_manager = get_settings_manager()
+        
+        # Update feature-specific settings
+        if enabled is not None:
+            settings_manager.set(f'quiet_mode.per_feature.{feature}.enabled', enabled)
+        if start:
+            settings_manager.set(f'quiet_mode.per_feature.{feature}.start', start)
+        if end:
+            settings_manager.set(f'quiet_mode.per_feature.{feature}.end', end)
+        
+        notify_settings_changed()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Quiet hours for {feature} updated',
+            'feature_settings': settings_manager.get(f'quiet_mode.per_feature.{feature}', {})
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error updating feature quiet hours: {str(e)}'
+        }), 500
+
+
+@user_settings_bp.route('/api/settings/quiet-mode/status', methods=['GET'])
+def get_quiet_mode_status():
+    """Check if quiet mode is currently active"""
+    try:
+        settings_manager = get_settings_manager()
+        feature = request.args.get('feature')  # Optional feature parameter
+        
+        is_active = settings_manager.is_quiet_mode_active(feature)
+        
+        return jsonify({
+            'success': True,
+            'is_active': is_active,
+            'feature': feature
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error checking quiet mode status: {str(e)}'
+        }), 500
+

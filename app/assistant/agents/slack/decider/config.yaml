@@ -5,7 +5,7 @@ llm_params:
   llm_provider: openai
   api_key: dummy_api_key
   engine: gpt-4o-mini
-  temperature: 0.1
+  temperature: .1
 
 system_context_items:
   - allowed_nodes
@@ -23,11 +23,4 @@ allowed_nodes:
   - web
   - exit_node
 
-rag_fields:
-  information:
-    - chat
-    - slack
-  task:
-    - chat
-    - slack
 

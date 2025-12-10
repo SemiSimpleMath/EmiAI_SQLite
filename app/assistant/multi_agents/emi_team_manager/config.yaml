@@ -36,7 +36,6 @@ control_nodes:
 
 tools:
   allowed_tools:
-    - rag_query
     - get_email
     - send_email
     - find_calendar_event_by_name

@@ -1,11 +1,7 @@
 from app.assistant.kg_core.kg_pipeline import process_text_to_kg
 from app.assistant.database.db_handler import UnifiedLog
 from app.assistant.rag_pipeline.source_log_handler import SourceLogHandler
-
-import unicodedata
-
-def normalize_ascii(text):
-    return unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
+from app.assistant.utils.utils import normalize_to_ascii as normalize_ascii
 
 
 class KGProcessor:

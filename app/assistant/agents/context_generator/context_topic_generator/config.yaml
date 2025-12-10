@@ -2,9 +2,9 @@ name: context_generator::context_topic_generator
 class_name: Agent
 color: magenta
 llm_params:
-  engine: gpt-4o-mini
+  engine: gpt-5-mini
   llm_provider: openai
-  temperature: 0.1
+  temperature: 1
 allowed_tools: []
 user_context_items:
 - topic

@@ -2,8 +2,8 @@ name: kg_maintenance::type_standardizer
 class_name: Agent
 color: red
 llm_params:
-  engine: gpt-4o-mini
-  temperature: 0.1
+  engine: gpt-5-mini
+  temperature: 1
   llm_provider: "openai"
 allowed_tools: []
 except_tools: []

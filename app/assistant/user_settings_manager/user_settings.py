@@ -43,6 +43,10 @@ class UserSettingsManager:
             print("Using default settings...")
             self._create_default_settings()
     
+    def reload_settings(self) -> None:
+        """Reload settings from disk. Call this after external changes to the settings file."""
+        self._load_settings()
+    
     def _create_default_settings(self) -> None:
         """Create default settings file"""
         default_settings = {
@@ -56,8 +60,8 @@ class UserSettingsManager:
                 "enable_scheduler": True,
                 "enable_daily_summary": True,
                 "enable_system_state_monitor": True,
-                "enable_kg": True,
-                "enable_taxonomy": True,
+                "enable_kg": False,  # Disabled in alpha (requires ChromaDB)
+                "enable_taxonomy": False,  # Disabled in alpha (requires ChromaDB)
                 "enable_entity_cards": True,
                 "enable_speak_mode": False
             },
@@ -94,6 +98,70 @@ class UserSettingsManager:
                 "name": "",
                 "timezone": "UTC",
                 "location": ""
+            },
+            "quiet_mode": {
+                "enabled": False,
+                "universal_hours": {
+                    "start": "23:00",
+                    "end": "07:00"
+                },
+                "per_feature": {
+                    "email": {
+                        "enabled": False,
+                        "start": "23:00",
+                        "end": "07:00"
+                    },
+                    "news": {
+                        "enabled": False,
+                        "start": "23:00",
+                        "end": "07:00"
+                    },
+                    "calendar": {
+                        "enabled": False,
+                        "start": "23:00",
+                        "end": "07:00"
+                    },
+                    "tasks": {
+                        "enabled": False,
+                        "start": "23:00",
+                        "end": "07:00"
+                    },
+                    "scheduler": {
+                        "enabled": False,
+                        "start": "23:00",
+                        "end": "07:00"
+                    },
+                    "weather": {
+                        "enabled": False,
+                        "start": "23:00",
+                        "end": "07:00"
+                    },
+                    "auto_planner": {
+                        "enabled": False,
+                        "start": "23:00",
+                        "end": "07:00"
+                    },
+                    "kg": {
+                        "enabled": False,
+                        "start": "23:00",
+                        "end": "07:00"
+                    },
+                    "daily_summary": {
+                        "enabled": False,
+                        "start": "23:00",
+                        "end": "07:00"
+                    },
+                    "taxonomy": {
+                        "enabled": False,
+                        "start": "23:00",
+                        "end": "07:00"
+                    },
+                    "entity_cards": {
+                        "enabled": False,
+                        "start": "23:00",
+                        "end": "07:00"
+                    }
+                }
             },
             "system": {
                 "first_run": True,
@@ -227,15 +295,16 @@ class UserSettingsManager:
             credentials_json = credentials_dir / 'credentials.json'
             token_pickle = credentials_dir / 'token.pickle'
             
-            # Need at least credentials.json to authenticate
-            return credentials_json.exists()
+            # Need BOTH credentials.json (client ID/secret) AND token.pickle (user's OAuth token)
+            return credentials_json.exists() and token_pickle.exists()
         except Exception as e:
             print(f"Error checking OAuth credentials: {e}")
             return False
     
     def is_feature_enabled(self, feature: str) -> bool:
         """
-        Check if a feature is enabled
+        Check if a feature is enabled.
+        Always reads fresh from disk to respect real-time setting changes.
         
         Args:
             feature: Feature name (e.g., 'kg', 'taxonomy', 'entity_cards')
@@ -243,6 +312,8 @@ class UserSettingsManager:
         Returns:
             True if enabled, False otherwise
         """
+        # Reload settings to get latest values (in case changed via UI)
+        self._load_settings()
         key_path = f"features.enable_{feature}"
         return self.get(key_path, False)
     
@@ -511,6 +582,92 @@ class UserSettingsManager:
     def reset_to_defaults(self) -> None:
         """Reset all settings to default values"""
         self._create_default_settings()
+    
+    def is_quiet_mode_active(self, feature: Optional[str] = None) -> bool:
+        """
+        Check if quiet mode is currently active for a feature.
+        Always reads fresh from disk to respect real-time setting changes.
+        
+        Args:
+            feature: Feature name (email, news, calendar, tasks, scheduler, weather).
+                    If None, checks universal quiet mode.
+        
+        Returns:
+            True if quiet mode is active, False otherwise
+        """
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+        from app.assistant.utils.logging_config import get_logger
+        
+        logger = get_logger(__name__)
+        
+        # Reload settings to get latest values (in case changed via UI)
+        self._load_settings()
+        
+        quiet_settings = self.get('quiet_mode', {})
+        
+        logger.info(f"🔍 QUIET MODE CHECK for feature='{feature}'")
+        logger.info(f"   Global quiet_mode.enabled = {quiet_settings.get('enabled', False)}")
+        
+        # If quiet mode is globally disabled, return False
+        if not quiet_settings.get('enabled', False):
+            logger.info(f"   ➜ Result: FALSE (global quiet mode disabled)")
+            return False
+        
+        # Get timezone from user settings
+        timezone_str = self.get('user_info.timezone', 'America/Los_Angeles')
+        try:
+            tz = ZoneInfo(timezone_str)
+        except:
+            tz = ZoneInfo('America/Los_Angeles')
+        
+        now = datetime.now(tz)
+        current_time = now.time()
+        logger.info(f"   Current time: {current_time.strftime('%H:%M')} ({timezone_str})")
+        
+        # Check per-feature quiet hours if feature is specified
+        if feature:
+            per_feature = quiet_settings.get('per_feature', {}).get(feature, {})
+            logger.info(f"   Per-feature settings for '{feature}': {per_feature}")
+            
+            if per_feature.get('enabled', False):
+                # Use feature-specific hours
+                start_str = per_feature.get('start', '23:00')
+                end_str = per_feature.get('end', '07:00')
+                logger.info(f"   Using PER-FEATURE hours: {start_str} - {end_str}")
+            else:
+                # Use universal hours
+                universal = quiet_settings.get('universal_hours', {})
+                start_str = universal.get('start', '23:00')
+                end_str = universal.get('end', '07:00')
+                logger.info(f"   Using UNIVERSAL hours: {start_str} - {end_str}")
+        else:
+            # Use universal hours
+            universal = quiet_settings.get('universal_hours', {})
+            start_str = universal.get('start', '23:00')
+            end_str = universal.get('end', '07:00')
+            logger.info(f"   Using UNIVERSAL hours (no feature specified): {start_str} - {end_str}")
+        
+        # Parse time strings
+        start_hour, start_min = map(int, start_str.split(':'))
+        end_hour, end_min = map(int, end_str.split(':'))
+        
+        start_time = datetime.strptime(start_str, '%H:%M').time()
+        end_time = datetime.strptime(end_str, '%H:%M').time()
+        
+        # Check if current time is in quiet hours
+        if start_time <= end_time:
+            # Same day range (e.g., 09:00 - 17:00)
+            is_quiet = start_time <= current_time <= end_time
+            logger.info(f"   Same-day range check: {start_str} <= {current_time.strftime('%H:%M')} <= {end_str}")
+        else:
+            # Overnight range (e.g., 23:00 - 07:00)
+            is_quiet = current_time >= start_time or current_time <= end_time
+            logger.info(f"   Overnight range check: {current_time.strftime('%H:%M')} >= {start_str} OR {current_time.strftime('%H:%M')} <= {end_str}")
+        
+        logger.info(f"   ➜ Result: {is_quiet}")
+        
+        return is_quiet
     
     def export_settings(self, export_path: str, include_api_keys: bool = False) -> None:
         """

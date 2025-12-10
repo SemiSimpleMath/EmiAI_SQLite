@@ -15,8 +15,6 @@ agents:
     class: Agent
   - name: shared::final_answer
     class: FinalAnswer
-  - name: shared::writer
-    class: Agent
   - name: shared::mathematician
     class: Agent
 

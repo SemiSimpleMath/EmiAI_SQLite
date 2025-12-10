@@ -27,8 +27,20 @@ class EventHandlerHub:
         # Track when an agent's message was first requeued: agent_name -> timestamp
         self.requeued_timestamps = {}
 
+        # Track requeue counts per agent: agent_name -> count
+        self.requeue_counts = {}
+        
+        # Track first requeue time per agent: agent_name -> timestamp (for backoff calculation)
+        self.requeue_first_time = {}
+
         # Maximum wait time (seconds) before force-releasing an agent
         self.max_wait_time = 200
+
+        # Maximum requeue attempts before killing the program (for debugging stuck agents)
+        self.max_requeue_attempts = 30  # Increased from 10 since we now have backoff
+        
+        # Backoff settings for busy agents
+        self.requeue_backoff_seconds = 2.0  # Wait this long between requeue attempts
 
         # Start a worker thread for processing messages
         self.worker_thread = threading.Thread(target=self.process_queue, daemon=True)
@@ -70,9 +82,13 @@ class EventHandlerHub:
                 logger.debug(f"🚀 Dispatching pending message for agent '{agent_name}'")
                 self.dispatch_message(pending_message)
 
-            # Clear the requeue timestamp if present
+            # Clear the requeue timestamp, count, and first_time if present
             if agent_name in self.requeued_timestamps:
                 del self.requeued_timestamps[agent_name]
+            if agent_name in self.requeue_counts:
+                del self.requeue_counts[agent_name]
+            if agent_name in self.requeue_first_time:
+                del self.requeue_first_time[agent_name]
 
     def is_agent_busy(self, agent_name):
         """Returns whether an agent is currently busy."""
@@ -85,7 +101,11 @@ class EventHandlerHub:
         logger.debug(f"🔵 Received event: {message.event_topic} for agent '{message.receiver}' with content: {message.content}")
 
         if message.event_topic not in self.event_registry:
-            logger.warning(f"⚠️ Event '{message.event_topic}' was published but has NO registered subscribers yet.")
+            # Some events are optional and don't require handlers
+            if message.event_topic in ['settings_changed']:
+                logger.debug(f"ℹ️ Event '{message.event_topic}' was published (no subscribers registered, which is normal)")
+            else:
+                logger.warning(f"⚠️ Event '{message.event_topic}' was published but has NO registered subscribers yet.")
 
         logger.debug(f"📥 Putting message for '{message.receiver}' into the queue")
         # print("JUKKA DEBUG In queue:")
@@ -136,7 +156,35 @@ class EventHandlerHub:
                     logger.debug(f"📬 Processing message for agent '{agent_name}'")
 
                     if agent_name is not None and self.agent_status.get(agent_name, False):
-                        logger.warning(f"⚠️ Agent '{agent_name}' is busy. Requeuing message.")
+                        current_time = time.time()
+                        
+                        # Initialize tracking for this agent if first requeue
+                        if agent_name not in self.requeue_first_time:
+                            self.requeue_first_time[agent_name] = current_time
+                            self.requeue_counts[agent_name] = 0
+                        
+                        # Check if enough time has passed since last requeue attempt (backoff)
+                        time_since_first = current_time - self.requeue_first_time[agent_name]
+                        expected_attempts = int(time_since_first / self.requeue_backoff_seconds)
+                        actual_attempts = self.requeue_counts[agent_name]
+                        
+                        # Only count as a new attempt if backoff period has passed
+                        if expected_attempts > actual_attempts:
+                            self.requeue_counts[agent_name] = expected_attempts
+                            requeue_count = expected_attempts
+                            
+                            logger.warning(f"⚠️ Agent '{agent_name}' is busy. Requeuing message. "
+                                         f"(attempt {requeue_count}/{self.max_requeue_attempts}, "
+                                         f"waiting {time_since_first:.1f}s)")
+                            
+                            if requeue_count >= self.max_requeue_attempts:
+                                total_wait = requeue_count * self.requeue_backoff_seconds
+                                logger.critical(f"🛑 KILLING PROGRAM: Agent '{agent_name}' has been busy for {requeue_count} attempts (~{total_wait:.0f}s)!")
+                                logger.critical(f"🛑 This indicates the agent never released its busy flag. Check _set_agent_idle() calls.")
+                                logger.critical(f"🛑 Message that couldn't be delivered: {message.event_topic} -> {message.receiver}")
+                                import os
+                                os._exit(1)  # Force kill - use os._exit to bypass cleanup and ensure immediate termination
+                        
                         messages_to_requeue.append(message)
                     else:
                         handler = self.event_registry.get(message.event_topic, self.default_handler)
@@ -152,7 +200,11 @@ class EventHandlerHub:
                     logger.debug(f"🔁 Re-queuing message for agent '{msg.receiver}'")
                     self.queue.put(msg)
 
-                time.sleep(0.01)  # Reduced from 0.05 to 0.01 seconds
+                # If we have messages waiting for busy agents, sleep longer to allow backoff
+                if messages_to_requeue:
+                    time.sleep(0.5)  # Wait 500ms before re-checking busy agents
+                else:
+                    time.sleep(0.01)  # Normal processing speed when no blocked messages
 
             except Exception as e:
                 logger.error(f"🚨 Uncaught exception in process_queue: {e}", exc_info=True)
@@ -165,6 +217,11 @@ class EventHandlerHub:
             if message.receiver not in DI.agent_registry.list_all_agent_names():
                 logger.warning(f"🚨 Message has receiver='{message.receiver}', but it's not a known agent. "
                                f"This may be a handler misusing receiver or a namespacing bug.")
+                print(f"\n{'=' * 80}")
+                print(f"🛑 FATAL: Unknown agent receiver '{message.receiver}'")
+                print(f"   Event topic: {message.event_topic}")
+                print(f"   Known agents: {DI.agent_registry.list_all_agent_names()[:10]}...")
+                print(f"{'=' * 80}\n")
                 exit(1)
 
         if agent_name is not None and agent_name not in DI.agent_registry.list_all_agent_names():
@@ -194,7 +251,11 @@ class EventHandlerHub:
         handler = self.event_registry.get(message.event_topic, self.default_handler)
 
         if handler == self.default_handler:
-            logger.warning(f"⚠️ No handler registered for event: {message.event_topic}. Using default handler.")
+            # Some events are optional and don't require handlers
+            if message.event_topic in ['settings_changed']:
+                logger.debug(f"ℹ️ No handler registered for event: {message.event_topic} (using default handler, which is normal)")
+            else:
+                logger.warning(f"⚠️ No handler registered for event: {message.event_topic}. Using default handler.")
 
         logger.debug(f"🚀 Dispatching message with event key '{message.event_topic}' to handler {handler}")
         handler(message)
@@ -202,7 +263,9 @@ class EventHandlerHub:
 
     def default_handler(self, message: Message):
         """Handles unknown or unregistered events."""
-        logger.warning(f"⚠️ No handler registered for event: {message.event_topic}")
+        # Only log if it's not an expected optional event
+        if message.event_topic not in ['settings_changed']:
+            logger.warning(f"⚠️ No handler registered for event: {message.event_topic}")
 
     def list_registered_events(self):
         """Lists all registered events and their handlers."""

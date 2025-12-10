@@ -1,4 +1,4 @@
-One of the agents in our system is passing important information to the user Jukka.
+One of the agents in our system is passing important information to the user {{ resource_user_data.first_name }}.
 This is not a question, and no reply is expected.
 
 Your job is to format this information. You should not change the meaning of the text,
@@ -10,7 +10,7 @@ We need:
 
 Example:
 Input:
-    I notified Jukka that the sync operation completed successfully.
+    I notified {{ resource_user_data.first_name }} that the sync operation completed successfully.
 
 Output:
     tts_str: The sync operation completed successfully.

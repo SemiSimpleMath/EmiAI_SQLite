@@ -251,7 +251,7 @@ def merge_nodes(n1_id, n2_id, session: Session) -> Node:
     # Delete the merged-away node
     session.delete(node2)
 
-    session.flush()
+    session.commit()  # Commit immediately - SQLite single-writer
     session.refresh(node1)
     return node1
 
@@ -543,6 +543,8 @@ def update_node_label(node_id: uuid.UUID, new_label: str, session: Session) -> O
     Update the label of a node.
     NOTE: This function does NOT commit the session. The caller is responsible for committing.
     """
+    # Convert UUID to string for SQLite compatibility
+    node_id = str(node_id)
     node = session.get(Node, node_id)
     if not node:
         print(f"Node {node_id} not found")
@@ -557,6 +559,8 @@ def update_node_type(node_id: uuid.UUID, new_node_type: str, session: Session) -
     Update the node_type of a node after validating it exists.
     NOTE: This function does NOT commit the session. The caller is responsible for committing.
     """
+    # Convert UUID to string for SQLite compatibility
+    node_id = str(node_id)
     node = session.get(Node, node_id)
     if not node:
         print(f"Node {node_id} not found")
@@ -573,6 +577,8 @@ def replace_node_attribute(node_id: uuid.UUID, attr_name: str, new_value: Any, s
     Replace a single attribute value on a node. Overwrites any existing value.
     NOTE: This function does NOT commit the session. The caller is responsible for committing.
     """
+    # Convert UUID to string for SQLite compatibility
+    node_id = str(node_id)
     node = session.get(Node, node_id)
     if not node:
         print(f"Node {node_id} not found")
@@ -590,6 +596,8 @@ def remove_node_attribute(node_id: uuid.UUID, attr_name: str, session: Session) 
     Remove a key from the attributes JSONB dict of a node.
     NOTE: This function does NOT commit the session. The caller is responsible for committing.
     """
+    # Convert UUID to string for SQLite compatibility
+    node_id = str(node_id)
     node = session.get(Node, node_id)
     if not node:
         print(f"Node {node_id} not found")
@@ -704,19 +712,26 @@ def safe_add_relationship_by_id(
     embedding_text = f"{source_node.label} {relationship_type} {target_node.label}"
 
     # 4. Create the new edge object.
+    edge_id = str(uuid.uuid4())
     new_edge = Edge(
-        id=uuid.uuid4(),
-        source_id=source_id,
-        target_id=target_id,
+        id=edge_id,
+        source_id=str(source_id),
+        target_id=str(target_id),
         relationship_type=relationship_type,
         start_date=start_date,
         end_date=end_date,
         attributes=attributes,
-        label_embedding=kg_utils.create_embedding(embedding_text)
+        # Note: embeddings are now stored in ChromaDB, not as columns
     )
 
     # 5. Add the new edge to the session for a future commit.
     db_session.add(new_edge)
+    
+    # Store edge embedding in ChromaDB
+    from app.assistant.kg_core.chroma_embedding_manager import get_chroma_manager
+    chroma = get_chroma_manager()
+    edge_embedding = kg_utils.create_embedding(embedding_text)
+    chroma.store_edge_embedding(edge_id, embedding_text, edge_embedding)
 
     return new_edge, "created"
 
@@ -1595,11 +1610,14 @@ def get_neighborhood(session: Session, node_id: uuid.UUID, depth: int = 1) -> Di
     Retrieves the subgraph surrounding a node up to a certain depth.
     Returns a dictionary of all nodes and edges within the neighborhood.
     """
+    # Convert UUID to string for SQLite compatibility
+    node_id_str = str(node_id)
+    
     neighborhood = {"nodes": set(), "edges": set()}
-    queue = deque([(node_id, 0)])  # (current_node_id, current_depth)
-    visited_nodes = {node_id}
+    queue = deque([(node_id_str, 0)])  # (current_node_id, current_depth)
+    visited_nodes = {node_id_str}
 
-    start_node = session.get(Node, node_id)
+    start_node = session.get(Node, node_id_str)
     if not start_node:
         return neighborhood
 
@@ -1836,6 +1854,8 @@ def inspect_node_neighborhood(
         node_info: dict containing info about the main node.
         edge_list: flat list of enriched edges with connected node data, suitable for chunking.
     """
+    # Convert UUID to string for SQLite compatibility
+    node_id = str(node_id)
     node = session.get(Node, node_id)
     if not node:
         raise ValueError(f"Node {node_id} not found")

@@ -3,7 +3,6 @@ import uuid
 import json
 from typing import List, Optional, Tuple, Dict, Any
 from sqlalchemy.orm import Session
-from sentence_transformers import SentenceTransformer
 import numpy as np
 from datetime import datetime
 
@@ -14,13 +13,81 @@ logger = get_logger(__name__)
 from app.models.base import get_session
 from app.assistant.utils.pydantic_classes import Message
 
-# Initialize embedding model (can be shared across instances)
-embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+# Lazy-load embedding model to avoid heavy imports during test initialization
+_embedding_model = None
+
+def _get_embedding_model():
+    """Lazy-load the sentence transformer model."""
+    global _embedding_model
+    if _embedding_model is None:
+        from sentence_transformers import SentenceTransformer
+        _embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+    return _embedding_model
 
 class KnowledgeGraphUtils:
-    def __init__(self, session: Optional[Session] = None):
-        self.session = session or get_session()
-        self.embedding_model = embedding_model
+    """
+    Utility class for knowledge graph operations.
+    
+    WARNING: This class holds a database session for its lifetime.
+    For long-running operations with LLM calls, you should:
+    1. Create the instance
+    2. Do DB operations quickly
+    3. Call close_session() before LLM calls
+    4. Create a new instance after LLM calls if more DB ops needed
+    
+    Better pattern: Use session_factory and get fresh sessions per operation.
+    """
+    
+    def __init__(self, session: Optional[Session] = None, session_factory=None):
+        """
+        Initialize KnowledgeGraphUtils.
+        
+        Args:
+            session: Existing session to use (will NOT be auto-closed)
+            session_factory: Factory to create new sessions (preferred for long-running ops)
+        """
+        self._owns_session = session is None  # Only close sessions we create
+        self._session_factory = session_factory or get_session
+        self.session = session or self._session_factory()
+        self._embedding_model = None
+
+    def close_session(self):
+        """
+        Close the session if we own it.
+        Call this before doing slow operations (LLM calls, API calls).
+        """
+        if self._owns_session and self.session:
+            try:
+                self.session.close()
+            except Exception:
+                pass  # Session might already be closed
+            self.session = None
+    
+    def get_fresh_session(self) -> Session:
+        """
+        Get a fresh session for a new operation.
+        Closes the old session if we own it.
+        """
+        self.close_session()
+        self.session = self._session_factory()
+        self._owns_session = True
+        return self.session
+    
+    def __enter__(self):
+        """Context manager support."""
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Close session on exit."""
+        self.close_session()
+        return False
+
+    @property
+    def embedding_model(self):
+        """Lazy-load embedding model on first access."""
+        if self._embedding_model is None:
+            self._embedding_model = _get_embedding_model()
+        return self._embedding_model
 
     def create_embedding(self, text: str) -> List[float]:
         """Create semantic embedding for text."""
@@ -87,23 +154,33 @@ class KnowledgeGraphUtils:
                               max_results: int = 5) -> List[Tuple[Node, float]]:
         """
         Finds nodes with semantically similar labels, optionally filtered by type.
+        Uses ChromaDB for fast vector similarity search.
         """
-        new_embedding = self.create_embedding(label)
-
-        query = self.session.query(Node)
-        if node_type_value:
-            query = query.filter(Node.node_type == node_type_value)
-
-        nodes = query.all()
-        similarities = []
-        for node in nodes:
-            if node.label_embedding is not None:
-                sim = self.cosine_similarity(new_embedding, node.label_embedding)
-                if sim >= similarity_threshold:
-                    similarities.append((node, sim))
-
-        similarities.sort(key=lambda x: x[1], reverse=True)
-        return similarities[:max_results]
+        from app.assistant.kg_core.chroma_embedding_manager import get_chroma_manager
+        
+        # Generate embedding for query
+        query_embedding = self.create_embedding(label)
+        
+        # Use ChromaDB for fast similarity search
+        chroma = get_chroma_manager()
+        similar_node_ids = chroma.search_similar_nodes(
+            query_embedding,
+            k=max_results * 3,  # Get more candidates for filtering
+            threshold=similarity_threshold
+        )
+        
+        # Fetch actual nodes and filter by type if needed
+        results = []
+        for node_id, similarity, _ in similar_node_ids:
+            node = self.session.query(Node).filter(Node.id == node_id).first()
+            if node:
+                # Filter by node type if specified
+                if node_type_value is None or node.node_type == node_type_value:
+                    results.append((node, similarity))
+                    if len(results) >= max_results:
+                        break
+        
+        return results
 
 
     def find_merge_candidates(self, label: str, node_type: str = None, semantic_label: str = None, category: str = None, k: int = 5) -> List[Node]:
@@ -310,16 +387,17 @@ class KnowledgeGraphUtils:
         Use add_node() if you want duplicate checking and merging.
         """
         # Create the new Node object with all provided details.
+        node_id = str(uuid.uuid4())  # SQLite requires UUID as string
         new_node = Node(
-            id=uuid.uuid4(),
+            id=node_id,
             node_type=node_type,
             label=label,
             category=category,
             aliases=aliases or [], # Default to an empty list if None
             description=description,
             attributes=attributes or {},
-            label_embedding=self.create_embedding(label),
-            description_embedding=None,
+            # Note: label_embedding is now a @property that reads from ChromaDB
+            # We store the embedding in ChromaDB after creating the node
             # New promoted fields
             valid_during=valid_during,
             hash_tags=hash_tags or [],
@@ -338,12 +416,17 @@ class KnowledgeGraphUtils:
             original_sentence=original_sentence,
             sentence_id=sentence_id
         )
+        
+        # Store label embedding in ChromaDB
+        from app.assistant.kg_core.chroma_embedding_manager import get_chroma_manager
+        chroma = get_chroma_manager()
+        label_embedding = self.create_embedding(label)
+        chroma.store_node_embedding(str(node_id), label, label_embedding)
 
-        # Add the new node to the session.
-        # The main pipeline will be responsible for the final session.commit().
+        # Add the new node to the session and commit immediately
+        # SQLite single-writer: commit after each write to avoid lock contention
         self.session.add(new_node)
-
-        # Note: No flush here - let the main pipeline handle flushing to assign IDs
+        self.session.commit()
 
         return new_node, "created"
 
@@ -576,11 +659,14 @@ class KnowledgeGraphUtils:
         # 3. Semantic deduplication: Check if a semantically similar edge exists
         if semantic_dedup and sentence:
             # Find all edges between these two nodes (any relationship type)
-            candidate_edges = self.session.query(Edge).filter(
+            # Note: sentence_embedding is a @property (ChromaDB), not a column, so we filter in Python
+            all_edges = self.session.query(Edge).filter(
                 Edge.source_id == source_id,
                 Edge.target_id == target_id,
-                Edge.sentence_embedding.isnot(None)  # Only check edges with embeddings
             ).all()
+            
+            # Filter to edges that have sentences (which means they can have embeddings)
+            candidate_edges = [e for e in all_edges if e.sentence]
             
             if candidate_edges:
                 # Create embedding for new sentence
@@ -617,19 +703,17 @@ class KnowledgeGraphUtils:
             print(f"Warning: Could not create edge because node IDs were not found in DB.")
             return None, "error_missing_nodes"
 
-        embedding_text = f"{source_node.label} {relationship_type} {target_node.label}"
-
         # 5. Create and persist the new edge.
+        edge_id = str(uuid.uuid4())
         new_edge = Edge(
-            id=str(uuid.uuid4()),  # SQLite: string UUID
+            id=edge_id,  # SQLite: string UUID
             source_id=str(source_id),  # SQLite: string UUID
             target_id=str(target_id),  # SQLite: string UUID
             relationship_type=relationship_type,
             attributes=attributes,
             sentence=sentence,
             original_message_timestamp=original_message_timestamp,
-            label_embedding=self.create_embedding(embedding_text),
-            sentence_embedding=self.create_embedding(sentence) if sentence else None,
+            # Note: embeddings are now stored in ChromaDB, not as columns
             # New first-class fields
             confidence=confidence,
             importance=importance,
@@ -640,7 +724,16 @@ class KnowledgeGraphUtils:
             relationship_descriptor=relationship_descriptor,
         )
         self.session.add(new_edge)
-        # Don't commit here - let the main pipeline handle the commit
+        
+        # Store edge embedding in ChromaDB (using sentence if available)
+        if sentence:
+            from app.assistant.kg_core.chroma_embedding_manager import get_chroma_manager
+            chroma = get_chroma_manager()
+            edge_embedding = self.create_embedding(sentence)
+            chroma.store_edge_embedding(edge_id, sentence, edge_embedding)
+        
+        # Commit immediately - SQLite single-writer needs frequent commits
+        self.session.commit()
         return new_edge, "created"
 
     def safe_add_relationship(self,
@@ -680,23 +773,31 @@ class KnowledgeGraphUtils:
             return existing_edge, "found"
 
         # Create and persist the new edge
+        edge_id = str(uuid.uuid4())
         new_edge = Edge(
-            id=str(uuid.uuid4()),  # SQLite: string UUID
+            id=edge_id,  # SQLite: string UUID
             source_id=src.id,  # Already a string from DB
             target_id=tgt.id,  # Already a string from DB
             relationship_type=relationship_type,
             start_date=start_date,
             end_date=end_date,
             attributes=attributes or {},
-            label_embedding=self.create_embedding(relationship_type),
-            sentence_embedding=None,
+            # Note: embeddings are now stored in ChromaDB, not as columns
             # New first-class fields
             confidence=confidence,
             importance=importance,
             source=source,
         )
         self.session.add(new_edge)
-        # Don't commit here - let the main pipeline handle the commit
+        
+        # Store edge embedding in ChromaDB (using relationship_type as text)
+        from app.assistant.kg_core.chroma_embedding_manager import get_chroma_manager
+        chroma = get_chroma_manager()
+        edge_embedding = self.create_embedding(relationship_type)
+        chroma.store_edge_embedding(edge_id, relationship_type, edge_embedding)
+        
+        # Commit immediately - SQLite single-writer needs frequent commits
+        self.session.commit()
         return new_edge, "created"
 
 
@@ -890,7 +991,8 @@ class KnowledgeGraphUtils:
         Returns:
             The Node object if found, otherwise None.
         """
-        return self.session.get(Node, node_id)
+        # Convert UUID to string for SQLite compatibility
+        return self.session.get(Node, str(node_id))
     
     def get_node_edges(self, node_id: uuid.UUID) -> List[Edge]:
         """
@@ -1031,6 +1133,10 @@ class KnowledgeGraphUtils:
         # Apply the merged data to the target node
         self._apply_merged_data_to_node(target_node, merger_result)
         
+        # COMMIT NOW - don't hold dirty session during edge queries
+        # This prevents "database is locked" errors from autoflush during queries
+        self.session.commit()
+        
         # Reassign edges from source to target (only if source node is persisted)
         if hasattr(source_node, 'id') and source_node.id is not None:
             self._reassign_edges_from_source_to_target(source_node, target_node)
@@ -1041,6 +1147,9 @@ class KnowledgeGraphUtils:
             except Exception as e:
                 # If deletion fails (e.g., node not persisted), just log and continue
                 logger.warning(f"Could not delete source node (may not be persisted): {e}")
+            
+            # Commit edge changes and deletion
+            self.session.commit()
         
         return target_node
 
@@ -1143,49 +1252,52 @@ class KnowledgeGraphUtils:
     def _reassign_edges_from_source_to_target(self, source_node: Node, target_node: Node) -> None:
         """Reassign all edges from source node to target node, handling duplicates."""
         
-        # Get all edges connected to the source node
-        edges = self.session.query(Edge).filter(
-            (Edge.source_id == source_node.id) | (Edge.target_id == source_node.id)
-        ).all()
-        
-        reassignments = []
-        deletions = []
-        
-        for edge in edges:
-            # Determine new source and target IDs
-            new_source_id = target_node.id if edge.source_id == source_node.id else edge.source_id
-            new_target_id = target_node.id if edge.target_id == source_node.id else edge.target_id
+        # Use no_autoflush to prevent premature flushing during queries
+        # This avoids "database is locked" errors when other operations hold the lock
+        with self.session.no_autoflush:
+            # Get all edges connected to the source node
+            edges = self.session.query(Edge).filter(
+                (Edge.source_id == source_node.id) | (Edge.target_id == source_node.id)
+            ).all()
             
-            # Skip self-loops
-            if new_source_id == new_target_id:
-                deletions.append(edge.id)
-                continue
+            reassignments = []
+            deletions = []
             
-            # Check for duplicate edge
-            existing = self.session.query(Edge).filter_by(
-                source_id=new_source_id,
-                target_id=new_target_id,
-                relationship_type=edge.relationship_type,
-                relationship_descriptor=edge.relationship_descriptor
-            ).first()
+            for edge in edges:
+                # Determine new source and target IDs
+                new_source_id = target_node.id if edge.source_id == source_node.id else edge.source_id
+                new_target_id = target_node.id if edge.target_id == source_node.id else edge.target_id
+                
+                # Skip self-loops
+                if new_source_id == new_target_id:
+                    deletions.append(edge.id)
+                    continue
+                
+                # Check for duplicate edge
+                existing = self.session.query(Edge).filter_by(
+                    source_id=new_source_id,
+                    target_id=new_target_id,
+                    relationship_type=edge.relationship_type,
+                    relationship_descriptor=edge.relationship_descriptor
+                ).first()
+                
+                if existing:
+                    # Edge already exists, delete the duplicate
+                    deletions.append(edge.id)
+                else:
+                    # Reassign the edge
+                    reassignments.append((edge.id, new_source_id, new_target_id))
             
-            if existing:
-                # Edge already exists, delete the duplicate
-                deletions.append(edge.id)
-            else:
-                # Reassign the edge
-                reassignments.append((edge.id, new_source_id, new_target_id))
-        
-        # Apply reassignments
-        for edge_id, new_source_id, new_target_id in reassignments:
-            self.session.query(Edge).filter_by(id=edge_id).update({
-                Edge.source_id: new_source_id,
-                Edge.target_id: new_target_id
-            })
-        
-        # Delete duplicate edges
-        if deletions:
-            self.session.query(Edge).filter(Edge.id.in_(deletions)).delete(synchronize_session=False)
+            # Apply reassignments
+            for edge_id, new_source_id, new_target_id in reassignments:
+                self.session.query(Edge).filter_by(id=edge_id).update({
+                    Edge.source_id: new_source_id,
+                    Edge.target_id: new_target_id
+                })
+            
+            # Delete duplicate edges
+            if deletions:
+                self.session.query(Edge).filter(Edge.id.in_(deletions)).delete(synchronize_session=False)
 
     def merge_multiple_duplicates(self, node_ids: List[str], node_data_merger) -> Dict:
         """

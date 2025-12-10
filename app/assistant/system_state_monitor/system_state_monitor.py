@@ -26,7 +26,7 @@ from datetime import datetime
 import uuid
 
 from app.assistant.ServiceLocator.service_locator import DI
-from app.assistant.utils.pydantic_classes import ToolResult, Message
+from app.assistant.utils.pydantic_classes import ToolResult, Message, ToolMessage
 from app.assistant.utils.time_utils import utc_to_local
 from app.assistant.event_repository.prune_repo_events import (
     prune_calendar_events,
@@ -201,7 +201,11 @@ class SystemStateMonitor:
             results = []
             for log in logs:
                 # Calculate time elapsed since this action
-                time_diff = now_utc - log.timestamp
+                # Ensure log.timestamp is timezone-aware (SQLite stores naive datetimes)
+                log_timestamp = log.timestamp
+                if log_timestamp.tzinfo is None:
+                    log_timestamp = log_timestamp.replace(tzinfo=timezone.utc)
+                time_diff = now_utc - log_timestamp
                 
                 # Format relative time
                 if time_diff.total_seconds() < 120:  # Less than 2 minutes
@@ -217,7 +221,7 @@ class SystemStateMonitor:
                     relative_time = f"{days} day{'s' if days != 1 else ''} ago"
                 
                 results.append({
-                    "timestamp": log.timestamp.isoformat(),
+                    "timestamp": log_timestamp.isoformat(),
                     "time_ago": relative_time,
                     "agent": log.agent_name,
                     "description": log.description,
@@ -381,6 +385,12 @@ class SystemStateMonitor:
             # Don't let this error break the auto_planner flow
 
     def run(self):
+        from app.assistant.user_settings_manager.user_settings import is_feature_enabled
+        
+        # Check if auto_planner feature is enabled
+        if not is_feature_enabled('auto_planner'):
+            logger.debug("⏸️ Auto planner disabled in settings - skipping")
+            return
 
         supervisor = DI.agent_factory.create_agent('auto_planner::supervisor')
         logger.info("Running system_state_monitor at %s", datetime.now(timezone.utc).isoformat())
@@ -430,22 +440,43 @@ class SystemStateMonitor:
             
             processed_item = items[0]
             
-            # Call action_decider - returns single response with: relevance_analysis, cost_benefit_analysis, decision, recommendation
+            # Call action_decider - returns: relevance_analysis, cost_benefit_analysis, decision (str), snooze_hours (optional), recommendation
             decider_result = self.call_auto_planner_decider(new_info, already_done, current_state)
             
             from app.assistant.unified_item_manager.unified_item import ItemState
             
-            if not decider_result or not decider_result.get('decision', False):
-                # No action needed - mark as DISMISSED (fully processed)
-                logger.info(f"No action needed for {processed_item.source_type} item: {processed_item.title}")
+            if not decider_result:
+                logger.error("action_decider returned no result")
+                return
+            
+            decision = decider_result.get('decision', 'dismiss')
+            
+            # Handle three-way decision: act_now, snooze, or dismiss
+            if decision == 'dismiss':
+                # No action needed - mark as DISMISSED
+                logger.info(f"Dismissing {processed_item.source_type} item: {processed_item.title}")
                 unified_manager.transition_state(
                     item_id=processed_item.id,
                     new_state=ItemState.DISMISSED,
                     agent_decision="No action needed",
-                    agent_notes=f"Relevance: {decider_result.get('relevance_analysis', 'N/A')[:200] if decider_result else 'N/A'}\nCost/Benefit: {decider_result.get('cost_benefit_analysis', 'N/A')[:200] if decider_result else 'N/A'}"
+                    agent_notes=f"Relevance: {decider_result.get('relevance_analysis', 'N/A')[:200]}\nCost/Benefit: {decider_result.get('cost_benefit_analysis', 'N/A')[:200]}\nRecommendation: {decider_result.get('recommendation', 'N/A')[:200]}"
                 )
-            else:
-                # Action needed - mark as ACTION_PENDING (will be processed by auto_planner)
+            
+            elif decision == 'snooze':
+                # Snooze for later - mark as SNOOZED
+                snooze_hours = decider_result.get('snooze_hours', 24)
+                snooze_until = datetime.now(timezone.utc) + timedelta(hours=snooze_hours)
+                logger.info(f"Snoozing {processed_item.source_type} item '{processed_item.title}' for {snooze_hours} hours (until {snooze_until})")
+                unified_manager.transition_state(
+                    item_id=processed_item.id,
+                    new_state=ItemState.SNOOZED,
+                    snooze_until=snooze_until,
+                    agent_decision=f"Snoozed for {snooze_hours} hours",
+                    agent_notes=f"Relevance: {decider_result.get('relevance_analysis', 'N/A')[:200]}\nCost/Benefit: {decider_result.get('cost_benefit_analysis', 'N/A')[:200]}\nRecommendation: {decider_result.get('recommendation', 'N/A')[:200]}"
+                )
+            
+            elif decision == 'act_now':
+                # Action needed - mark as ACTION_PENDING and proceed to supervisor
                 logger.info(f"Action needed for {processed_item.source_type} item: {processed_item.title}")
                 unified_manager.transition_state(
                     item_id=processed_item.id,
@@ -464,8 +495,11 @@ class SystemStateMonitor:
                 }
                 supervisor_result = supervisor.action_handler(Message(agent_input=supervisor_input)).data or {}
 
-                # if supervisor decision == T we call the team and input will be action_input
-                if supervisor_result.get("decision") is True:
+                # Handle supervisor's three-way decision: act_now, snooze, or dismiss
+                supervisor_decision = supervisor_result.get("decision", "dismiss")
+                
+                if supervisor_decision == "act_now":
+                    # Supervisor approved action - call the team
                     auto_planner_team = DI.multi_agent_manager_factory.create_manager("auto_planner_team_manager")
 
                     auto_planner_team_result = auto_planner_team.request_handler(Message(task=supervisor_result.get("action_input")))
@@ -479,6 +513,20 @@ class SystemStateMonitor:
                             agent_decision="Action completed by auto_planner_team",
                             related_action_id=action_log_id
                         )
+                        
+                        # Send notification to UI feed (same as emi_team_manager does)
+                        tool_message = ToolMessage(
+                            tool_name="auto_planner_team",
+                            sender="auto_planner_team",
+                            receiver="emi_result_handler",
+                            content=auto_planner_team_result.content,
+                            tool_result=auto_planner_team_result,
+                            tool_data={},
+                            notification=True  # Mark as notification so it doesn't wait for user response
+                        )
+                        tool_message.event_topic = "emi_result_request"
+                        DI.event_hub.publish(tool_message)
+                        logger.info("Sent auto_planner result to UI feed")
                     else:
                         # Action attempted but failed
                         unified_manager.transition_state(
@@ -487,13 +535,27 @@ class SystemStateMonitor:
                             agent_decision="Action attempted but failed",
                             agent_notes="auto_planner_team returned no result"
                         )
-                else:
+                
+                elif supervisor_decision == "snooze":
+                    # Supervisor wants to snooze - override decider's decision
+                    snooze_hours = supervisor_result.get('snooze_hours', 24)
+                    snooze_until = datetime.now(timezone.utc) + timedelta(hours=snooze_hours)
+                    logger.info(f"Supervisor snoozed {processed_item.source_type} item '{processed_item.title}' for {snooze_hours} hours")
+                    unified_manager.transition_state(
+                        item_id=processed_item.id,
+                        new_state=ItemState.SNOOZED,
+                        snooze_until=snooze_until,
+                        agent_decision=f"Supervisor snoozed for {snooze_hours} hours",
+                        agent_notes=f"Supervisor reasoning: {supervisor_result.get('cost_benefit_analysis', 'N/A')[:300]}"
+                    )
+                
+                else:  # dismiss
                     # Supervisor declined - mark as DISMISSED
                     unified_manager.transition_state(
                         item_id=processed_item.id,
                         new_state=ItemState.DISMISSED,
                         agent_decision="Supervisor declined action",
-                        agent_notes="Action was recommended but supervisor declined"
+                        agent_notes=f"Action was recommended but supervisor declined: {supervisor_result.get('cost_benefit_analysis', 'N/A')[:300]}"
                     )
 
 

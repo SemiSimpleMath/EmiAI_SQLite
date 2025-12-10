@@ -72,6 +72,33 @@ class Taxonomy(Base):
     
     __table_args__ = {'extend_existing': True}
     
+    @property
+    def label_embedding(self):
+        """
+        Get label embedding from ChromaDB.
+        If not found, compute and store it.
+        """
+        from app.assistant.kg_core.chroma_embedding_manager import get_chroma_manager
+        from app.assistant.kg_core.knowledge_graph_utils import KnowledgeGraphUtils
+        from app.models.base import get_session
+        
+        chroma = get_chroma_manager()
+        
+        # Try to get from ChromaDB first
+        embedding = chroma.get_taxonomy_embedding(self.id)
+        
+        # If not found, compute and store
+        if embedding is None:
+            session = get_session()
+            try:
+                kg_utils = KnowledgeGraphUtils(session)
+                embedding = kg_utils.create_embedding(self.label)
+                chroma.store_taxonomy_embedding(self.id, self.label, embedding)
+            finally:
+                session.close()  # Always close the session!
+        
+        return embedding
+    
     def __repr__(self):
         return f"<Taxonomy(id={self.id}, label='{self.label}', parent_id={self.parent_id})>"
     

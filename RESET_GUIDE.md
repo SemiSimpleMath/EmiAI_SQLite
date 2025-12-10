@@ -55,6 +55,7 @@ Remove-Item -Recurse -Force chroma_db -ErrorAction SilentlyContinue
 
 # Delete resource configs (will recreate in setup wizard)
 Remove-Item -Force resources\resource_user_data.json -ErrorAction SilentlyContinue
+Remove-Item -Force resources\resource_assistant_data.json -ErrorAction SilentlyContinue
 Remove-Item -Force resources\resource_assistant_personality_data.json -ErrorAction SilentlyContinue
 Remove-Item -Force resources\resource_relationship_config.json -ErrorAction SilentlyContinue
 Remove-Item -Force resources\resource_chat_guidelines_data.json -ErrorAction SilentlyContinue

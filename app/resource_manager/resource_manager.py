@@ -91,21 +91,29 @@ class ResourceManager:
         Args:
             resources_dir: Relative path to resources directory (default: "resources")
         """
+        logger.info(f"🔧 Starting resource loading from '{resources_dir}'...")
+        logger.info(f"   DI has global_blackboard: {hasattr(DI, 'global_blackboard')}")
+        if hasattr(DI, "global_blackboard"):
+            logger.info(f"   DI.global_blackboard is None: {DI.global_blackboard is None}")
+        
         if not hasattr(DI, "global_blackboard") or DI.global_blackboard is None:
-            logger.error("Global blackboard not initialized, cannot load shared resources.")
+            logger.error("❌ Global blackboard not initialized, cannot load shared resources.")
             return
 
         resources_path = (self.base_dir / resources_dir).resolve()
+        logger.info(f"   Resources path: {resources_path}")
+        logger.info(f"   Path exists: {resources_path.exists()}")
         
         if not resources_path.exists():
-            logger.warning(f"Resources directory does not exist: {resources_path}")
+            logger.error(f"❌ Resources directory does not exist: {resources_path}")
             return
         
+        logger.info(f"   Is directory: {resources_path.is_dir()}")
         if not resources_path.is_dir():
-            logger.error(f"Resources path is not a directory: {resources_path}")
+            logger.error(f"❌ Resources path is not a directory: {resources_path}")
             return
 
-        logger.info(f"Scanning resources directory: {resources_path}")
+        logger.info(f"📂 Scanning resources directory: {resources_path}")
         loaded_count = 0
         skipped_count = 0
 

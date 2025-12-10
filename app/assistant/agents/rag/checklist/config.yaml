@@ -2,8 +2,8 @@ name: rag::checklist
 class_name: Agent
 color: red
 llm_params:
-  engine: gpt-4o-mini
-  temperature: 0.1
+  engine: gpt-5-mini
+  temperature: 1
 allowed_tools: []
 except_tools: []
 user_context_items:
@@ -15,10 +15,7 @@ user_context_items:
 - query_list
 - checklist
 - accomplishments
-rag_fields:
-  task: ["chat"]
-  information: ["chat"]
-  query: ["chat"]
+
 type: agent
 llm_provider: openai
 append_fields: accomplishments # not appending something is up

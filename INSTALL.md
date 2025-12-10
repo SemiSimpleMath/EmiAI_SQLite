@@ -9,11 +9,35 @@ Before you begin, you **ONLY** need:
 - **Python 3.10 or higher** ([Download here](https://www.python.org/downloads/))
   - Make sure to check "Add Python to PATH" during installation on Windows
   - Verify: `python --version` should show 3.10+
+  - **Any version 3.10-3.13 works!** ✨
 - **Internet connection** (to download dependencies during setup)
 - **4GB RAM** minimum (8GB recommended)
 - **2GB disk space** for the application and database
+- **OAuth credentials file** (`credentials.json`) - **provided separately via email**
+  - Place this file in `app/assistant/lib/credentials/` before running setup
 
-**That's it!** The setup script will install everything else automatically.
+**That's it!** No C++ Build Tools, Visual Studio, or other tools needed. The setup script will install everything else automatically.
+
+### 📝 Alpha Release - Lightweight Version
+
+This alpha release focuses on core chat functionality without heavy ML dependencies:
+
+**✅ What's Included:**
+- AI-powered chat with OpenAI/Anthropic
+- Gmail integration (fetch, send, manage emails)
+- Google Calendar (create events, reminders)
+- Google Tasks (manage todo lists)
+- Email notifications and management
+- Calendar event creation and reminders
+- Daily summaries
+- System monitoring
+
+**⏸️ Coming in Future Releases:**
+- Knowledge Graph (requires ChromaDB)
+- Taxonomy classification (requires ChromaDB)
+- Advanced entity extraction
+
+The lightweight installation makes it easy to test without C++ Build Tools or 6GB+ downloads!
 
 ## 🔧 What the Setup Script Does
 
@@ -79,21 +103,21 @@ python run_flask.py
 
 You should see:
 ```
- * Running on http://127.0.0.1:5000
+ * Running on http://127.0.0.1:8000
 ```
 
 ### Step 5: Open in Browser
 
 Open your web browser and navigate to:
 ```
-http://localhost:5000
+http://localhost:8000
 ```
 
 ### Step 6: Complete Setup Wizard
 
 On first launch, you'll be directed to the setup wizard at:
 ```
-http://localhost:5000/setup
+http://localhost:8000/setup
 ```
 
 Follow the prompts to configure:
@@ -136,8 +160,8 @@ See `docs/gettin_started/slack_setup.md` for details.
 - Python installation might not be complete
 - Try `python -m pip` instead of just `pip`
 
-### "Port 5000 already in use"
-- Another application is using port 5000
+### "Port 8000 already in use"
+- Another application is using port 8000
 - Stop the other application or edit `config.py` to change the port
 
 ### "ModuleNotFoundError"
@@ -151,7 +175,7 @@ See `docs/gettin_started/slack_setup.md` for details.
 
 ### Setup wizard doesn't appear
 - Clear browser cache
-- Navigate manually to `http://localhost:5000/setup`
+- Navigate manually to `http://localhost:8000/setup`
 
 ## 📚 Next Steps
 
@@ -161,9 +185,9 @@ After installation:
 2. **Explore the Documentation**: Check `docs/` folder
 3. **Try the Chat**: Start chatting with Emi!
 4. **Explore Tools**:
-   - Knowledge Graph Visualizer: `http://localhost:5000/kg-visualizer`
-   - Taxonomy Viewer: `http://localhost:5000/taxonomy_webviewer`
-   - Entity Cards: `http://localhost:5000/entity_cards`
+   - Knowledge Graph Visualizer: `http://localhost:8000/kg-visualizer`
+   - Taxonomy Viewer: `http://localhost:8000/taxonomy_webviewer`
+   - Entity Cards: `http://localhost:8000/entity_cards`
 
 ## 🐛 Reporting Issues
 

@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 import json
+import os
 import re
 from typing import List, Dict, Any, Optional, Union
 from colorama import Fore
@@ -105,10 +106,10 @@ class Agent:
 
         for keyword in quota_keywords:
             if keyword in response_str:
-                logger.error(f"❌ LLM QUOTA ERROR DETECTED in agent: {self.name}")
-                logger.error(f"   Response preview: {str(response_text)[:500]}")
-                logger.error(f"   Keyword: '{keyword}'")
-                logger.error(f"🛑 Exiting pipeline due to LLM quota exhaustion")
+                logger.critical(f"❌ LLM QUOTA ERROR DETECTED in agent: {self.name}")
+                logger.critical(f"   Response preview: {str(response_text)[:500]}")
+                logger.critical(f"   Keyword: '{keyword}'")
+                logger.critical(f"🛑 Forcing program exit to prevent data corruption")
                 print(f"\n{'=' * 80}")
                 print(f"❌ CRITICAL ERROR: LLM Quota Exhausted")
                 print(f"{'=' * 80}")
@@ -116,9 +117,10 @@ class Agent:
                 print(f"Detected keyword: '{keyword}'")
                 print(f"Response preview: {str(response_text)[:500]}")
                 print(f"{'=' * 80}")
-                print(f"🛑 Pipeline stopped. Please check your LLM quota and try again.")
+                print(f"🛑 Program terminated. Please check your LLM quota and billing.")
                 print(f"{'=' * 80}\n")
-                sys.exit(1)
+                # Use os._exit() instead of sys.exit() - works in threads and bypasses exception handlers
+                os._exit(1)
 
     def _update_blackboard_state(self, message: Message):
         self.blackboard.update_state_value('next_agent', None)
@@ -176,42 +178,58 @@ class Agent:
         timer_id = performance_monitor.start_timer(f'agent_{self.name}', message.id)
 
         self._set_agent_busy()
-        self._update_blackboard_state(message)
-        self._store_incoming_message(message)
-
-        # Update last acting agent
-        self.blackboard.update_state_value('last_agent', self.name)
-
         try:
-            messages = self.construct_prompt(message)
+            self._update_blackboard_state(message)
+            self._store_incoming_message(message)
+
+            # Update last acting agent
+            self.blackboard.update_state_value('last_agent', self.name)
+
+            try:
+                messages = self.construct_prompt(message)
+            except Exception as e:
+                logger.error(f"[{self.name}] Error during prompt construction: {e}, {message}")
+                performance_monitor.end_timer(timer_id, {'status': 'error', 'error': 'prompt_construction_failed'})
+                print(f"\n{'=' * 80}")
+                print(f"🛑 FATAL: Agent '{self.name}' failed to construct prompt")
+                print(f"   Error: {e}")
+                print(f"   Message: {message}")
+                print(f"{'=' * 80}\n")
+                exit(1)
+
+            schema = self.config.get('structured_output')
+
+            result = self._run_llm_with_schema(messages, schema)
+
+            self._add_extra_msgs(message)
+
+            try:
+                result = self.process_llm_result(result)
+            except Exception as e:
+                logger.error(f"[{self.name}] Error processing LLM result: {e}")
+                print(f"🛑 [{self.name}] Error processing LLM result: {e}")
+                performance_monitor.end_timer(timer_id, {'status': 'error', 'error': 'llm_result_processing_failed'})
+                raise
+
+            # End timing and record success
+            performance_monitor.end_timer(timer_id, {
+                'status': 'success',
+                'agent_name': self.name,
+                'message_id': message.id
+            })
+
+            return result
         except Exception as e:
-            logger.error(f"[{self.name}] Error during prompt construction: {e}, {message}")
-            performance_monitor.end_timer(timer_id, {'status': 'error', 'error': 'prompt_construction_failed'})
-            exit(1)
-
-        schema = self.config.get('structured_output')
-
-        result = self._run_llm_with_schema(messages, schema)
-
-        self._add_extra_msgs(message)
-
-        try:
-            result = self.process_llm_result(result)
-        except Exception as e:
-            print(f"Error: {e}")
-            performance_monitor.end_timer(timer_id, {'status': 'error', 'error': 'llm_result_processing_failed'})
+            logger.error(f"[{self.name}] Unhandled exception in action_handler: {e}")
+            print(f"🛑 [{self.name}] action_handler exception: {e}")
             raise
-
-        self._set_agent_idle()
-
-        # End timing and record success
-        performance_monitor.end_timer(timer_id, {
-            'status': 'success',
-            'agent_name': self.name,
-            'message_id': message.id
-        })
-
-        return result
+        finally:
+            # ALWAYS release the busy lock, even on exceptions
+            try:
+                self._set_agent_idle()
+            except Exception as e:
+                logger.error(f"[{self.name}] Failed to release busy lock: {e}")
+                print(f"🛑 [{self.name}] Failed to release busy lock: {e}")
 
     def call_llm(
             self,
@@ -299,6 +317,10 @@ class Agent:
 
         if not system_prompt_template:
             logger.error(f"[{self.name}] No system prompt found.")
+            print(f"\n{'=' * 80}")
+            print(f"🛑 FATAL: Agent '{self.name}' has no system prompt configured")
+            print(f"   Check the agent's config.yaml for 'prompts.system' or 'prompts.system_file'")
+            print(f"{'=' * 80}\n")
             exit(1)
             return f"No system prompt available for {self.name}."
 
@@ -337,7 +359,8 @@ class Agent:
             try:
                 user_context = self.generate_injections_block(prompt_injections, message)
             except Exception as e:
-                print(f"Error: {e}")
+                logger.error(f"[{self.name}] Error generating injections: {e}")
+                print(f"🛑 [{self.name}] Error generating injections: {e}")
                 raise e
         else:
             user_context = {}
@@ -479,7 +502,6 @@ class Agent:
                 continue
 
             if dt == "tool_result_summary":
-                # With your invariants, summaries are emitted via the raw branch. Skip here.
                 i += 1
                 continue
 
@@ -601,7 +623,8 @@ class Agent:
                 context = {}
                 if global_bb is not None:
                     # Get all *_data resources for template context
-                    for key in ['resource_user_data', 'resource_assistant_personality_data', 
+                    for key in ['resource_user_data', 'resource_assistant_data',
+                                'resource_assistant_personality_data', 
                                 'resource_relationship_config', 'resource_chat_guidelines_data']:
                         data = global_bb.get_state_value(key, None)
                         if data is not None:
@@ -740,15 +763,35 @@ class Agent:
             return context
 
         # ------------------------------------------------------------
-        # Phase 2: single entity detection over full context
+        # Phase 2: single entity detection over selected context values
         # ------------------------------------------------------------
 
+        # Only use user facing text fields for entity detection.
+        # You can override this per agent in config["entity_detection_keys"] if needed.
+        detection_keys = self.config.get(
+            "entity_detection_keys",
+            ["incoming_message", "recent_history", "task"]
+        )
+
+        detection_values = []
+        for key in detection_keys:
+            if key not in context:
+                continue
+            value = context[key]
+            if value is None:
+                continue
+            if isinstance(value, (dict, list)):
+                continue
+            detection_values.append(str(value))
+
         try:
-            # Serialize the current context (Phase 1 only) to a single text blob
-            serialized_context = json.dumps(context, default=str, ensure_ascii=False)
+            # Join values only; do not include JSON keys like "rag"
+            serialized_context = "\n\n".join(detection_values)
         except Exception as e:
-            logger.error(f"[{self.name}] Failed to serialize context for entity detection: {e}")
-            serialized_context = " ".join(str(v) for v in context.values() if v is not None)
+            logger.error(f"[{self.name}] Failed to build detection text for entity detection: {e}")
+            serialized_context = " ".join(
+                str(v) for v in detection_values if v is not None
+            )
 
         detected_entities: List[str] = []
         if serialized_context.strip():

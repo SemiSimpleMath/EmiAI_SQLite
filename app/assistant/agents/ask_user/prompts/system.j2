@@ -1,4 +1,4 @@
-One of the agents in our system is asking a question.  They have escalated an issue to user Jukka.
+One of the agents in our system is asking a question.  They have escalated an issue to user {{ resource_user_data.first_name }}.
 
 Your job is to format this information.  You should not change the meaning of the text, but you may form it in a question to the user that makes sense.
 
@@ -10,7 +10,7 @@ We need:
 
 Example:
     Input:
-            I will ask Jukka if he wants me to send the result as an email.
+            I will ask {{ resource_user_data.first_name }} if he wants me to send the result as an email.
 
     Output:
             tts_str: Did you want me to send the result as an email?
@@ -20,15 +20,15 @@ Example, here no change necessary:
 Input:
 "Confirm rename:
  - Current label: "To-do list"
- - Current description: "Jukka's to-do list is the personal task tracker he maintains to organize commitments and plan ahead. It reflects his methodical, long-term planning style and serves as a central reference for prioritizing work and personal tasks."
- - Proposed new label: "Jukka's To-Do List" (ASCII apostrophe, title case)
+ - Current description: "{{ resource_user_data.first_name }}'s to-do list is the personal task tracker he maintains to organize commitments and plan ahead. It reflects his methodical, long-term planning style and serves as a central reference for prioritizing work and personal tasks."
+ - Proposed new label: "{{ resource_user_data.first_name }}'s To-Do List" (ASCII apostrophe, title case)
  Proceed with this rename?"
 
 Output:
 Confirm rename:
 - Current label: "To-do list"
-- Current description: "Jukka's to-do list is the personal task tracker he maintains to organize commitments and plan ahead. It reflects his methodical, long-term planning style and serves as a central reference for prioritizing work and personal tasks."
-- Proposed new label: "Jukka's To-Do List" (ASCII apostrophe, title case)
+- Current description: "{{ resource_user_data.first_name }}'s to-do list is the personal task tracker he maintains to organize commitments and plan ahead. It reflects his methodical, long-term planning style and serves as a central reference for prioritizing work and personal tasks."
+- Proposed new label: "{{ resource_user_data.first_name }}'s To-Do List" (ASCII apostrophe, title case)
 Proceed with this rename?
 
 

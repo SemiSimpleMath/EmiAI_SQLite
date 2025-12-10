@@ -4,10 +4,34 @@ from typing import List, Dict
 from openai import OpenAI
 
 import os
+import sys
 
 from app.assistant.utils.logging_config import get_logger
 from app.assistant.performance.performance_monitor import performance_monitor
 logger = get_logger(__name__)
+
+
+def _handle_fatal_quota_error(error_msg: str, context: str = ""):
+    """
+    Handle fatal LLM quota errors by logging and forcing program exit.
+    Uses os._exit() because sys.exit() doesn't work reliably in threads.
+    """
+    logger.critical(f"❌ FATAL: LLM Quota Exhausted")
+    logger.critical(f"   Context: {context}")
+    logger.critical(f"   Error: {error_msg}")
+    logger.critical(f"🛑 Forcing program exit to prevent data corruption")
+    
+    print(f"\n{'=' * 80}")
+    print(f"❌ CRITICAL ERROR: LLM Quota Exhausted")
+    print(f"{'=' * 80}")
+    print(f"Context: {context}")
+    print(f"Error: {error_msg}")
+    print(f"{'=' * 80}")
+    print(f"🛑 Program terminated. Please check your LLM quota and billing.")
+    print(f"{'=' * 80}\n")
+    
+    # Use os._exit() instead of sys.exit() - works in threads and bypasses exception handlers
+    os._exit(1)
 
 # print("\nthe key is: ", os.environ.get('OPENAI_API_KEY'))  # Should return your API key
 
@@ -150,13 +174,17 @@ class OpenAILLM(BaseLLMProvider):
             })
             
             logger.error(f"Error processing input function_query: {e}")
-            # Return a more detailed error message
-            if "timeout" in str(e).lower():
+            error_str = str(e).lower()
+            
+            # FATAL: Quota errors require immediate program exit
+            if "quota" in error_str or "insufficient_quota" in error_str:
+                _handle_fatal_quota_error(str(e), f"structured_output (model: {model})")
+            
+            # Return a more detailed error message for non-fatal errors
+            if "timeout" in error_str:
                 return f"LLM request timed out after {timeout} seconds"
-            elif "rate limit" in str(e).lower():
+            elif "rate limit" in error_str:
                 return "LLM rate limit exceeded"
-            elif "quota" in str(e).lower():
-                return "LLM quota exceeded"
             else:
                 return f"LLM error: {str(e)}"
 
@@ -242,13 +270,17 @@ class OpenAILLM(BaseLLMProvider):
             })
             
             logger.error(f"Error processing input function_query: {e}")
-            # Return a more detailed error message
-            if "timeout" in str(e).lower():
+            error_str = str(e).lower()
+            
+            # FATAL: Quota errors require immediate program exit
+            if "quota" in error_str or "insufficient_quota" in error_str:
+                _handle_fatal_quota_error(str(e), f"structured_output_json (model: {model})")
+            
+            # Return a more detailed error message for non-fatal errors
+            if "timeout" in error_str:
                 return f"LLM request timed out after {timeout} seconds"
-            elif "rate limit" in str(e).lower():
+            elif "rate limit" in error_str:
                 return "LLM rate limit exceeded"
-            elif "quota" in str(e).lower():
-                return "LLM quota exceeded"
             else:
                 return f"LLM error: {str(e)}"
 

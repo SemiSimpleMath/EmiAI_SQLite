@@ -27,48 +27,59 @@ class EmiReminderHandler(Agent):
 
     def action_handler(self, message: Message):
         # Check if scheduler/reminders feature is enabled
-        from app.assistant.user_settings_manager.user_settings import can_run_feature
+        from app.assistant.user_settings_manager.user_settings import can_run_feature, get_settings_manager
         if not can_run_feature('scheduler'):
             logger.info("⏸️ Scheduler feature disabled in settings - skipping reminder")
             return None
 
-        # Check if we're in the quiet hours (midnight to 6:30am) - use local PST/PDT time
+        # Check if quiet mode is active for scheduler/reminders using user's configured quiet hours
         from zoneinfo import ZoneInfo
-        now_local = datetime.now(ZoneInfo("America/Los_Angeles"))
-        current_hour = now_local.hour
-        current_minute = now_local.minute
-        
-        # Disable all reminders between 00:00 and 06:30 Pacific Time
-        if current_hour < 6 or (current_hour == 6 and current_minute < 30):
-            logger.info(f"⏸️ Quiet hours (00:00-06:30 PT) - skipping reminder (current time: {now_local.strftime('%H:%M %Z')})")
+        settings_manager = get_settings_manager()
+        if settings_manager.is_quiet_mode_active('scheduler'):
+            now_local = datetime.now(ZoneInfo("America/Los_Angeles"))
+            logger.info(f"⏸️ Quiet hours active for scheduler - skipping reminder (current time: {now_local.strftime('%H:%M %Z')})")
             return None
 
         self._set_agent_busy()
-
-        event_payload = message.data.get('event_payload')
-        payload_content = event_payload.get('payload_message')
-
-        reminder_dict = {"reminder_data": payload_content}
-
-        self.blackboard.reset_blackboard()
-        # Populate local blackboard with reminder data
-        for key, value in reminder_dict.items():
-            self.blackboard.update_state_value(key, value)
-
         try:
-            messages = self.construct_prompt(message)
+            event_payload = message.data.get('event_payload')
+            payload_content = event_payload.get('payload_message')
+
+            reminder_dict = {"reminder_data": payload_content}
+
+            self.blackboard.reset_blackboard()
+            # Populate local blackboard with reminder data
+            for key, value in reminder_dict.items():
+                self.blackboard.update_state_value(key, value)
+
+            try:
+                messages = self.construct_prompt(message)
+            except Exception as e:
+                logger.error(f"[{self.name}] Error during prompt construction: {e}")
+                print(f"\n{'=' * 80}")
+                print(f"🛑 FATAL: EmiReminderHandler failed to construct prompt")
+                print(f"   Error: {e}")
+                print(f"{'=' * 80}\n")
+                exit(1)
+
+            schema = self.config.get('structured_output')
+
+            result = self._run_llm_with_schema(messages, schema)
+
+            result = self.process_llm_result(result)
+
+            return result
         except Exception as e:
-            logger.error(f"[{self.name}] Error during prompt construction: {e}")
-            exit(1)
-
-        schema = self.config.get('structured_output')
-
-        result = self._run_llm_with_schema(messages, schema)
-
-        result = self.process_llm_result(result)
-
-        self._set_agent_idle()
-        return result
+            logger.error(f"[{self.name}] Unhandled exception in action_handler: {e}")
+            print(f"🛑 [{self.name}] action_handler exception: {e}")
+            raise
+        finally:
+            # ALWAYS release the busy lock, even on exceptions
+            try:
+                self._set_agent_idle()
+            except Exception as e:
+                logger.error(f"[{self.name}] Failed to release busy lock: {e}")
+                print(f"🛑 [{self.name}] Failed to release busy lock: {e}")
 
 
     def get_user_prompt(self, message: Message = None):
@@ -82,7 +93,10 @@ class EmiReminderHandler(Agent):
             try:
                 user_context = self.generate_injections_block(prompt_injections, message)
             except Exception as e:
-                print(f"Error: {e}")
+                print(f"\n{'=' * 80}")
+                print(f"🛑 FATAL: EmiReminderHandler failed to generate injections block")
+                print(f"   Error: {e}")
+                print(f"{'=' * 80}\n")
                 exit(1)
         else:
             user_context = {}
@@ -98,7 +112,10 @@ class EmiReminderHandler(Agent):
             return rendered_output
         except Exception as e:
             logger.error(f"[{self.name}] ERROR while rendering user prompt: {e}")
-            print(f"[{self.name}] ERROR while rendering user prompt: {e}")
+            print(f"\n{'=' * 80}")
+            print(f"🛑 FATAL: EmiReminderHandler failed to render user prompt")
+            print(f"   Error: {e}")
+            print(f"{'=' * 80}\n")
             exit(1)
 
 

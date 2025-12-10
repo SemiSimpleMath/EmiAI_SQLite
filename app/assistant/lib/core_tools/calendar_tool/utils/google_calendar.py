@@ -459,6 +459,11 @@ if __name__ == "__main__":
     service = authenticate_google_api(TOKEN_PATH, CREDENTIALS_PATH)
     if not service:
         logger.error("Google Calendar service initialization failed.")
+        print(f"\n{'=' * 80}")
+        print(f"🛑 FATAL: Google Calendar service initialization failed")
+        print(f"   Check that credentials exist at: {CREDENTIALS_PATH}")
+        print(f"   Check that token exists at: {TOKEN_PATH}")
+        print(f"{'=' * 80}\n")
         exit(1)
 
     # List all available calendars for verification

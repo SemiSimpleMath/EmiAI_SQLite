@@ -43,22 +43,67 @@ def create_alpha_package():
         "app",
         "resources",
         "docs",
+        "tools",  # Database utilities
+    ]
+    
+    # Root-level directories to EXCLUDE (will not be copied)
+    root_dirs_to_exclude = [
+        "_archive",  # Old/deprecated code
+        "chroma_db",  # Vector database - will be created fresh
+        "instance",  # User-specific Flask instance
+        "logs",  # User logs
+        "migration_scripts",  # PostgreSQL migration (not needed for alpha)
+        "postgresql_to_sqlite_migration",  # PostgreSQL migration (not needed for alpha)
+        "sqlite_utilities",  # Moved to tools/
+        "tests",  # Test suite (not needed for alpha)
+        "templates",  # Old standalone templates (not needed)
+        "uploads",  # User uploads
+        ".git",  # Git repository
+        ".vscode",  # IDE settings
+        ".idea",  # IDE settings
+        ".vs",  # IDE settings
+        "__pycache__",  # Python cache
+        ".pytest_cache",  # Test cache
     ]
     
     # Files in root to copy
     root_files_to_copy = [
         ".gitignore",
         "config.py",
-        "requirements.txt",
+        "requirements_alpha.txt",  # Lightweight requirements (will be renamed to requirements.txt)
+        "requirements.txt",  # Full requirements (will be renamed to requirements_full.txt)
         "run_flask.py",
         "run.py",
-        "setup.py",
+        "setup.py",  # Lightweight setup (alpha)
+        "setup_full.py",  # Full setup (all features)
         "README.md",
         "QUICK_START.md",
         "INSTALL.md",
         "GOOGLE_OAUTH_IMPLEMENTATION.md",
         "GOOGLE_OAUTH_USER_GUIDE.md",
+        "CREDENTIALS_SETUP_INSTRUCTIONS.md",  # Instructions for placing credentials.json
         "reset_corrupted_database.sql",
+        "RESET_GUIDE.md",  # User guide for resetting environment
+        "ALPHA_PACKAGE_CONTENTS.md",  # Documentation of what's included/excluded
+        "UPGRADE_TO_FULL.md",  # Guide for upgrading to full version
+    ]
+    
+    # Root-level files to EXCLUDE (will not be copied)
+    root_files_to_exclude = [
+        ".env",  # User's API keys
+        "*.db",  # Database files
+        "*.sqlite",  # Database files
+        "*.sqlite3",  # Database files
+        "*.log",  # Log files
+        "*.iml",  # IDE files
+        "user_settings.json",  # User settings
+        "create_alpha_package.py",  # This script itself
+        "run_kg_explorer.py",  # Standalone app (deprecated)
+        "run_migration.py",  # PostgreSQL migration
+        "run_repair_pipeline.py",  # Maintenance script
+        "requirements_full.txt",  # Old requirements
+        "ALPHA_PACKAGE_SUMMARY.md",  # Internal doc
+        "ALPHA_RELEASE.md",  # Internal doc
     ]
     
     # Directories to exclude from app/ directory
@@ -93,15 +138,24 @@ def create_alpha_package():
         if path.suffix in [".db", ".sqlite", ".sqlite3"]:
             return True
         
+        # Exclude log files
+        if path.suffix == ".log":
+            return True
+        
         # Exclude node_modules
         if "node_modules" in path.parts:
             return True
         
-        # Exclude build directories (but we need to keep the structure)
-        # Actually, don't exclude build - users need to build it
+        # Exclude .git directory
+        if ".git" in path.parts:
+            return True
         
         # Exclude .pytest_cache
         if ".pytest_cache" in path.parts:
+            return True
+        
+        # Exclude .vscode, .idea (IDE settings)
+        if any(ide in path.parts for ide in [".vscode", ".idea", ".vs"]):
             return True
         
         # Exclude personal resource files (will be created by setup wizard)
@@ -113,15 +167,28 @@ def create_alpha_package():
         if "daily_summaries" in path.parts:
             return True
         
+        # Exclude chroma_db (vector database - will be created fresh)
+        if "chroma_db" in path.parts:
+            return True
+        
+        # Exclude uploads directory (user files)
+        if "uploads" in path.parts:
+            return True
+        
         # Exclude credentials (OAuth tokens, but INCLUDE credentials.json for alpha testers)
         # IMPORTANT: credentials.json contains OAuth client ID/secret (safe for desktop apps)
         #            token.pickle contains user-specific OAuth token (must exclude)
+        #            token.json is also user-specific (from old tasks tool)
         if "credentials" in path.parts:
-            if path.name == "token.pickle":
-                return True  # Exclude user's OAuth token
+            if path.name in ["token.pickle", "token.json"]:
+                return True  # Exclude user's OAuth tokens
             if path.suffix in [".pem"]:
                 return True  # Exclude certificates
             # Keep credentials.json for alpha testers
+        
+        # Exclude .env file (contains user's API keys)
+        if path.name == ".env":
+            return True
         
         return False
     
@@ -160,6 +227,29 @@ def create_alpha_package():
             print(f"   [WARN] {filename} not found (skipping)")
     
     print(f"\n   Copied {copied_files} root files")
+    
+    # Step 3.5: Rename requirements files
+    # Alpha requirements → requirements.txt (default)
+    alpha_req = dest_root / "requirements_alpha.txt"
+    normal_req = dest_root / "requirements.txt"
+    full_req_src = dest_root / "requirements.txt"
+    full_req_dst = dest_root / "requirements_full.txt"
+    
+    # First, rename full requirements.txt to requirements_full.txt
+    if full_req_src.exists():
+        try:
+            full_req_src.rename(full_req_dst)
+            print(f"   [OK] Renamed requirements.txt → requirements_full.txt")
+        except Exception as e:
+            print(f"   [ERROR] Failed to rename full requirements: {e}")
+    
+    # Then rename alpha requirements to requirements.txt
+    if alpha_req.exists():
+        try:
+            alpha_req.rename(normal_req)
+            print(f"   [OK] Renamed requirements_alpha.txt → requirements.txt")
+        except Exception as e:
+            print(f"   [ERROR] Failed to rename alpha requirements: {e}")
     
     # Step 4: Copy directories
     print_step("Copying directories...")

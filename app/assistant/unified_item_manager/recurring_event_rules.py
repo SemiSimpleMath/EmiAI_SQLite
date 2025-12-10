@@ -136,7 +136,11 @@ class RecurringEventRuleManager:
                 existing.rule_config = rule_config or {}
                 existing.updated_at = datetime.now(timezone.utc)
                 session.commit()
+                session.refresh(existing)  # Refresh to load any DB defaults
                 logger.info(f"Updated recurring event rule: {parent_id} -> {action}")
+                
+                # Expunge the rule from the session so it can be used after session closes
+                session.expunge(existing)
                 return existing
             
             # Create new rule (always using parent ID)
@@ -151,7 +155,11 @@ class RecurringEventRuleManager:
             )
             session.add(rule)
             session.commit()
+            session.refresh(rule)  # Refresh to load any DB defaults
             logger.info(f"Created recurring event rule: {parent_id} -> {action}")
+            
+            # Expunge the rule from the session so it can be used after session closes
+            session.expunge(rule)
             return rule
             
         except Exception as e:

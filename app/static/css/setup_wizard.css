@@ -836,3 +836,174 @@ input:checked + .toggle-slider:before {
     }
 }
 
+/* Quiet Mode Settings */
+.section-description {
+    color: var(--text-secondary, #666);
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+}
+
+.help-text {
+    color: var(--text-secondary, #666);
+    font-size: 0.85rem;
+    margin-top: 0.25rem;
+    font-style: italic;
+}
+
+.time-range-group {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-end;
+    margin-bottom: 1rem;
+}
+
+.time-range-group .form-group {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+.feature-quiet-hours {
+    margin: 1.5rem 0;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+.feature-quiet-hours h4 {
+    margin-bottom: 0.75rem;
+    color: #333;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.feature-quiet-hours h4 i {
+    color: #667eea;
+}
+
+.feature-quiet-hours .checkbox-label {
+    margin-bottom: 0.5rem;
+}
+
+.feature-quiet-hours .time-range-group {
+    margin-top: 0.75rem;
+    margin-left: 1.5rem;
+}
+
+#quiet-hours-settings h3 {
+    color: #333;
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+    margin-top: 1rem;
+}
+
+#quiet-hours-settings details {
+    margin-top: 1.5rem;
+}
+
+#quiet-hours-settings details summary {
+    cursor: pointer;
+    padding: 0.75rem;
+    background: #f0f0f0;
+    border-radius: 6px;
+    user-select: none;
+    transition: background 0.2s ease;
+}
+
+#quiet-hours-settings details summary:hover {
+    background: #e8e8e8;
+}
+
+#quiet-hours-settings details[open] summary {
+    margin-bottom: 1rem;
+}
+
+input[type="time"] {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-color 0.3s ease;
+}
+
+input[type="time"]:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Quiet Mode Page Specific Styles */
+.global-toggle-card {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.time-settings-card {
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 1.5rem;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.time-input-group {
+    display: flex;
+    gap: 2rem;
+    align-items: flex-end;
+    margin-bottom: 1rem;
+}
+
+.time-input-field {
+    flex: 1;
+}
+
+.time-input-field label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #333;
+}
+
+.time-input-field label i {
+    margin-right: 0.5rem;
+    color: #667eea;
+}
+
+.time-input-field input[type="time"] {
+    width: 100%;
+}
+
+.quiet-feature-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.feature-time-settings {
+    padding: 0.75rem;
+    background: #f0f0f0;
+    border-radius: 6px;
+    margin-top: 0.5rem;
+}
+
+.time-input-group-small {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    justify-content: center;
+}
+
+.time-input-group-small input[type="time"] {
+    flex: 1;
+    max-width: 120px;
+}
+
+.time-input-group-small span {
+    color: #666;
+    font-weight: 500;
+}
+

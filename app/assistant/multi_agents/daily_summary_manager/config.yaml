@@ -56,7 +56,6 @@ tools:
     - send_email
     - search_web
     - scrape_url
-    - rag_query
     - web_manager
     - event_manager
     - ask_user

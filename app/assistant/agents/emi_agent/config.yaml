@@ -12,7 +12,7 @@ system_context_items:
 
 user_context_items:
   - date_time
-  - entity_injection
+  - entity_summary
   - history
   - agent_input
 

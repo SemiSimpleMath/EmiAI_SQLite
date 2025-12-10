@@ -17,11 +17,8 @@ user_context_items:
   - information
   - recent_history
 
-rag_fields:
-  task: ["chat"]
-  information: ["chat"]
-
 system_context_items:
   - task
+  - resource_user_data
 
 

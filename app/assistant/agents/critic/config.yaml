@@ -3,8 +3,8 @@ class_name: Agent
 color: "red"
 llm_provider: "openai"
 llm_params:
-  engine: "gpt-4o-mini"
-  temperature: 0.1
+  engine: "gpt-5-mini"
+  temperature: 1
 
 allowed_tools: []
 except_tools: []
@@ -24,8 +24,4 @@ system_context_items:
   - tool_descriptions
   - allowed_nodes
 
-rag_fields:
-  - information:
-      -chat
-  - task:
-      -chat
+

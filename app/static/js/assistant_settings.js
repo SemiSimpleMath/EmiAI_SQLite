@@ -191,5 +191,3 @@ function showSuccess(message) {
         successDiv.style.display = 'none';
     }, 3000);
 }
-
-

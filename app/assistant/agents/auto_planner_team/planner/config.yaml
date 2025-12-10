@@ -21,16 +21,13 @@ user_context_items:
   - entity_summary
   - entity_metadata
 
-
-
-rag_fields:
-  task: ["chat"]
-  information: ["chat"]
-
 system_context_items:
   - tool_descriptions
   - allowed_nodes
   - task
+  - resource_user_data
+  - resource_assistant_data
+  - resource_auto_planner_instructions
 
 
 

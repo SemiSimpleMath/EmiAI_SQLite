@@ -3,8 +3,8 @@ class_name: ToolArguments
 color: "yellow"
 llm_params:
   llm_provider: "openai"
-  engine: "gpt-4o-mini"
-  temperature: 0.1
+  engine: "gpt-5-mini"
+  temperature: 1
 
 allowed_tools: "all"  # This agent does not use tools itself, it generates tool arguments
 except_tools: []
@@ -16,7 +16,3 @@ user_context_items:
   - selected_tool
 
 system_context_items: []
-
-rag_fields:
-  task: ["chat"]
-  information: ["chat"]

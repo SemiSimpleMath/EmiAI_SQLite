@@ -29,7 +29,18 @@ DEFAULT_MIN_INTERVALS = {
 
 
 def fire_and_forget(func, *args, **kwargs):
-    thread = threading.Thread(target=func, args=args, kwargs=kwargs)
+    """Run function in a daemon thread with error handling"""
+    def wrapped_func():
+        try:
+            func(*args, **kwargs)
+        except FileNotFoundError as e:
+            # OAuth token missing - log and skip
+            logger.warning(f"Tool execution skipped: {e}")
+        except Exception as e:
+            # Log other errors but don't crash the thread
+            logger.error(f"Error in background tool execution: {e}", exc_info=True)
+    
+    thread = threading.Thread(target=wrapped_func)
     thread.daemon = True  # Daemon thread won't block process exit
     thread.start()
 
@@ -40,6 +51,7 @@ class MaintenanceToolCaller:
         self.tool_registry = DI.tool_registry
         self.min_intervals = min_intervals
         self.tool_timers: Dict[str, datetime] = {}
+        self.tools_running: Dict[str, bool] = {}  # Track which tools are currently running
         self.tools_in_order = [
             'get_email',
             'get_news',
@@ -50,46 +62,58 @@ class MaintenanceToolCaller:
         ]
 
         self.next_tool_index = 0
-        self.first_run = True
 
     def call_next_tool_if_ready(self):
         now = datetime.now(timezone.utc)
+        local_time = get_local_time()
+        timestamp_str = local_time.strftime("%m/%d/%Y %I:%M %p")
+        
         total_tools = len(self.tools_in_order)
         attempts = 0
 
         while attempts < total_tools:
             tool = self.tools_in_order[self.next_tool_index]
-            is_eligible = self._is_tool_eligible(tool, now)
-            
-            # Log eligibility status for debugging
-            if tool == 'get_email':
-                last_called = self.tool_timers.get(tool)
-                if last_called:
-                    elapsed = (now - last_called).total_seconds() / 60.0
-                    logger.info(f"📧 Email eligibility check: elapsed={elapsed:.1f} min, required=5 min, eligible={is_eligible}")
-                else:
-                    logger.info(f"📧 Email eligibility check: never called, eligible={is_eligible}")
+            is_eligible, reason = self._is_tool_eligible(tool, now)
             
             if is_eligible:
+                # Log that we're running the tool
+                logger.info(f"▶️  Running {tool} at {timestamp_str} - Reason: {reason}")
+                
                 # Dynamically get the trigger method (e.g., trigger_get_email)
                 trigger_method = getattr(self, f"trigger_{tool}", None)
                 if trigger_method:
-                    trigger_method()
-                    self.tool_timers[tool] = now
-                    logger.info(f"Called tool: {tool}")
+                    try:
+                        # Mark tool as running before triggering
+                        self.tools_running[tool] = True
+                        trigger_method()
+                        self.tool_timers[tool] = now
+                        logger.info(f"✅ Completed {tool} at {timestamp_str}")
+                    except Exception as e:
+                        # Always update timer even if trigger fails, to prevent rapid retries
+                        self.tool_timers[tool] = now
+                        self.tools_running[tool] = False  # Clear running flag on error
+                        logger.error(f"❌ Error running {tool} at {timestamp_str}: {e}", exc_info=True)
                     break
                 else:
                     logger.error(f"No trigger method defined for tool: {tool}")
             else:
-                logger.debug(f"Tool '{tool}' is not eligible yet.")
+                # Log that we're NOT running the tool and why
+                logger.info(f"⏸️  Not running {tool} at {timestamp_str} - Reason: {reason}")
+            
             self.next_tool_index = (self.next_tool_index + 1) % total_tools
             attempts += 1
 
-        if self.first_run and self.next_tool_index == 0:
-            self.first_run = False
-            logger.debug("Completed first full round of tool execution.")
-
-    def _is_tool_eligible(self, tool: str, current_time: datetime) -> bool:
+    def _is_tool_eligible(self, tool: str, current_time: datetime) -> tuple[bool, str]:
+        """
+        Check if a tool is eligible to run
+        
+        Returns:
+            tuple: (is_eligible: bool, reason: str)
+        """
+        # Check if tool is already running
+        if self.tools_running.get(tool, False):
+            return False, "Already running"
+        
         # Map tool names to feature names
         tool_feature_map = {
             'get_email': 'email',
@@ -104,22 +128,41 @@ class MaintenanceToolCaller:
         feature_name = tool_feature_map.get(tool)
         if feature_name:
             if not can_run_feature(feature_name):
-                logger.debug(f"⏸️ Tool '{tool}' skipped: feature '{feature_name}' disabled or missing required API key")
-                return False
+                return False, "Feature disabled or missing API key"
+            
+            # Check if quiet mode is active for this feature
+            from app.assistant.user_settings_manager.user_settings import get_settings_manager
+            settings_manager = get_settings_manager()
+            if settings_manager.is_quiet_mode_active(feature_name):
+                return False, "Quiet hours active"
         
-        if self.first_run:
-            return True
-        
-        # Standard interval-based scheduling for all tools
-        min_interval = self.min_intervals.get(tool, 10)
+        # If tool has never been called, it's immediately eligible (startup staggering)
         last_called = self.tool_timers.get(tool)
         if last_called is None:
-            return True
+            return True, "First run"
+        
+        # Standard interval-based scheduling for tools that have run at least once
+        min_interval = self.min_intervals.get(tool, 10)
         elapsed = (current_time - last_called).total_seconds() / 60.0
-        return elapsed >= min_interval
+        
+        if elapsed >= min_interval:
+            return True, f"Interval met ({elapsed:.1f} min >= {min_interval} min)"
+        else:
+            return False, f"Interval not met ({elapsed:.1f} min < {min_interval} min)"
 
-    def _run_tool_async(self, tool_func, *args, **kwargs):
-        fire_and_forget(tool_func, *args, **kwargs)
+    def _run_tool_async(self, tool_name: str, tool_func, *args, **kwargs):
+        """Run tool asynchronously and clear running flag when done"""
+        def wrapped_tool():
+            try:
+                tool_func(*args, **kwargs)
+            except Exception as e:
+                logger.error(f"❌ Error in async tool '{tool_name}': {e}", exc_info=True)
+            finally:
+                # Always clear running flag when tool completes (success or failure)
+                self.tools_running[tool_name] = False
+                logger.debug(f"Tool '{tool_name}' completed, cleared running flag")
+        
+        fire_and_forget(wrapped_tool)
 
     def trigger_get_email(self):
         logger.info("Triggering get_email tool.")
@@ -174,9 +217,9 @@ class MaintenanceToolCaller:
             )
             last_checked = now_utc - MAX_LOOKBACK
 
-        # Final window (UTC)
-        start_date_str = last_checked.replace(microsecond=0).strftime("%Y-%m-%dT%H:%M:%S")
-        end_date_str = now_utc.replace(microsecond=0).strftime("%Y-%m-%dT%H:%M:%S")
+        # Final window (UTC) - use ISO format with timezone
+        start_date_str = last_checked.replace(microsecond=0).isoformat()
+        end_date_str = now_utc.replace(microsecond=0).isoformat()
 
         logger.info(
             f"📧 Email search window (UTC): start_date={start_date_str}, "
@@ -206,7 +249,7 @@ class MaintenanceToolCaller:
             tool_instance = tool_class()
             tool_instance.execute(tool_message)
 
-        self._run_tool_async(tool_call)
+        self._run_tool_async('get_email', tool_call)
 
 
     def trigger_get_news(self):
@@ -224,7 +267,7 @@ class MaintenanceToolCaller:
             tool_instance = tool_class()
             tool_instance.execute(tool_message)
 
-        self._run_tool_async(tool_call)
+        self._run_tool_async('get_news', tool_call)
 
     def trigger_get_calendar_events(self):
         """
@@ -268,7 +311,7 @@ class MaintenanceToolCaller:
             tool_instance = tool_class()
             tool_instance.execute(tool_message)
 
-        self._run_tool_async(tool_call)
+        self._run_tool_async('get_calendar_events', tool_call)
 
 
 
@@ -301,7 +344,7 @@ class MaintenanceToolCaller:
             tool_instance = tool_class()
             tool_instance.execute(tool_message)
 
-        self._run_tool_async(tool_call)
+        self._run_tool_async('get_todo_tasks', tool_call)
 
     def trigger_get_scheduler_events(self):
         logger.info("Triggering get_scheduler_events tool.")
@@ -323,7 +366,7 @@ class MaintenanceToolCaller:
             tool_instance = tool_class()
             tool_instance.execute(tool_message)
 
-        self._run_tool_async(tool_call)
+        self._run_tool_async('get_scheduler_events', tool_call)
 
     def trigger_get_weather(self):
         logger.info("Triggering get_weather tool.")
@@ -340,4 +383,4 @@ class MaintenanceToolCaller:
             tool_instance = tool_class()
             tool_instance.execute(tool_message)
 
-        self._run_tool_async(tool_call)
+        self._run_tool_async('get_weather', tool_call)

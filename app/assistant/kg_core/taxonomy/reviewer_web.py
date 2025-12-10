@@ -691,7 +691,7 @@ class TaxonomyReviewManager:
                         description=f"Created via manual review"
                     )
                     self.session.add(new_taxonomy)
-                    self.session.flush()  # Get the ID
+                    self.session.commit()  # Commit immediately - SQLite single-writer
                     current_taxonomy = new_taxonomy
                     current_parent_id = new_taxonomy.id
             
@@ -1511,7 +1511,7 @@ def api_update_node_taxonomy(node_id, old_taxonomy_id):
                     # Create new taxonomy node
                     new_tax = Taxonomy(label=part, parent_id=parent_id)
                     session.add(new_tax)
-                    session.flush()
+                    session.commit()  # Commit immediately - SQLite single-writer
                     parent_id = new_tax.id
             
             new_taxonomy_id = parent_id

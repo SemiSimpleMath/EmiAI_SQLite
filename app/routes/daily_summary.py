@@ -19,50 +19,48 @@ def daily_summary_page():
         storage = DailySummaryStorage()
         stored_data = storage.get_daily_summary(date_str)
         
+        # If no summary for requested date, fall back to latest available
+        if not stored_data and date_str is None:
+            current_app.logger.info("No daily summary for today, falling back to latest available")
+            stored_data = storage.get_latest_daily_summary()
+        
         if stored_data:
             # Use stored data (pass the entire structure, conversion function will extract summary)
             html_data = convert_daily_summary_result_to_html_data(stored_data)
             html_content = generate_daily_summary_page(html_data)
             return html_content
         else:
-            # Fall back to sample data if no stored summary
-            sample_data = {
+            # No summaries available at all - show informative message
+            from datetime import datetime
+            from zoneinfo import ZoneInfo
+            
+            now = datetime.now(ZoneInfo('America/Los_Angeles'))
+            no_data_message = {
                 'header': {
-                    'date_str': 'August 23, 2025',
-                    'day_of_week': 'Saturday'
+                    'date_str': now.strftime('%B %d, %Y'),
+                    'day_of_week': now.strftime('%A')
                 },
-                'narrative': "Today is a low-key Saturday with only routine events on the calendar. All scheduled tasks for today are already completed, and there are no new or urgent emails requiring your attention. The day is wide open, offering ample opportunity for rest, leisure, or light planning for the week ahead.",
-                'schedule': [
-                    {'start_time': '8:00 AM', 'end_time': '8:30 AM', 'title': 'Take out the dogs', 'notes': 'Daily pet care'},
-                    {'start_time': '9:00 PM', 'end_time': '9:30 PM', 'title': 'Walk the dogs', 'notes': 'Daily pet care'}
-                ],
-                'free_time_windows': [
-                    {'start_time': '8:30 AM', 'end_time': '9:00 PM', 'length_minutes': 630, 'suggestions': ['Rest: Take a nap, read, or enjoy a hobby.', "Push: Review school supplies and prep for Monday's first day of school."]}
-                ],
-                'upcoming_events': [
-                    {'title': 'First Day of School - Woodbridge HS', 'days_until': 2, 'importance': 'high', 'lead_actions': ['Ensure school supplies are ready', 'Review school schedule'], 'watch_flag': True}
-                ],
+                'narrative': "No daily summary is available yet. The daily summary is generated automatically during your configured quiet hours, or you can trigger one manually.",
+                'schedule': [],
+                'free_time_windows': [],
+                'upcoming_events': [],
                 'task_plan': {
-                    'load_recommendation': 'rest',
-                    'load_rationale': 'All scheduled tasks for today are already completed and there are no urgent deadlines.',
+                    'load_recommendation': 'unknown',
+                    'load_rationale': 'No summary data available.',
                     'tasks': []
                 },
                 'email_triage': {'urgent': [], 'time_sensitive': [], 'fyi': [], 'ignore': []},
                 'metrics': {
-                    'workload_score': 1,
-                    'total_free_minutes': 779,
+                    'workload_score': 0,
+                    'total_free_minutes': 0,
                     'total_task_minutes': 0,
                     'buffers_added_minutes': 0
                 },
-                'assumptions': [
-                    'No additional tasks or appointments were added after the last data pull.',
-                    'No travel or location changes are required today.',
-                    'No new emails arrived after the last check.'
-                ],
+                'assumptions': ['No daily summary has been generated yet.'],
                 'conflicts': []
             }
             
-            html_content = generate_daily_summary_page(sample_data)
+            html_content = generate_daily_summary_page(no_data_message)
             return html_content
         
     except Exception as e:

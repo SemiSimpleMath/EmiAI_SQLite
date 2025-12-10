@@ -6,6 +6,9 @@ llm_params:
   engine: "gpt-5-mini"
   temperature: 1
 
+system_context_items:
+  - resource_user_data
+
 user_context_items:
   - date_time
   - question

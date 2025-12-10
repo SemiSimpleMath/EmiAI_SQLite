@@ -56,6 +56,12 @@ def features_page():
     """Render features settings page"""
     return render_template('features_settings.html')
 
+
+@preferences_bp.route('/settings/quiet-mode', methods=['GET'])
+def quiet_mode_page():
+    """Render quiet mode settings page"""
+    return render_template('quiet_mode_settings.html')
+
 # ============= User Profile API =============
 
 @preferences_bp.route('/api/user-profile', methods=['GET'])

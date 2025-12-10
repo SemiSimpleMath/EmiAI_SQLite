@@ -3,8 +3,8 @@ class_name: FinalAnswer
 color: "blue"
 llm_params:
   llm_provider: "openai"
-  engine: "gpt-4o-mini"
-  temperature: 0.1
+  engine: "gpt-5-mini"
+  temperature: 1
 
 allowed_tools: []  # No tools needed for this agent
 except_tools: []
@@ -14,9 +14,3 @@ user_context_items:
   - task
   - information
   - recent_history
-
-
-
-rag_fields:
-  task: ["chat"]
-  information: ["chat"]

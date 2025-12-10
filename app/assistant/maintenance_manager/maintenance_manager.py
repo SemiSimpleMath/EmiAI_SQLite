@@ -27,15 +27,15 @@ class MaintenanceManager:
         # Dictionaries for rate limiting publish events
         self.last_publish_times = {}  # Stores the last publish time for each event
         self.publish_intervals = {
-            'summarize_chat': timedelta(seconds=300),  # DISABLED
-            'maintenance': timedelta(seconds=30),  # Run maintenance more frequently to allow 5-min email checks
-            'system_state_monitor': timedelta(seconds=300),  # DISABLED
+            'save_chat': timedelta(seconds=30),  # Rate limit chat saving to avoid unnecessary DB writes
+            'summarize_chat': timedelta(seconds=300),
+            'maintenance': timedelta(seconds=30),
+            'system_state_monitor': timedelta(seconds=300),
             'action_decider': timedelta(seconds=240),
-            # 'rag_processing': timedelta(minutes=12),  # DISABLED - DEPRECATED
-            'kg_processing': timedelta(minutes=15),  # DISABLED
-            'kg_explorer': timedelta(hours=2),  # DISABLED
-            'kg_repair_pipeline': timedelta(minutes=5),  # NEW: KG repair pipeline testing ✨
-            'taxonomy_processing': timedelta(minutes=20),  # NEW: Taxonomy classification processing ✨
+            'kg_processing': timedelta(minutes=15),
+            'kg_explorer': timedelta(hours=2),
+            'kg_repair_pipeline': timedelta(minutes=5),
+            'taxonomy_processing': timedelta(minutes=20),
         }
 
         self.last_summary_time = datetime.now(timezone.utc)
@@ -68,93 +68,132 @@ class MaintenanceManager:
 
     def should_run_daily_summary(self) -> bool:
         """
-        Check if daily summary should run (6am-5pm Pacific Time, once per day).
+        Check if daily summary should run (once per day, respects quiet_mode settings).
         
         Returns:
             bool: True if daily summary should run, False otherwise
         """
-        # Use local Pacific Time instead of UTC
         from zoneinfo import ZoneInfo
         now = datetime.now(ZoneInfo("America/Los_Angeles"))
-
-        # Check if we're in the time window (6am-5pm Pacific Time)
-        current_hour = now.hour
-        if not (6 <= current_hour < 17):  # 6am to 5pm (17:00) Pacific
-            return False
-
-        # Check if we've already run today
         today = now.date()
-        last_run_date = getattr(self, 'last_daily_summary_date', None)
+        today_str = today.strftime("%Y-%m-%d")
 
+        # Check if we've already run today (in-memory check)
+        last_run_date = getattr(self, 'last_daily_summary_date', None)
         if last_run_date == today:
-            return False  # Already ran today
+            logger.debug(f"⏸️ Daily summary skipped - already ran today")
+            return False
 
         # Check if daily summary file already exists for today
         from app.assistant.maintenance_manager.daily_summary_storage import DailySummaryStorage
         storage = DailySummaryStorage()
-        today_str = today.strftime("%Y-%m-%d")
 
         if storage.get_daily_summary(today_str) is not None:
             # File already exists, mark as run for today
             self.last_daily_summary_date = today
+            logger.debug(f"⏸️ Daily summary skipped - file already exists for {today_str}")
             return False
 
         # Should run - mark the date
+        logger.info(f"✅ Daily summary eligible to run for {today_str}")
         self.last_daily_summary_date = today
         return True
 
     def _is_tool_quiet_hours(self) -> bool:
         """
-        Check if we're in quiet hours for tool calls (11pm-7am Pacific Time).
+        Check if we're in quiet hours for tool calls using universal_hours from quiet_mode config.
         Returns True if tools should be disabled.
         """
-        from zoneinfo import ZoneInfo
-        now_local = datetime.now(ZoneInfo("America/Los_Angeles"))
-        current_hour = now_local.hour
+        from app.assistant.user_settings_manager.user_settings import get_settings_manager
+        settings_manager = get_settings_manager()
         
-        # Disable tool calls between 23:00 (11pm) and 07:00 (7am) Pacific Time
-        if current_hour >= 23 or current_hour < 7:
-            return True
-        return False
+        # Check if global quiet mode is enabled
+        if not settings_manager.get("quiet_mode.enabled", False):
+            return False
+        
+        # Use universal_hours from quiet_mode config
+        universal_hours = settings_manager.get("quiet_mode.universal_hours", {})
+        start_str = universal_hours.get("start", "23:00")
+        end_str = universal_hours.get("end", "07:00")
+        
+        try:
+            from zoneinfo import ZoneInfo
+            now_local = datetime.now(ZoneInfo("America/Los_Angeles"))
+            current_time = now_local.time()
+            
+            start_time = datetime.strptime(start_str, "%H:%M").time()
+            end_time = datetime.strptime(end_str, "%H:%M").time()
+            
+            # Handle overnight ranges (e.g., 23:00 to 07:00)
+            if start_time > end_time:
+                # Overnight: quiet if current >= start OR current < end
+                return current_time >= start_time or current_time < end_time
+            else:
+                # Same day: quiet if current >= start AND current < end
+                return start_time <= current_time < end_time
+        except Exception as e:
+            logger.warning(f"Error parsing quiet hours: {e}, using default behavior")
+            return False
 
     def _is_kg_processing_window(self) -> bool:
         """
-        Check if we're in the KG/taxonomy processing window (12am-5am Pacific Time).
-        Returns True if KG and taxonomy processing should run.
+        DEPRECATED: Use _is_feature_in_quiet_hours('kg') instead.
+        This method is kept for backwards compatibility but always returns True.
+        KG processing is now controlled by feature settings and quiet hours from UI.
         """
-        from zoneinfo import ZoneInfo
-        now_local = datetime.now(ZoneInfo("America/Los_Angeles"))
-        current_hour = now_local.hour
+        return True
+
+    def _is_feature_in_quiet_hours(self, feature: str) -> bool:
+        """
+        Check if a feature is currently in quiet hours based on user settings.
         
-        # Run KG and taxonomy processing between 00:00 (midnight) and 05:00 (5am) Pacific Time
-        if 0 <= current_hour < 5:
-            return True
-        return False
+        Args:
+            feature: Feature name (e.g., 'kg', 'taxonomy', 'email')
+            
+        Returns:
+            True if the feature should be disabled due to quiet hours.
+        """
+        from app.assistant.user_settings_manager.user_settings import get_settings_manager
+        settings_manager = get_settings_manager()
+        return settings_manager.is_quiet_mode_active(feature)
 
     def idle_mode_handler(self, idle_msg):
         logger.info("Idle mode triggered - running maintenance tasks.")
 
-        # 1. Chat saving (always runs)
-        self.save_chat_history()
+        # 1. Chat saving (rate limited, skip if KG or taxonomy is running)
+        if self.should_publish("save_chat"):
+            if getattr(self, 'kg_processing_running', False) or getattr(self, 'taxonomy_processing_running', False):
+                logger.debug("⏸️ Skipping chat save - KG/taxonomy processing in progress")
+            else:
+                self.save_chat_history()
 
-        # 2. Chat summarization (always runs if needed)
+        # 2. Chat summarization (skip if KG or taxonomy is running to avoid database lock contention)
         if self.should_publish("summarize_chat"):
-            messages = DI.global_blackboard.get_messages()
-            if self.should_summarize(messages):
-                ChatSummaryRunner(DI.global_blackboard).run()
+            if getattr(self, 'kg_processing_running', False) or getattr(self, 'taxonomy_processing_running', False):
+                logger.debug("⏸️ Skipping chat summarization - KG/taxonomy processing in progress")
+            else:
+                messages = DI.global_blackboard.get_messages()
+                if self.should_summarize(messages):
+                    ChatSummaryRunner(DI.global_blackboard).run()
 
-        # 3. Tool execution (respects quiet hours 11pm-7am)
+        # 3. Tool execution (respects universal quiet hours from config, skip if KG/taxonomy/planner running)
         if self.should_publish("maintenance"):
-            if self._is_tool_quiet_hours():
+            if getattr(self, 'kg_processing_running', False) or getattr(self, 'taxonomy_processing_running', False):
+                logger.debug("⏸️ Skipping tool calls - KG/taxonomy processing in progress")
+            elif DI.system_state_monitor and getattr(DI.system_state_monitor, 'planner_running', False):
+                logger.debug("⏸️ Skipping tool calls - auto_planner is running")
+            elif self._is_tool_quiet_hours():
                 from zoneinfo import ZoneInfo
                 now_local = datetime.now(ZoneInfo("America/Los_Angeles"))
-                logger.info(f"⏸️ Tool quiet hours (11pm-7am PT) - skipping tool calls (current time: {now_local.strftime('%H:%M %Z')})")
+                logger.info(f"⏸️ Tool quiet hours active - skipping tool calls (current time: {now_local.strftime('%H:%M %Z')})")
             else:
                 self.tool_caller.call_next_tool_if_ready()
 
-        # 4. System state monitoring (checks feature flag)
+        # 4. System state monitoring (checks feature flag, skip if KG/taxonomy running)
         if self.should_publish("system_state_monitor"):
-            if can_run_feature('system_state_monitor'):
+            if getattr(self, 'kg_processing_running', False) or getattr(self, 'taxonomy_processing_running', False):
+                logger.debug("⏸️ Skipping system state monitor - KG/taxonomy processing in progress")
+            elif can_run_feature('system_state_monitor'):
                 try:
                     DI.system_state_monitor.run()
                 except AttributeError:
@@ -166,34 +205,38 @@ class MaintenanceManager:
         # if self.should_publish("rag_processing"):
         #     self.run_rag_processing()
 
-        # 6. Knowledge Graph processing (runs midnight-5am PT only, checks feature flag & API key)
+        # 6. Knowledge Graph processing (respects feature flag, quiet hours, and running state)
         if self.should_publish("kg_processing"):
             if not can_run_feature('kg'):
-                logger.debug("⏸️ KG processing disabled in settings or missing OpenAI API key")
-            elif self._is_kg_processing_window():
+                logger.info("⏸️ KG processing disabled in settings or missing OpenAI API key")
+            elif self._is_feature_in_quiet_hours('kg'):
+                logger.info("⏸️ KG processing skipped - quiet hours active")
+            elif getattr(self, 'kg_processing_running', False):
+                logger.info("⏸️ KG processing already running in background")
+            else:
                 self.run_kg_processing()
-            else:
-                from zoneinfo import ZoneInfo
-                now_local = datetime.now(ZoneInfo("America/Los_Angeles"))
-                logger.debug(f"⏸️ KG processing window is 12am-5am PT (current time: {now_local.strftime('%H:%M %Z')})")
 
-        # 7. Daily Summary processing (checks feature flag & API keys)
+        # 7. Daily Summary processing (checks feature flag, quiet hours, & API keys, skip if KG/taxonomy running)
         if self.should_run_daily_summary():
-            if can_run_feature('daily_summary'):
-                self.run_daily_summary()
-            else:
+            if getattr(self, 'kg_processing_running', False) or getattr(self, 'taxonomy_processing_running', False):
+                logger.debug("⏸️ Skipping daily summary - KG/taxonomy processing in progress")
+            elif not can_run_feature('daily_summary'):
                 logger.info("⏸️ Daily summary disabled in settings or missing required API keys (Google, OpenAI)")
+            elif self._is_feature_in_quiet_hours('daily_summary'):
+                logger.info("⏸️ Daily summary skipped - quiet hours active")
+            else:
+                self.run_daily_summary()
 
-        # 8. Taxonomy processing (runs midnight-5am PT only, checks feature flag & API key)
+        # 8. Taxonomy processing (respects feature flag, quiet hours, and running state)
         if self.should_publish("taxonomy_processing"):
             if not can_run_feature('taxonomy'):
-                logger.debug("⏸️ Taxonomy processing disabled in settings or missing OpenAI API key")
-            elif self._is_kg_processing_window():
-                self.run_taxonomy_processing()
+                logger.info("⏸️ Taxonomy processing disabled in settings or missing OpenAI API key")
+            elif self._is_feature_in_quiet_hours('taxonomy'):
+                logger.info("⏸️ Taxonomy processing skipped - quiet hours active")
+            elif getattr(self, 'taxonomy_processing_running', False):
+                logger.info("⏸️ Taxonomy processing already running in background")
             else:
-                from zoneinfo import ZoneInfo
-                now_local = datetime.now(ZoneInfo("America/Los_Angeles"))
-                logger.debug(f"⏸️ Taxonomy processing window is 12am-5am PT (current time: {now_local.strftime('%H:%M %Z')})")
+                self.run_taxonomy_processing()
 
         # 8. Knowledge Graph Explorer - DISABLED
         # if self.should_publish("kg_explorer"):
@@ -206,14 +249,14 @@ class MaintenanceManager:
     def scheduler_event_handler(self, event_msg):
         """
         Handle scheduler events, specifically daily summary events.
-        Respects quiet hours (11pm-7am PT) for non-critical events.
+        Respects universal quiet hours from config for non-critical events.
         """
         try:
-            # Check if we're in quiet hours for scheduler events
+            # Check if we're in quiet hours for scheduler events (uses universal_hours from config)
             if self._is_tool_quiet_hours():
                 from zoneinfo import ZoneInfo
                 now_local = datetime.now(ZoneInfo("America/Los_Angeles"))
-                logger.info(f"⏸️ Scheduler quiet hours (11pm-7am PT) - ignoring scheduler event (current time: {now_local.strftime('%H:%M %Z')})")
+                logger.info(f"⏸️ Scheduler quiet hours active - ignoring scheduler event (current time: {now_local.strftime('%H:%M %Z')})")
                 return
             
             event_data = event_msg.data
@@ -360,34 +403,29 @@ class MaintenanceManager:
         """
         Process unified_log messages through knowledge graph pipeline.
         This includes entity resolution and knowledge graph building.
-        Only runs after midnight Pacific Time.
+        
+        Eligibility is controlled by:
+        - Feature flag (enable_kg in settings)
+        - Quiet hours (per-feature quiet hours in settings)
+        - Not already running (kg_processing_running flag)
+        - Rate limiting (15 min interval via should_publish)
+        
         Runs in a separate thread to avoid blocking other maintenance tasks.
         """
-        # Check if it's after midnight (00:00) Pacific Time
-        from zoneinfo import ZoneInfo
-        now_local = datetime.now(ZoneInfo("America/Los_Angeles"))
-
-        # Check if we've already run KG processing today
-        today = now_local.date()
-        last_kg_run_date = getattr(self, 'last_kg_processing_date', None)
-
-        if last_kg_run_date == today:
-            logger.debug(f"⏸️ KG processing already ran today ({today}) - skipping")
-            return
-
-        # Check if a KG processing thread is already running
+        # Check if a KG processing thread is already running (double-check)
         if getattr(self, 'kg_processing_running', False):
-            logger.debug("⏸️ KG processing already running in background - skipping")
+            logger.info("⏸️ KG processing already running in background - skipping")
             return
 
         # Mark as running and spawn thread
         self.kg_processing_running = True
-        thread = threading.Thread(target=self._kg_processing_worker, args=(today,), daemon=True)
+        thread = threading.Thread(target=self._kg_processing_worker, daemon=True)
         thread.start()
         logger.info("🧠 Started knowledge graph processing in background thread")
 
-    def _kg_processing_worker(self, today):
+    def _kg_processing_worker(self):
         """Background worker for KG processing"""
+        kg_utils = None
         try:
             logger.info("🧠 Starting knowledge graph processing...")
 
@@ -404,22 +442,27 @@ class MaintenanceManager:
             logger.info(f"✅ Entity resolution completed: {entity_result}")
 
             # Step 2: Knowledge graph processing (processed_entity_log → KG)
+            # Use context manager pattern to ensure session is closed after processing
             from app.assistant.kg_core.kg_pipeline import process_all_processed_entity_logs_to_kg
+            from app.assistant.kg_core.knowledge_graph_utils import KnowledgeGraphUtils
 
-            kg_result = process_all_processed_entity_logs_to_kg(
-                batch_size=100,
-                max_batches=1,  # Process one batch per idle cycle to avoid blocking
-                role_filter=['user', 'assistant']
-            )
+            # Create kg_utils with context manager to ensure cleanup
+            with KnowledgeGraphUtils() as kg_utils:
+                kg_result = process_all_processed_entity_logs_to_kg(
+                    batch_size=100,
+                    max_batches=1,  # Process one batch per idle cycle to avoid blocking
+                    role_filter=['user', 'assistant'],
+                    kg_utils=kg_utils
+                )
 
             logger.info(f"✅ Knowledge graph processing completed: {kg_result}")
-
-            # Mark that we ran KG processing today
-            self.last_kg_processing_date = today
 
         except Exception as e:
             logger.error(f"❌ Error in KG processing: {e}")
         finally:
+            # Ensure session is closed even on error
+            if kg_utils:
+                kg_utils.close_session()
             self.kg_processing_running = False
 
     def run_taxonomy_processing(self):

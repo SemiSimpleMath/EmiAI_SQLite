@@ -23,3 +23,5 @@ system_context_items:
   - tool_descriptions
   - allowed_nodes
   - task
+  - resource_user_data
+  - resource_assistant_data

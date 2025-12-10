@@ -42,8 +42,11 @@ tmp/
 .env
 .env.local
 
-# Credentials (NEVER commit these!)
-app/assistant/lib/credentials/*.json
+# Credentials
+# OAuth client credentials (credentials.json) - testing if GitHub allows it
+# User tokens must NEVER be committed
+app/assistant/lib/credentials/token.pickle
+app/assistant/lib/credentials/token.json
 app/assistant/lib/credentials/*.pickle
 app/certs/*.pem
 

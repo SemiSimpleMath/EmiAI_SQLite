@@ -1,5 +1,6 @@
 # base.py
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 import os
 import threading
@@ -9,6 +10,19 @@ import threading
 _engines = {}
 _sessionmakers = {}
 _engines_lock = threading.Lock()
+_pragma_listener_registered = False
+
+
+def _set_sqlite_pragma(dbapi_conn, connection_record):
+    """
+    Set SQLite pragmas for ALL connections.
+    This is registered as a module-level listener to ensure it applies to every connection.
+    """
+    cursor = dbapi_conn.cursor()
+    cursor.execute("PRAGMA journal_mode=WAL")
+    cursor.execute("PRAGMA busy_timeout=30000")  # 30 second timeout
+    cursor.execute("PRAGMA synchronous=NORMAL")  # Balance between safety and performance
+    cursor.close()
 
 # Database setup with SQLite
 def get_database_uri():
@@ -37,6 +51,8 @@ def get_session(force_test_db=False):
     Args:
         force_test_db (bool): If True, force use test database regardless of environment variable
     """
+    global _pragma_listener_registered
+    
     # Force set test database if requested
     if force_test_db:
         os.environ['USE_TEST_DB'] = 'true'
@@ -47,6 +63,12 @@ def get_session(force_test_db=False):
     # Get or create engine for this database URI (singleton pattern)
     # Thread-safe: lock protects dictionary access during engine creation
     with _engines_lock:
+        # Register the pragma listener ONCE at module level for ALL engines
+        # This ensures pragmas are set for every new connection
+        if not _pragma_listener_registered:
+            event.listen(Engine, "connect", _set_sqlite_pragma)
+            _pragma_listener_registered = True
+        
         if database_uri not in _engines:
             # Create engine with connection pooling
             # pool_size: number of connections to maintain
@@ -58,7 +80,11 @@ def get_session(force_test_db=False):
                 pool_size=10,           # Maintain 10 connections in pool
                 max_overflow=20,       # Allow up to 20 additional connections
                 pool_recycle=3600,     # Recycle connections after 1 hour
-                pool_pre_ping=True     # Verify connections before using
+                pool_pre_ping=True,    # Verify connections before using
+                connect_args={
+                    'timeout': 30,     # Wait up to 30 seconds for lock to release
+                    'check_same_thread': False  # Allow connections across threads
+                }
             )
             _sessionmakers[database_uri] = sessionmaker(bind=_engines[database_uri])
         
@@ -73,8 +99,15 @@ def get_session(force_test_db=False):
 # These now use the singleton engine pattern
 def get_current_engine():
     """Get the current engine based on environment configuration"""
+    global _pragma_listener_registered
+    
     database_uri = get_database_uri()
     with _engines_lock:
+        # Register the pragma listener ONCE at module level for ALL engines
+        if not _pragma_listener_registered:
+            event.listen(Engine, "connect", _set_sqlite_pragma)
+            _pragma_listener_registered = True
+        
         if database_uri not in _engines:
             _engines[database_uri] = create_engine(
                 database_uri,
@@ -82,8 +115,13 @@ def get_current_engine():
                 pool_size=10,
                 max_overflow=20,
                 pool_recycle=3600,
-                pool_pre_ping=True
+                pool_pre_ping=True,
+                connect_args={
+                    'timeout': 30,
+                    'check_same_thread': False
+                }
             )
+            
             # IMPORTANT: Also create sessionmaker so get_session() works later
             _sessionmakers[database_uri] = sessionmaker(bind=_engines[database_uri])
         return _engines[database_uri]

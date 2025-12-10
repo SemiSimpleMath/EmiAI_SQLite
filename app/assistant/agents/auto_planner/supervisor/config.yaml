@@ -3,14 +3,15 @@ class_name: Agent
 color: red
 llm_params:
   llm_provider: "openai"
-  engine: "gpt-4o-mini"
-  temperature: 0.1
+  engine: "gpt-5-mini"
+  temperature: 1
 allowed_nodes:
   - exit_node
 allowed_tools: [auto_planner_team_manager, kg_team_manager]
 except_tools: []
 system_context_items:
   - resource_user_data
+  - resource_assistant_data
   - resource_supervisor_instructions
   - resource_current_interests
   - tool_descriptions
