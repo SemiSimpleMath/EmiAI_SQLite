@@ -9,6 +9,10 @@ llm_params:
 system_context_items:
   - resource_header
   - resource_user_data
+  - resource_assistant_personality
+  - resource_assistant_role
+  - resource_core_user_info
+  - resource_chat_guidelines
 
 user_context_items:
   - date_time

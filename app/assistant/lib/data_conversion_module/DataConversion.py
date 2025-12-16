@@ -143,6 +143,8 @@ class DataConversionModule:
                 "start": start_local,  # Now in local time
                 "end": end_local,  # Now in local time
                 "recurrence_rule": recurrence_rule,
+                "flexibility": event_obj.get("flexibility", "fixed"),
+                "blocking": event_obj.get("blocking", True),
             }
 
             # Add extra fields for 'full' level

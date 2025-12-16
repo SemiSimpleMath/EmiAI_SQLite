@@ -702,7 +702,7 @@ class Agent:
                 # Keep the full resource_ prefix in the context
                 logger.info(f"[{self.name}] Processing resource: {key}")
                 resolved_value = self._resolve_resource(key)
-                logger.info(f"[{self.name}] Resolved resource '{key}' type: {type(resolved_value)}, value preview: {str(resolved_value)[:100] if resolved_value else 'None'}")
+                logger.info(f"[{self.name}] Resolved resource '{key}' type: {type(resolved_value)}, value:\n{resolved_value}")
                 context[key] = resolved_value
                 continue
 

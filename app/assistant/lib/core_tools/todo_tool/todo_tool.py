@@ -245,14 +245,23 @@ class ToDoTool(BaseTool):
             # Only update repository if explicitly requested (maintenance tools)
             if repo_update:
                 logger.debug(f"repo_update=True: Storing {len(tasks)} tasks in EventRepository")
+                
+                # PHASE 1: Collect tasks to store (no DB writes yet)
+                tasks_to_store = []
+                server_ids = []
                 for task in tasks:
                     unique_id = task.get("recurringTaskId") or task.get("id") or task.get("task_id")
                     if unique_id:
+                        tasks_to_store.append((unique_id, task))
+                    if 'id' in task:
+                        server_ids.append(task['id'])
+                
+                # PHASE 2: Batch write to database
+                if tasks_to_store:
+                    logger.debug(f"Batch writing {len(tasks_to_store)} todo tasks to repo")
+                    for unique_id, task in tasks_to_store:
                         self.repo_manager.store_event(unique_id, event_data=task, data_type="todo_task")
-
-                # Sync repository with latest server task IDs
-                server_ids = [task['id'] for task in tasks if 'id' in task]
-                self.repo_manager.sync_events_with_server(server_ids, "todo_task")
+                    self.repo_manager.sync_events_with_server(server_ids, "todo_task")
                 
                 # Instant ingestion into UnifiedItems (only for active tasks)
                 try:
@@ -353,22 +362,34 @@ class ToDoTool(BaseTool):
     def handle_delete_task(self, arguments: Dict[str, Any]) -> ToolResult:
         """
         Deletes an existing task and removes it from the repository.
+        If cascade=True, also deletes all linked children from the event hierarchy.
 
         Args:
-            arguments: Dictionary containing 'task_id'.
+            arguments: Dictionary containing 'task_id' and optional 'cascade'.
 
         Returns:
             ToolResult indicating success or failure.
         """
         try:
             task_id = arguments.get('task_id')
+            cascade = arguments.get('cascade', False)
+            
             if not task_id:
                 raise ValueError("Missing required 'task_id' when deleting a task.")
+
+            deleted_children = []
+            
+            # Handle cascade deletion
+            if cascade:
+                deleted_children = self._cascade_delete_children('google_tasks', task_id)
 
             delete_task(task_id=task_id)
 
             # Remove from repository
             self.repo_manager.delete_event(task_id, data_type="todo_task")
+            
+            # Clean up EventNode if it exists
+            self._cleanup_event_node('google_tasks', task_id)
 
             repo_msg = Message(
                 data_type="repo_update",
@@ -376,7 +397,7 @@ class ToDoTool(BaseTool):
                 receiver=None,
                 data={
                     "data_type": "todo_task",
-                    "action": "create",
+                    "action": "delete",
                     "entity_id": task_id
                 }
             )
@@ -384,11 +405,15 @@ class ToDoTool(BaseTool):
             event_hub = DI.event_hub
             event_hub.publish(repo_msg)
 
+            if cascade and deleted_children:
+                return ToolResult(
+                    result_type="success",
+                    content=f"Task '{task_id}' deleted successfully. Also deleted {len(deleted_children)} linked children: {deleted_children}"
+                )
             return ToolResult(
                 result_type="success",
                 content=f"Task '{task_id}' deleted successfully."
             )
-
 
         except TaskError as e:
             logger.error(f"Failed to delete task: {e}")
@@ -396,6 +421,65 @@ class ToDoTool(BaseTool):
         except Exception as e:
             logger.error(f"Unexpected error during delete: {e}")
             return ToolResult(result_type="error", content="An unexpected error occurred.")
+    
+    def _cascade_delete_children(self, source_system: str, source_id: str) -> list:
+        """Delete all children linked to this task in the EventNode graph."""
+        deleted = []
+        try:
+            from app.assistant.event_graph import get_event_node_manager
+            mgr = get_event_node_manager()
+            
+            hierarchy = mgr.get_event_hierarchy(f"{source_system}:{source_id}")
+            if not hierarchy:
+                return deleted
+            
+            subtree = hierarchy.get('subtree', [])
+            parent_node_id = hierarchy['node']['node_id']
+            
+            for node in subtree:
+                if node['node_id'] != parent_node_id:
+                    node_with_sources = mgr.get_node_with_sources(node['node_id'])
+                    if node_with_sources:
+                        for source in node_with_sources.get('sources', []):
+                            child_deleted = self._delete_source_item(source)
+                            if child_deleted:
+                                deleted.append(child_deleted)
+                                
+        except Exception as e:
+            logger.warning(f"Error in cascade delete: {e}")
+        return deleted
+    
+    def _delete_source_item(self, source: dict) -> str:
+        """Delete an item from its source system."""
+        try:
+            source_system = source.get('source_system')
+            source_id = source.get('source_id')
+            
+            if source_system == 'scheduler':
+                DI.scheduler.event_scheduler.delete_event(source_id)
+                self.repo_manager.delete_event(source_id, data_type="scheduler")
+                return f"scheduler:{source_id}"
+            elif source_system == 'google_tasks':
+                delete_task(task_id=source_id)
+                self.repo_manager.delete_event(source_id, data_type="todo_task")
+                return f"google_tasks:{source_id}"
+            elif source_system == 'google_calendar':
+                logger.info(f"Skipping calendar deletion for {source_id} - use delete_calendar_event")
+                return None
+        except Exception as e:
+            logger.warning(f"Error deleting {source}: {e}")
+        return None
+    
+    def _cleanup_event_node(self, source_system: str, source_id: str):
+        """Remove the EventNode after deleting from source."""
+        try:
+            from app.assistant.event_graph import get_event_node_manager
+            mgr = get_event_node_manager()
+            node = mgr.get_node_by_source(source_system, source_id)
+            if node:
+                mgr.delete_node(node['node_id'], cascade=False)
+        except Exception as e:
+            logger.debug(f"No EventNode to clean up for {source_system}:{source_id}: {e}")
 
     def handle_create_tasklist(self, arguments: Dict[str, Any]) -> ToolResult:
         try:

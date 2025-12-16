@@ -32,6 +32,35 @@ logger = get_logger(__name__)
 VALID_FREQ = {"DAILY", "WEEKLY", "MONTHLY", "YEARLY"}
 VALID_BYDAY = {"MO", "TU", "WE", "TH", "FR", "SA", "SU"}
 
+# Valid flexibility values
+VALID_FLEXIBILITY = {"fixed", "flexible", "soft_block", "aspirational"}
+
+
+def _extract_flexibility(event: Dict[str, Any]) -> str:
+    """
+    Extract flexibility from Google Calendar's extendedProperties.
+    Returns 'fixed' as default if not set.
+    """
+    try:
+        extended_props = event.get('extendedProperties', {})
+        private_props = extended_props.get('private', {})
+        flexibility = private_props.get('flexibility', 'fixed')
+        return flexibility if flexibility in VALID_FLEXIBILITY else 'fixed'
+    except Exception:
+        return 'fixed'
+
+
+def _extract_blocking(event: Dict[str, Any]) -> bool:
+    """
+    Extract blocking from Google Calendar's transparency field.
+    Returns True (opaque/busy) or False (transparent/free).
+    """
+    try:
+        transparency = event.get('transparency', 'opaque')
+        return transparency != 'transparent'
+    except Exception:
+        return True
+
 
 def format_rrule(freq: str, start: str, byday: Optional[str] = None, until: Optional[str] = None) -> str:
     """
@@ -182,6 +211,8 @@ class CalendarTool(BaseTool):
             location = arguments.get('location')
             link = arguments.get('link')
             participants = arguments.get('participants')
+            flexibility = arguments.get('flexibility', 'fixed')
+            blocking = arguments.get('blocking', True)
 
             time_zone = "UTC"
             calendar_name = arguments.get('calendar_name', 'primary')
@@ -207,11 +238,15 @@ class CalendarTool(BaseTool):
                 'location': location,
                 'link': link,
                 'participants': attendees,
+                'flexibility': flexibility,
+                'blocking': blocking,
             })
             event_id = event.get('id')
             if not event:
                 return ToolResult(result_type="error", content="Error, event not created.")
 
+            # Extract flexibility from extendedProperties for local storage
+            event['flexibility'] = _extract_flexibility(event)
             self.repo_manager.store_event(event_id, event_data=event, data_type="calendar")
 
             repo_msg = Message(
@@ -250,6 +285,8 @@ class CalendarTool(BaseTool):
             location = arguments.get('location')
             link = arguments.get('link')
             participants = arguments.get('participants')
+            flexibility = arguments.get('flexibility', 'fixed')
+            blocking = arguments.get('blocking', True)
 
             if not all([event_name, start, end, recurrence_rule_input]):
                 raise ValueError("Missing required fields for creating a repeating event.")
@@ -292,6 +329,8 @@ class CalendarTool(BaseTool):
                 "location": location,
                 "link": link,
                 "participants": attendees,
+                "flexibility": flexibility,
+                "blocking": blocking,
             }
             logger.debug(f"Prepared Event Dictionary: {event_dict}")
 
@@ -300,6 +339,8 @@ class CalendarTool(BaseTool):
                 raise ValueError("Failed to create the repeating event.")
 
             event_id = event.get('id')
+            # Extract flexibility from extendedProperties for local storage
+            event['flexibility'] = _extract_flexibility(event)
             self.repo_manager.store_event(event_id, event_data=event, data_type="calendar")
 
             repo_msg = Message(
@@ -410,6 +451,7 @@ class CalendarTool(BaseTool):
                 "id": event_id,
                 "summary": event.get("summary", "No Title"),
                 "description": event.get("description", ""),
+                "location": event.get("location", ""),
                 "start": start_utc,
                 "end": end_utc,
                 "link": event.get("htmlLink"),
@@ -417,6 +459,8 @@ class CalendarTool(BaseTool):
                 "is_all_day": is_all_day,
                 "recurring_event_id": recurring_event_id,
                 "recurrence_rule": recurrence_rule,
+                "flexibility": _extract_flexibility(event),
+                "blocking": _extract_blocking(event),
                 "participants": [
                     {
                         "email": attendee.get("email"),
@@ -430,14 +474,16 @@ class CalendarTool(BaseTool):
             result_events.append(parsed_event)
             server_ids.add(event_id)
 
-            if repo_update:
+        # Batch write to database AFTER all processing is complete
+        # This minimizes DB lock time
+        if repo_update and result_events:
+            logger.debug(f"Batch writing {len(result_events)} calendar events to repo")
+            for parsed_event in result_events:
                 self.repo_manager.store_event(
-                    event_id,
+                    parsed_event["id"],
                     event_data=parsed_event,
                     data_type="calendar",
                 )
-
-        if repo_update:
             # Enforce stable 7 day window: repo will match current fetch set
             self.repo_manager.sync_events_with_server(list(server_ids), "calendar")
 
@@ -480,6 +526,15 @@ class CalendarTool(BaseTool):
             if not event_id:
                 raise ValueError("Missing 'event_id' for updating event.")
 
+            # Extract scope for recurring events (remove from arguments dict)
+            scope = arguments.pop("scope", None)
+            
+            # Extract flexibility (stored in extendedProperties)
+            flexibility = arguments.pop("flexibility", None)
+            
+            # Extract blocking (stored in transparency field)
+            blocking = arguments.pop("blocking", None)
+
             # Convert times to local timezone (e.g., PST) using utc_to_local
             local_tz = get_local_timezone().key  # Should be 'America/Los_Angeles'
             for key in ["start", "end"]:
@@ -495,14 +550,23 @@ class CalendarTool(BaseTool):
                 if not isinstance(arguments["recurrence"], list):
                     arguments["recurrence"] = [arguments["recurrence"]]
 
-            # Call the edit_event function
-            updated_event = edit_event(self.service, event_id, arguments)
+            # Add flexibility and blocking back to arguments for edit_event to handle
+            if flexibility:
+                arguments['flexibility'] = flexibility
+            if blocking is not None:
+                arguments['blocking'] = blocking
+
+            # Call the edit_event function with scope for recurring event handling
+            updated_event = edit_event(self.service, event_id, arguments, scope=scope)
             if not updated_event:
                 raise ValueError("Failed to update the event.")
 
             # Normalize times from Google before storing
-
             updated_event = normalize_google_event_times(updated_event)
+            
+            # Extract flexibility and blocking from Google response
+            updated_event['flexibility'] = _extract_flexibility(updated_event)
+            updated_event['blocking'] = _extract_blocking(updated_event)
 
             repo_msg = Message(
                 data_type="repo_update",
@@ -528,11 +592,20 @@ class CalendarTool(BaseTool):
     def handle_delete_calendar_event(self, arguments: Dict[str, Any]) -> ToolResult:
         """
         Deletes an event from Google Calendar and removes it from the repository.
+        If cascade=True, also deletes all linked children (reminders, sub-events).
         """
         try:
             event_id = arguments.get('event_id')
+            cascade = arguments.get('cascade', False)
+            
             if not event_id:
                 raise ValueError("Missing 'event_id' for deleting event.")
+
+            deleted_children = []
+            
+            # Handle cascade deletion
+            if cascade:
+                deleted_children = self._cascade_delete_children('google_calendar', event_id)
 
             success = delete_event(self.service, event_id)
             if not success:
@@ -553,11 +626,99 @@ class CalendarTool(BaseTool):
             event_hub.publish(repo_msg)
 
             self.repo_manager.delete_event(event_id, data_type="calendar")
+            
+            # Clean up EventNode if it exists
+            self._cleanup_event_node('google_calendar', event_id)
 
+            if cascade and deleted_children:
+                return ToolResult(
+                    result_type="success", 
+                    content=f"Event deleted successfully. Also deleted {len(deleted_children)} linked children: {deleted_children}"
+                )
             return ToolResult(result_type="success", content="Event deleted successfully.")
         except Exception as e:
             logger.error(f"Failed to handle_delete_event: {e}")
             return ToolResult(result_type="error", content=f"Error, event not deleted. {e}")
+    
+    def _cascade_delete_children(self, source_system: str, source_id: str) -> list:
+        """Delete all children linked to this event in the EventNode graph."""
+        deleted = []
+        try:
+            from app.assistant.event_graph import get_event_node_manager
+            mgr = get_event_node_manager()
+            
+            hierarchy = mgr.get_event_hierarchy(f"{source_system}:{source_id}")
+            if not hierarchy:
+                return deleted
+            
+            # Get all children and delete them from their source systems
+            for child in hierarchy.get('children', []):
+                child_deleted = self._delete_from_source(child, mgr)
+                if child_deleted:
+                    deleted.append(child_deleted)
+                    
+            # Also recursively delete grandchildren via subtree
+            subtree = hierarchy.get('subtree', [])
+            parent_node_id = hierarchy['node']['node_id']
+            for node in subtree:
+                if node['node_id'] != parent_node_id:  # Skip the parent
+                    node_with_sources = mgr.get_node_with_sources(node['node_id'])
+                    if node_with_sources:
+                        for source in node_with_sources.get('sources', []):
+                            child_deleted = self._delete_source_item(source)
+                            if child_deleted:
+                                deleted.append(child_deleted)
+                                
+        except Exception as e:
+            logger.warning(f"Error in cascade delete: {e}")
+        return deleted
+    
+    def _delete_from_source(self, child_node: dict, mgr) -> str:
+        """Delete a child node from its source system."""
+        try:
+            node_with_sources = mgr.get_node_with_sources(child_node['node_id'])
+            if not node_with_sources:
+                return None
+                
+            for source in node_with_sources.get('sources', []):
+                return self._delete_source_item(source)
+        except Exception as e:
+            logger.warning(f"Error deleting child: {e}")
+        return None
+    
+    def _delete_source_item(self, source: dict) -> str:
+        """Delete an item from its source system."""
+        try:
+            source_system = source.get('source_system')
+            source_id = source.get('source_id')
+            
+            if source_system == 'scheduler':
+                # Delete from scheduler
+                DI.scheduler.event_scheduler.delete_event(source_id)
+                self.repo_manager.delete_event(source_id, data_type="scheduler")
+                return f"scheduler:{source_id}"
+            elif source_system == 'google_calendar':
+                # Delete from calendar (recursive - be careful)
+                delete_event(self.service, source_id)
+                self.repo_manager.delete_event(source_id, data_type="calendar")
+                return f"google_calendar:{source_id}"
+            elif source_system == 'google_tasks':
+                # TODO: Implement Google Tasks deletion
+                return f"google_tasks:{source_id} (not deleted - not implemented)"
+        except Exception as e:
+            logger.warning(f"Error deleting {source}: {e}")
+        return None
+    
+    def _cleanup_event_node(self, source_system: str, source_id: str):
+        """Remove the EventNode after deleting from source."""
+        try:
+            from app.assistant.event_graph import get_event_node_manager
+            mgr = get_event_node_manager()
+            node = mgr.get_node_by_source(source_system, source_id)
+            if node:
+                mgr.delete_node(node['node_id'], cascade=False)
+        except Exception as e:
+            logger.debug(f"No EventNode to clean up for {source_system}:{source_id}: {e}")
 
 
 def normalize_start_end(event: dict, calendar_timezone: str = None) -> (str, str):

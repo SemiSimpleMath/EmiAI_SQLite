@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 from typing import Any, Union
 
@@ -37,10 +37,24 @@ def _parse_iso_like(value: str) -> datetime:
     - Full timestamps with offset.
     - Naive timestamps.
     - 'Z' suffix for UTC.
+    - '24:00:00' (midnight of next day - common LLM output)
     """
     text = value.strip()
     if text.endswith("Z"):
         text = text[:-1] + "+00:00"
+    
+    # Handle 24:00:00 (ISO 8601 allows this, but Python doesn't)
+    # Convert to 00:00:00 of the next day
+    if "T24:00" in text or "T24:00:00" in text:
+        # Split date and time, add one day to date, set time to 00:00:00
+        date_part = text.split("T")[0]
+        try:
+            base_date = datetime.fromisoformat(date_part)
+            next_day = base_date + timedelta(days=1)
+            text = next_day.strftime("%Y-%m-%dT00:00:00")
+        except:
+            pass  # Fall through to normal parsing which will error
+    
     try:
         return datetime.fromisoformat(text)
     except Exception as e:

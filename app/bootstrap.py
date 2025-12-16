@@ -70,4 +70,11 @@ def initialize_services(app):
 
     print("✅ EventHandlerHub started in the background.")
 
+    # Initialize and start background task manager
+    # These tasks run independently of the browser/UI
+    from app.assistant.background_task_manager import start_background_tasks
+    background_manager = start_background_tasks()
+    ServiceLocator.register('background_task_manager', background_manager)
+    logger.info("✅ Background task manager started (physical_status, proactive, location)")
+
     return DI

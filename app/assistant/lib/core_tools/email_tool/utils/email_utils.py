@@ -158,14 +158,16 @@ class EmailUtils:
                         logger.error("⚠️  OAUTH SCOPE MISSING: Delete token.pickle and re-authenticate to get gmail.modify scope")
         
         # Step 3: Now parse only the emails that passed the timestamp filter
+        # PHASE A: Process all emails with LLM (no DB writes)
         processed_emails = []
         email_ids = []
         skipped_low_importance = 0
         skipped_missing_importance = 0
         
         summary_agent = DI.agent_factory.create_agent("email_parser")
+        logger.info(f"📧 Starting LLM processing for {len(filtered_emails)} emails...")
 
-        for email_meta, full_email, email_metadata in filtered_emails:
+        for idx, (email_meta, full_email, email_metadata) in enumerate(filtered_emails):
             # Now extract body and parse (we already have metadata from filtering step)
             # Parse raw email string into EmailMessage object
             email_message = message_from_string(full_email["raw_email"])
@@ -174,6 +176,8 @@ class EmailUtils:
             agent_msg = Message(agent_input=email_body)
             result_data = summary_agent.action_handler(agent_msg)
             summary_data = result_data.data if hasattr(result_data, "data") else result_data
+            
+            logger.debug(f"📧 Processed email {idx+1}/{len(filtered_emails)}")
 
             email_data = {
                 **email_metadata,
@@ -213,19 +217,22 @@ class EmailUtils:
                 continue
 
             processed_emails.append(email_data)
-
             if repo_update:
-                # Only scheduler-run writes to repo
                 email_ids.append(email_meta["uid"])
+
+        # PHASE B: Batch write to database (quick, single burst)
+        # This ensures DB lock is held for minimal time
+        if repo_update and email_ids:
+            logger.info(f"📧 Batch writing {len(email_ids)} emails to repository...")
+            for email_data in processed_emails:
                 self.repo_manager.store_event(
-                    email_meta["uid"],
+                    email_data["uid"],
                     event_data=email_data,
                     data_type="email",
                 )
-
-        if repo_update and email_ids:
             # Single sync call enforces 10 hour policy for emails
             self.repo_manager.sync_events_with_server(email_ids, "email")
+            logger.info(f"📧 Batch write complete")
 
         # Debug summary
         logger.info(

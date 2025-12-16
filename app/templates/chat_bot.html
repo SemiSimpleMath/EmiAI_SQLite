@@ -4,6 +4,7 @@
 <!-- External CSS -->
 <link rel="stylesheet" href="{{ url_for('static', filename='css/chat_bot_4.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/weather.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/proactive_popup.css') }}">
 <!-- Google Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 <!-- Font Awesome for Icons -->
@@ -93,6 +94,18 @@
               <i class="fas fa-globe"></i>
               <span>Start Ngrok</span>
             </button>
+          </li>
+          <li class="submenu-item">
+            <a href="/debug/status" target="_blank" class="menu-btn">
+              <i class="fas fa-heartbeat"></i>
+              <span>User Status Debug</span>
+            </a>
+          </li>
+          <li class="submenu-item">
+            <a href="/debug/orchestrator" target="_blank" class="menu-btn">
+              <i class="fas fa-lightbulb"></i>
+              <span>Proactive Orchestrator</span>
+            </a>
           </li>
         </ul>
       </li>
@@ -344,6 +357,7 @@
 </script>
 <script src="{{ url_for('static', filename='js/emi.js') }}"></script>
 <script src="{{ url_for('static', filename='js/weather.js') }}"></script>
+<script src="{{ url_for('static', filename='js/proactive_popup.js') }}"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Swiper/10.2.0/swiper-bundle.min.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Swiper/10.2.0/swiper-bundle.min.js"></script>
 <script src="{{ url_for('static', filename='js/mobile_swiper.js') }}"></script>

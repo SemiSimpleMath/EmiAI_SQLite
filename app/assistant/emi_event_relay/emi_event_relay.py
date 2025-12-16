@@ -28,6 +28,7 @@ class EmiEventRelay:
         DI.event_hub.register_event('socket_emit', self.socket_emit_handler)
         DI.event_hub.register_event('socket_emit_all_done', self.socket_emit_all_done_handler)
         DI.event_hub.register_event('repo_update', self.notify_ui_of_repo_update)
+        DI.event_hub.register_event('proactive_suggestion', self.proactive_suggestion_handler)
 
 
     def socket_emit_handler(self, message: UserMessage):
@@ -70,6 +71,22 @@ class EmiEventRelay:
         print(f"WebSocketHandler: Notifying socket_id {socket_id} that streaming is complete")
         with self.socket_lock:
             socket_io.emit('all_done', room=socket_id)
+    
+    def proactive_suggestion_handler(self, message: Message):
+        """Emit proactive suggestion to frontend via WebSocket."""
+        socket_manager = DI.socket_manager
+        socket_id, socket_io = socket_manager.get_connection()
+        
+        if not socket_io or not socket_id:
+            logger.warning("❌ Cannot emit proactive suggestion — socket not available.")
+            return
+        
+        # The message.data should contain the ticket dict
+        suggestion_data = message.data if hasattr(message, 'data') else {}
+        
+        with self.socket_lock:
+            socket_io.emit('proactive_suggestion', suggestion_data, room=socket_id)
+            logger.info(f"📋 Emitted proactive_suggestion to socket_id {socket_id}")
 
     def process_queue(self):
         """Continuously process messages from the queue and emit via WebSocket."""

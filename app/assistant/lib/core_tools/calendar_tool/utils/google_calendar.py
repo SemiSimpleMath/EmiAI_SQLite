@@ -141,6 +141,8 @@ def get_calendar_by_name(service, calendar_name: str) -> Optional[str]:
 def create_event(service, event_dict, calendarId='primary'):
     """
     Create a single event on the Google Calendar with proper time zone handling.
+    Supports extended properties for custom fields like 'flexibility'.
+    Supports Google's native 'transparency' field via 'blocking' parameter.
     """
     summary = event_dict.get('event_name')
     start = event_dict.get('start')
@@ -149,6 +151,8 @@ def create_event(service, event_dict, calendarId='primary'):
     location = event_dict.get('location')
     link = event_dict.get('link')
     participants = event_dict.get('participants')
+    flexibility = event_dict.get('flexibility')
+    blocking = event_dict.get('blocking', True)
 
     if not summary or not start or not end:
         logger.error("Event dictionary missing required fields.")
@@ -173,6 +177,16 @@ def create_event(service, event_dict, calendarId='primary'):
         event['description'] = (desc + "\n" if desc else "") + f"Link: {link}"
     if participants and isinstance(participants, list):
         event['attendees'] = participants
+    
+    # Google's transparency field: opaque = blocking, transparent = non-blocking
+    event['transparency'] = 'opaque' if blocking else 'transparent'
+    
+    # Add extended properties for custom fields (persists in Google Calendar)
+    extended_props = {}
+    if flexibility:
+        extended_props['flexibility'] = flexibility
+    if extended_props:
+        event['extendedProperties'] = {'private': extended_props}
 
     try:
         created_event = service.events().insert(calendarId=calendarId, body=event).execute()
@@ -186,6 +200,8 @@ def create_event(service, event_dict, calendarId='primary'):
 def create_repeating_event(service, event_dict, calendarId='primary'):
     """
     Create a repeating event on Google Calendar and log full request details.
+    Supports extended properties for custom fields like 'flexibility'.
+    Supports Google's native 'transparency' field via 'blocking' parameter.
     """
     # Extract required fields
     summary = event_dict.get('event_name')
@@ -198,6 +214,8 @@ def create_repeating_event(service, event_dict, calendarId='primary'):
     location = event_dict.get('location')
     link = event_dict.get('link')
     participants = event_dict.get('participants')
+    flexibility = event_dict.get('flexibility')
+    blocking = event_dict.get('blocking', True)
 
     if not summary or not start or not end:
         logger.error("Event dictionary missing required fields.")
@@ -238,6 +256,16 @@ def create_repeating_event(service, event_dict, calendarId='primary'):
                     attendee['displayName'] = name
                 attendees.append(attendee)
         event['attendees'] = attendees
+    
+    # Google's transparency field: opaque = blocking, transparent = non-blocking
+    event['transparency'] = 'opaque' if blocking else 'transparent'
+    
+    # Add extended properties for custom fields (persists in Google Calendar)
+    extended_props = {}
+    if flexibility:
+        extended_props['flexibility'] = flexibility
+    if extended_props:
+        event['extendedProperties'] = {'private': extended_props}
 
     logger.info(f"Creating repeating event with payload: {event}")
 
@@ -379,12 +407,24 @@ def search_event_by_name(service, query: str) -> Optional[List[Dict[str, Any]]]:
 
         event_details = []
         for event in events:
+            # Extract flexibility from extendedProperties
+            extended_props = event.get('extendedProperties', {})
+            private_props = extended_props.get('private', {})
+            flexibility = private_props.get('flexibility', 'fixed')
+            
+            # Extract blocking from transparency (opaque=blocking, transparent=non-blocking)
+            transparency = event.get('transparency', 'opaque')
+            blocking = transparency != 'transparent'
+            
             event_info = {
                 "id": event.get('id'),
                 "summary": event.get('summary', 'No Title'),
                 "start": event['start'].get('dateTime', event['start'].get('date')),
                 "end": event['end'].get('dateTime', event['end'].get('date')),
-                "link": event.get('htmlLink', 'No link available')
+                "link": event.get('htmlLink', 'No link available'),
+                "location": event.get('location', ''),
+                "flexibility": flexibility,
+                "blocking": blocking,
             }
             event_details.append(event_info)
 
@@ -395,41 +435,111 @@ def search_event_by_name(service, query: str) -> Optional[List[Dict[str, Any]]]:
         return None
 
 
-def edit_event(service, event_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+def edit_event(service, event_id: str, updates: Dict[str, Any], scope: Optional[str] = None) -> Optional[Dict[str, Any]]:
     """
-    Edit an existing event by its ID. If the event is part of a series, modify the parent event.
+    Edit an existing event by its ID.
+    
+    Args:
+        service: Authenticated Google Calendar service instance.
+        event_id: The ID of the event to edit.
+        updates: Dictionary of fields to update.
+        scope: For recurring events:
+               - "single": Update only this occurrence (creates an exception)
+               - "all": Update all occurrences (modifies parent event)
+               - None: Defaults to "single" for instances, "all" for non-recurring
+    
+    Returns:
+        Updated event dictionary or None if failed.
     """
     try:
         # Fetch the existing event
         event = service.events().get(calendarId='primary', eventId=event_id).execute()
+        logger.debug(f"Fetched event: {event.get('id')} - {event.get('summary')}")
 
-        # If the event is part of a recurrence, update the parent instead
-        parent_event_id = event.get("recurringEventId", event_id)  # Use parent if available
+        # Check if this is part of a recurring series
+        recurring_event_id = event.get("recurringEventId")
+        is_recurring_instance = recurring_event_id is not None
+        
+        # Determine which event ID to update based on scope
+        if is_recurring_instance:
+            if scope == "all":
+                # Update the parent event (affects all occurrences)
+                target_event_id = recurring_event_id
+                # Need to fetch the parent event to update it
+                event = service.events().get(calendarId='primary', eventId=recurring_event_id).execute()
+                logger.info(f"Updating ALL occurrences of recurring event (parent: {recurring_event_id})")
+            else:
+                # Default to "single" - update just this instance (creates exception)
+                target_event_id = event_id
+                # For single instance updates, remove recurrence field if present in updates
+                # (single instances cannot have recurrence rules)
+                updates.pop("recurrence", None)
+                logger.info(f"Updating SINGLE occurrence: {event_id} (parent: {recurring_event_id})")
+        else:
+            # Non-recurring event - just update it directly
+            target_event_id = event_id
+            logger.info(f"Updating non-recurring event: {event_id}")
 
-        # Ensure recurrence is fully replaced, not merged
+        # Ensure recurrence is fully replaced, not merged (only for parent/non-recurring)
         if "recurrence" in updates and isinstance(updates["recurrence"], list):
             updates["recurrence"] = [updates["recurrence"][0]]  # Ensure it's a full override list
 
         # Handle datetime conversions correctly
-        if "start" in updates and isinstance(updates["start"], dict):
-            if "dateTime" in updates["start"]:
-                updates["start"]["dateTime"] = updates["start"]["dateTime"].replace("Z", "")
+        # The dateTime field might be a datetime object or a string
+        for time_field in ["start", "end"]:
+            if time_field in updates and isinstance(updates[time_field], dict):
+                dt_value = updates[time_field].get("dateTime")
+                if dt_value is not None:
+                    # Convert datetime object to ISO string if needed
+                    if hasattr(dt_value, 'isoformat'):
+                        dt_str = dt_value.isoformat()
+                    else:
+                        dt_str = str(dt_value)
+                    # Remove trailing Z if present (Google wants local time format)
+                    updates[time_field]["dateTime"] = dt_str.replace("Z", "")
 
-        if "end" in updates and isinstance(updates["end"], dict):
-            if "dateTime" in updates["end"]:
-                updates["end"]["dateTime"] = updates["end"]["dateTime"].replace("Z", "")
+        # Handle flexibility via extendedProperties
+        if 'flexibility' in updates:
+            flexibility = updates.pop('flexibility')
+            # Merge with existing extendedProperties if present
+            existing_props = event.get('extendedProperties', {})
+            private_props = existing_props.get('private', {})
+            private_props['flexibility'] = flexibility
+            updates['extendedProperties'] = {'private': private_props}
 
-        # Apply updates
-        event.update(updates)
+        # Handle blocking via Google's transparency field
+        if 'blocking' in updates:
+            blocking = updates.pop('blocking')
+            updates['transparency'] = 'opaque' if blocking else 'transparent'
 
-        # Update the event in Google Calendar
-        print("Data before update: ", parent_event_id, event)
-        updated_event = service.events().update(calendarId='primary', eventId=parent_event_id, body=event).execute()
-        print("\n\nUpdated event is: ", updated_event)
-        logger.info(f"Event updated: {updated_event.get('htmlLink')}")
+        # Build the patch body - only include fields we want to update
+        # This is cleaner than modifying the full event object
+        patch_body = {}
+        allowed_fields = ['summary', 'description', 'start', 'end', 'location', 'recurrence', 'attendees', 'reminders', 'extendedProperties', 'transparency']
+        for field in allowed_fields:
+            if field in updates:
+                patch_body[field] = updates[field]
+        
+        if not patch_body:
+            logger.warning("No valid fields to update")
+            return event  # Nothing to update, return original
+        
+        logger.debug(f"Patching event {target_event_id} with: {patch_body}")
+        
+        # Use patch instead of update - patch only sends changed fields
+        # This is safer for single instance updates
+        updated_event = service.events().patch(
+            calendarId='primary', 
+            eventId=target_event_id, 
+            body=patch_body,
+            sendUpdates='all'  # Notify attendees of the change
+        ).execute()
+        
+        logger.info(f"Event updated successfully: {updated_event.get('htmlLink')}")
         return updated_event
+        
     except Exception as e:
-        logger.error(f"An error occurred while updating the event: {e}")
+        logger.error(f"An error occurred while updating the event: {e}", exc_info=True)
         return None
 
 

@@ -36,6 +36,9 @@ class MaintenanceManager:
             'kg_explorer': timedelta(hours=2),
             'kg_repair_pipeline': timedelta(minutes=5),
             'taxonomy_processing': timedelta(minutes=20),
+            'location_tracking': timedelta(minutes=30),  # Check location every 30 minutes
+            'physical_status': timedelta(minutes=5),  # Check physical/cognitive status every 5 minutes (must be faster than orchestrator)
+            'proactive_orchestrator': timedelta(minutes=10),  # Run proactive suggestions every 10 minutes
         }
 
         self.last_summary_time = datetime.now(timezone.utc)
@@ -171,10 +174,12 @@ class MaintenanceManager:
         if self.should_publish("summarize_chat"):
             if getattr(self, 'kg_processing_running', False) or getattr(self, 'taxonomy_processing_running', False):
                 logger.debug("⏸️ Skipping chat summarization - KG/taxonomy processing in progress")
+            elif getattr(self, 'chat_summary_running', False):
+                logger.debug("⏸️ Chat summarization already running in background")
             else:
                 messages = DI.global_blackboard.get_messages()
                 if self.should_summarize(messages):
-                    ChatSummaryRunner(DI.global_blackboard).run()
+                    self._run_chat_summary_async()
 
         # 3. Tool execution (respects universal quiet hours from config, skip if KG/taxonomy/planner running)
         if self.should_publish("maintenance"):
@@ -193,11 +198,10 @@ class MaintenanceManager:
         if self.should_publish("system_state_monitor"):
             if getattr(self, 'kg_processing_running', False) or getattr(self, 'taxonomy_processing_running', False):
                 logger.debug("⏸️ Skipping system state monitor - KG/taxonomy processing in progress")
+            elif getattr(self, 'system_state_monitor_running', False):
+                logger.debug("⏸️ System state monitor already running in background")
             elif can_run_feature('system_state_monitor'):
-                try:
-                    DI.system_state_monitor.run()
-                except AttributeError:
-                    logger.info("System state monitor not available - skipping")
+                self._run_system_state_monitor_async()
             else:
                 logger.debug("⏸️ System state monitor disabled in settings")
 
@@ -238,11 +242,20 @@ class MaintenanceManager:
             else:
                 self.run_taxonomy_processing()
 
-        # 8. Knowledge Graph Explorer - DISABLED
+        # 9. Location tracking - NOW HANDLED BY BackgroundTaskManager
+        # Runs every 30 minutes independently of browser
+        
+        # 10. Physical status tracking - NOW HANDLED BY BackgroundTaskManager  
+        # Runs every 5 minutes independently of browser
+        
+        # 11. Proactive Orchestrator - NOW HANDLED BY BackgroundTaskManager
+        # Runs every 10 minutes independently of browser
+
+        # 12. Knowledge Graph Explorer - DISABLED
         # if self.should_publish("kg_explorer"):
         #     self.run_kg_explorer()
 
-        # 9. KG REPAIR PIPELINE (DISABLED)
+        # 12. KG REPAIR PIPELINE (DISABLED)
         # if self.should_publish("kg_repair_pipeline"):
         #     self.run_kg_repair_pipeline()
 
@@ -326,6 +339,130 @@ class MaintenanceManager:
             self.last_summary_time = datetime.now(timezone.utc)
             save_to_unified_db(result, "chat")
 
+    # =========================================================================
+    # Async Wrappers for Long-Running Tasks
+    # These run in background threads to avoid blocking the EventHandlerHub
+    # =========================================================================
+
+    def _run_chat_summary_async(self):
+        """Run chat summarization in background thread."""
+        self.chat_summary_running = True
+        thread = threading.Thread(target=self._chat_summary_worker, daemon=True)
+        thread.start()
+        logger.info("💬 Started chat summarization in background thread")
+
+    def _chat_summary_worker(self):
+        """Background worker for chat summarization."""
+        try:
+            logger.info("💬 Chat summarization background worker started")
+            ChatSummaryRunner(DI.global_blackboard).run()
+            logger.info("💬 Chat summarization completed")
+        except Exception as e:
+            logger.error(f"❌ Error in chat summarization: {e}", exc_info=True)
+        finally:
+            self.chat_summary_running = False
+
+    def _run_system_state_monitor_async(self):
+        """Run system state monitor in background thread."""
+        self.system_state_monitor_running = True
+        thread = threading.Thread(target=self._system_state_monitor_worker, daemon=True)
+        thread.start()
+        logger.info("🔍 Started system state monitor in background thread")
+
+    def _system_state_monitor_worker(self):
+        """Background worker for system state monitor."""
+        try:
+            logger.info("🔍 System state monitor background worker started")
+            DI.system_state_monitor.run()
+            logger.info("🔍 System state monitor completed")
+        except AttributeError:
+            logger.info("System state monitor not available")
+        except Exception as e:
+            logger.error(f"❌ Error in system state monitor: {e}", exc_info=True)
+        finally:
+            self.system_state_monitor_running = False
+
+    def _run_location_tracking_async(self):
+        """Run location tracking in background thread."""
+        self.location_tracking_running = True
+        thread = threading.Thread(target=self._location_tracking_worker, daemon=True)
+        thread.start()
+        logger.info("📍 Started location tracking in background thread")
+
+    def _location_tracking_worker(self):
+        """Background worker for location tracking."""
+        try:
+            logger.info("📍 Location tracking background worker started")
+            self.run_location_tracking()
+        except Exception as e:
+            logger.error(f"❌ Error in location tracking worker: {e}", exc_info=True)
+        finally:
+            self.location_tracking_running = False
+            logger.info("📍 Location tracking background worker finished")
+
+    def _run_physical_status_tracking_async(self):
+        """Run physical status tracking in background thread."""
+        self.physical_status_running = True
+        thread = threading.Thread(target=self._physical_status_tracking_worker, daemon=True)
+        thread.start()
+        logger.info("📊 Started physical status tracking in background thread")
+
+    def _physical_status_tracking_worker(self):
+        """Background worker for physical status tracking."""
+        try:
+            logger.info("Physical status tracking background worker started")
+            self.run_physical_status_tracking()
+        except Exception as e:
+            logger.error(f"Error in physical status tracking worker: {e}", exc_info=True)
+        finally:
+            self.physical_status_running = False
+            logger.info("Physical status tracking background worker finished")
+
+    def _run_proactive_orchestrator_async(self):
+        """Run proactive orchestrator in background thread."""
+        self.proactive_orchestrator_running = True
+        thread = threading.Thread(target=self._proactive_orchestrator_worker, daemon=True)
+        thread.start()
+        logger.info("Started proactive orchestrator in background thread")
+
+    def _proactive_orchestrator_worker(self):
+        """Background worker for proactive orchestrator."""
+        try:
+            logger.info("Proactive orchestrator background worker started")
+            self.run_proactive_orchestrator()
+        except Exception as e:
+            logger.error(f"Error in proactive orchestrator worker: {e}", exc_info=True)
+        finally:
+            self.proactive_orchestrator_running = False
+            logger.info("Proactive orchestrator background worker finished")
+
+    def run_proactive_orchestrator(self):
+        """
+        Run the proactive orchestrator to suggest breaks, hydration, stretches, etc.
+        
+        This runs every ~10 minutes and can create multiple suggestions per run.
+        """
+        print("run_proactive_orchestrator() called")
+        logger.info("run_proactive_orchestrator() starting...")
+        try:
+            from app.assistant.proactive_orchestrator import get_orchestrator_manager
+            
+            orchestrator = get_orchestrator_manager()
+            result = orchestrator.run()
+            
+            suggestions_count = result.get('suggestions_created', 0)
+            if suggestions_count > 0:
+                print(f"Proactive orchestrator created {suggestions_count} suggestion(s)")
+                logger.info(f"Proactive orchestrator created {suggestions_count} suggestion(s)")
+            else:
+                reason = result.get('reason', 'No suggestions needed')
+                print(f"Proactive orchestrator: {reason}")
+                logger.info(f"Proactive orchestrator: {reason}")
+                
+        except Exception as e:
+            print(f"Error in proactive orchestrator: {e}")
+            logger.error(f"Error in proactive orchestrator: {e}", exc_info=True)
+
     def setup_daily_summary_schedule(self):
         """
         Set up the daily summary to run at 7am every day.
@@ -369,11 +506,28 @@ class MaintenanceManager:
 
     def run_daily_summary(self):
         """
-        Execute the daily summary generation.
+        Execute the daily summary generation in a background thread.
         Called by idle mode handler between 6am-5pm, once per day.
+        
+        Runs in a separate thread to avoid blocking the EventHandlerHub worker,
+        which would delay socket emissions and other events.
         """
+        # Check if already running
+        if getattr(self, 'daily_summary_running', False):
+            logger.info("⏸️ Daily summary already running in background - skipping")
+            return {"success": False, "error": "Already running"}
+        
+        # Mark as running and spawn thread
+        self.daily_summary_running = True
+        thread = threading.Thread(target=self._daily_summary_worker, daemon=True)
+        thread.start()
+        logger.info("📋 Started daily summary in background thread")
+        return {"success": True, "message": "Started in background"}
+    
+    def _daily_summary_worker(self):
+        """Background worker for daily summary processing."""
         try:
-            logger.info("🕖 Daily summary triggered by idle mode")
+            logger.info("🕖 Daily summary background worker started")
             result = self.daily_summary_scheduler.run_daily_summary()
 
             if result.get("success"):
@@ -381,15 +535,11 @@ class MaintenanceManager:
             else:
                 logger.error(f"❌ Daily summary failed: {result.get('error')}")
 
-            return result
-
         except Exception as e:
             logger.error(f"❌ Error in daily summary execution: {e}")
-            return {
-                "success": False,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "error": str(e)
-            }
+        finally:
+            self.daily_summary_running = False
+            logger.info("📋 Daily summary background worker finished")
 
     def run_rag_processing(self):
         # DEPRECATED: RAG processing has been replaced by the knowledge graph pipeline
@@ -506,6 +656,61 @@ class MaintenanceManager:
             logger.error(f"❌ Error in taxonomy processing: {e}")
         finally:
             self.taxonomy_processing_running = False
+
+    def run_location_tracking(self):
+        """
+        Build/refresh the location timeline based on calendar events.
+        
+        This runs periodically to predict where the user will be throughout
+        the day based on calendar events with locations. Other agents can
+        query: "Where will user be in 2 hours?"
+        """
+        print("📍 run_location_tracking() called")
+        logger.info("📍 run_location_tracking() starting...")
+        try:
+            from app.assistant.location_manager.location_manager import get_location_manager
+            
+            location_manager = get_location_manager()
+            print("📍 Got location manager, calling refresh()...")
+            
+            # Rebuild timeline from calendar and infer gaps
+            current = location_manager.refresh()
+            
+            # Log summary
+            summary = location_manager.get_location_summary(hours_ahead=12)
+            print(f"📍 Location timeline refreshed:\n{summary}")
+            logger.info(f"📍 Location timeline refreshed:\n{summary}")
+            
+        except Exception as e:
+            print(f"❌ Error in location tracking: {e}")
+            logger.error(f"❌ Error in location tracking: {e}", exc_info=True)
+
+    def run_physical_status_tracking(self):
+        """
+        Assess and refresh the user's physical, cognitive, and emotional status.
+        
+        This runs periodically to track energy levels, cognitive load, mood, etc.
+        Other agents can query: "Is this a good time for a complex question?"
+        """
+        print("📊 run_physical_status_tracking() called")
+        logger.info("📊 run_physical_status_tracking() starting...")
+        try:
+            from app.assistant.physical_status_manager.physical_status_manager import get_physical_status_manager
+            
+            status_manager = get_physical_status_manager()
+            print("📊 Got physical status manager, calling refresh()...")
+            
+            # Refresh status assessment
+            status_manager.refresh()
+            
+            # Log summary
+            summary = status_manager.get_status_summary()
+            print(f"📊 Physical status refreshed: {summary}")
+            logger.info(f"📊 Physical status refreshed: {summary}")
+            
+        except Exception as e:
+            print(f"❌ Error in physical status tracking: {e}")
+            logger.error(f"❌ Error in physical status tracking: {e}", exc_info=True)
 
     def run_kg_explorer(self):
         """

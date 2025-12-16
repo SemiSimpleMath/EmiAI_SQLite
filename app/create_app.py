@@ -82,7 +82,10 @@ def create_app(config_class="config.DevelopmentConfig"):
         kg_visualizer_bp,
         taxonomy_viewer_bp,
         google_oauth_bp,
-        health_check_bp
+        health_check_bp,
+        debug_status_bp,
+        debug_orchestrator_bp,
+        proactive_api_bp
     )
     
     # Import ngrok route
@@ -116,6 +119,9 @@ def create_app(config_class="config.DevelopmentConfig"):
     app.register_blueprint(daily_summary_route_bp)
     app.register_blueprint(entity_cards_editor_bp)
     app.register_blueprint(health_check_bp)
+    app.register_blueprint(debug_status_bp)
+    app.register_blueprint(debug_orchestrator_bp)
+    app.register_blueprint(proactive_api_bp)
     
     # KG/Taxonomy/Graph Visualizer routes - only register if available (disabled in alpha)
     # All of these require chromadb/sentence-transformers

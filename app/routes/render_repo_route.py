@@ -30,6 +30,42 @@ def render_repo_route():
             try:
                 events = event_repo.search_events(data_type=category)
                 events = json.loads(events)  # Convert JSON string to dict
+                
+                # Filter out past calendar events
+                if category == "calendar":
+                    current_datetime_utc = datetime.now(timezone.utc)
+                    filtered_events = []
+                    for event in events:
+                        event_data = event.get("data", {})
+                        # Use END time to filter - keep events that haven't ended yet
+                        end_val = event_data.get("end") or event_data.get("start")
+                        
+                        # Handle both string and dict formats for end time
+                        # Dict format: {"dateTime": "...", "timeZone": "..."} or {"date": "..."}
+                        # String format: "2025-12-12T10:00:00Z"
+                        if isinstance(end_val, dict):
+                            end_str = end_val.get("dateTime") or end_val.get("date")
+                        else:
+                            end_str = end_val
+                        
+                        if end_str:
+                            try:
+                                if isinstance(end_str, str):
+                                    end_dt = datetime.fromisoformat(end_str.replace("Z", "+00:00"))
+                                    # Keep events that haven't ended yet
+                                    if end_dt >= current_datetime_utc:
+                                        filtered_events.append(event)
+                                else:
+                                    # If it's not a string, keep the event
+                                    filtered_events.append(event)
+                            except ValueError:
+                                # If we can't parse the date, keep the event
+                                filtered_events.append(event)
+                        else:
+                            filtered_events.append(event)
+                    print(f"🗓️ Calendar: Filtered {len(events)} -> {len(filtered_events)} events (removed ended)")
+                    events = filtered_events
+                
                 if category == "scheduler":
                     print(f"🔍 Scheduler: Loaded {len(events)} events before filtering")
                     #print("\n\n\n", events)

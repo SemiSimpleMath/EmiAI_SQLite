@@ -24,6 +24,9 @@ class UnifiedLog(Base):
     message = Column(Text, nullable=False)
     source = Column(Text, nullable=False)
     processed = Column(Boolean, default=False, nullable=False)
+    
+    # Switchboard classification (nullable for backwards compatibility)
+    category = Column(String, nullable=True)  # "preference", "task", "fact", "wellness", etc.
 
 class InfoDatabase(Base):
     __tablename__ = 'info_database'

@@ -177,11 +177,23 @@ class SchedulerTool(BaseTool):
     # Handler for deleting a scheduler event.
     ############################################################################
     def handle_delete_scheduler_event(self, arguments: Dict[str, Any], tool_message: 'ToolMessage'):
+        """
+        Delete a scheduler event.
+        If cascade=True, also deletes all linked children from the event hierarchy.
+        """
         try:
             logger.info("Handling delete_scheduler_event action.")
             event_id = arguments.get('event_id')
+            cascade = arguments.get('cascade', False)
+            
             if not event_id:
                 raise ValueError("Missing 'event_id' for deleting scheduler event.")
+
+            deleted_children = []
+            
+            # Handle cascade deletion
+            if cascade:
+                deleted_children = self._cascade_delete_children('scheduler', event_id)
 
             logger.info(f"Attempting to delete scheduler event with ID: {event_id}")
             # Delete the event from the repository.
@@ -192,10 +204,16 @@ class SchedulerTool(BaseTool):
             logger.info(f"Requesting delete event for event_id: {event_id}")
 
             result = DI.scheduler.event_scheduler.delete_event(event_id)
+            
+            # Clean up EventNode if it exists
+            self._cleanup_event_node('scheduler', event_id)
 
             self._update_repo_cache()
 
-            success_message = f"{result}."
+            if cascade and deleted_children:
+                success_message = f"{result}. Also deleted {len(deleted_children)} linked children: {deleted_children}"
+            else:
+                success_message = f"{result}."
             tool_result = ToolResult(result_type="success", content=success_message)
             return self.publish_result(tool_result)
 
@@ -203,6 +221,66 @@ class SchedulerTool(BaseTool):
             logger.exception(f"Error in handle_delete_scheduler_event: {e}")
             error_result = ToolResult(result_type="error", content=f"Error in DeleteSchedulerEvent: {e}")
             return self.publish_error(error_result)
+    
+    def _cascade_delete_children(self, source_system: str, source_id: str) -> list:
+        """Delete all children linked to this event in the EventNode graph."""
+        deleted = []
+        try:
+            from app.assistant.event_graph import get_event_node_manager
+            mgr = get_event_node_manager()
+            
+            hierarchy = mgr.get_event_hierarchy(f"{source_system}:{source_id}")
+            if not hierarchy:
+                return deleted
+            
+            # Get all descendants and delete them
+            subtree = hierarchy.get('subtree', [])
+            parent_node_id = hierarchy['node']['node_id']
+            
+            for node in subtree:
+                if node['node_id'] != parent_node_id:
+                    node_with_sources = mgr.get_node_with_sources(node['node_id'])
+                    if node_with_sources:
+                        for source in node_with_sources.get('sources', []):
+                            child_deleted = self._delete_source_item(source)
+                            if child_deleted:
+                                deleted.append(child_deleted)
+                                
+        except Exception as e:
+            logger.warning(f"Error in cascade delete: {e}")
+        return deleted
+    
+    def _delete_source_item(self, source: dict) -> str:
+        """Delete an item from its source system."""
+        try:
+            source_system = source.get('source_system')
+            source_id = source.get('source_id')
+            
+            if source_system == 'scheduler':
+                DI.scheduler.event_scheduler.delete_event(source_id)
+                self.repo_manager.delete_event(source_id, data_type="scheduler")
+                return f"scheduler:{source_id}"
+            elif source_system == 'google_calendar':
+                # Would need calendar service - skip for now
+                logger.info(f"Skipping calendar deletion for {source_id} - use delete_calendar_event")
+                return None
+            elif source_system == 'google_tasks':
+                # TODO: Implement
+                return None
+        except Exception as e:
+            logger.warning(f"Error deleting {source}: {e}")
+        return None
+    
+    def _cleanup_event_node(self, source_system: str, source_id: str):
+        """Remove the EventNode after deleting from source."""
+        try:
+            from app.assistant.event_graph import get_event_node_manager
+            mgr = get_event_node_manager()
+            node = mgr.get_node_by_source(source_system, source_id)
+            if node:
+                mgr.delete_node(node['node_id'], cascade=False)
+        except Exception as e:
+            logger.debug(f"No EventNode to clean up for {source_system}:{source_id}: {e}")
 
     ############################################################################
     # Handler for fetching scheduler events.
@@ -219,7 +297,10 @@ class SchedulerTool(BaseTool):
         scheduler = DI.scheduler
         fetched_events = scheduler.event_scheduler.get_events(start_date=start_date, end_date=end_date)
 
+        # PHASE 1: Process all events (no DB writes)
+        events_to_store = []
         event_sync_list = []
+        
         for event in fetched_events:
             event_id = event.event_id
             event_type = event.event_type
@@ -239,17 +320,20 @@ class SchedulerTool(BaseTool):
                 if isinstance(data.get("event_payload"), dict):
                     data["occurrence"] = data["event_payload"].get("occurrence")
 
-                # Store the event with unique store_id for repeats
-                self.repo_manager.store_event(
-                    id=store_id,  # Store ID for uniqueness
-                    event_data=data,
-                    data_type="scheduler",
-                    event_id=event_id  # Reference ID
-                )
+                events_to_store.append((store_id, data, event_id))
                 event_sync_list.append(store_id)
 
-        # Sync local database with server events
-        self.repo_manager.sync_events_with_server(event_sync_list, "scheduler")
+        # PHASE 2: Batch write to database
+        if events_to_store:
+            logger.debug(f"Batch writing {len(events_to_store)} scheduler events to repo")
+            for store_id, data, event_id in events_to_store:
+                self.repo_manager.store_event(
+                    id=store_id,
+                    event_data=data,
+                    data_type="scheduler",
+                    event_id=event_id
+                )
+            self.repo_manager.sync_events_with_server(event_sync_list, "scheduler")
 
         fetch_events_result = ToolResult(
             result_type="scheduler_events",
@@ -404,7 +488,10 @@ class SchedulerTool(BaseTool):
         scheduler = DI.scheduler
         fetched_events = scheduler.event_scheduler.get_events(start_date=start_date, end_date=end_date)
 
+        # PHASE 1: Process all events (no DB writes)
+        events_to_store = []
         event_sync_list = []
+        
         for event in fetched_events:
             event_id = event.event_id
             event_type = event.event_type
@@ -427,17 +514,21 @@ class SchedulerTool(BaseTool):
                 store_id = event_id
                 data = event.model_dump()
 
-            self.repo_manager.store_event(
-                id=store_id,
-                event_data=data,
-                data_type="scheduler",
-                event_id=event_id
-            )
-
-
+            events_to_store.append((store_id, data, event_id))
             event_sync_list.append(store_id)
 
-        self.repo_manager.sync_events_with_server(event_sync_list, "scheduler")
+        # PHASE 2: Batch write to database
+        if events_to_store:
+            logger.debug(f"Batch writing {len(events_to_store)} scheduler events to repo")
+            for store_id, data, event_id in events_to_store:
+                self.repo_manager.store_event(
+                    id=store_id,
+                    event_data=data,
+                    data_type="scheduler",
+                    event_id=event_id
+                )
+            self.repo_manager.sync_events_with_server(event_sync_list, "scheduler")
+        
         return fetched_events
 
 

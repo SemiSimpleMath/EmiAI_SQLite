@@ -90,21 +90,13 @@ class UIToolCaller():
         logger.debug(f"Response type: {type(response)}")
         logger.debug(f"Response attributes: {dir(response)}")
         
-        data_list = response.data_list
-        logger.debug(f"data_list: {data_list}")
-        logger.debug(f"data_list type: {type(data_list)}")
-        logger.debug(f"data_list length: {len(data_list) if data_list else 'None'}")
+        # Agent returns structured output in response.data
+        result = response.data
         
-        # Check if data_list is empty or None
-        if not data_list or len(data_list) == 0:
-            logger.error("No data in response.data_list - cannot process message")
-            return
+        logger.debug(f"response.data: {result}")
         
-        result = data_list[0] # This feels dumb but ok...
-        
-        # Check if result is a dictionary
-        if not isinstance(result, dict):
-            logger.error(f"Expected dict in data_list[0], got {type(result)}: {result}")
+        if not result or not isinstance(result, dict):
+            logger.error(f"Expected dict in response.data, got {type(result)}: {result}")
             return
             
         chat_str = result.get('chat_str')

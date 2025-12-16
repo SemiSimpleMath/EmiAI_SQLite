@@ -19,11 +19,8 @@ def daily_summary_page():
         storage = DailySummaryStorage()
         stored_data = storage.get_daily_summary(date_str)
         
-        # If no summary for requested date, fall back to latest available
-        if not stored_data and date_str is None:
-            current_app.logger.info("No daily summary for today, falling back to latest available")
-            stored_data = storage.get_latest_daily_summary()
-        
+        # If requesting today (no date param) and no summary exists, show "not generated"
+        # Don't fall back to old summaries - that's confusing
         if stored_data:
             # Use stored data (pass the entire structure, conversion function will extract summary)
             html_data = convert_daily_summary_result_to_html_data(stored_data)
