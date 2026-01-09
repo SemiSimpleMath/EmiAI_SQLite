@@ -1,0 +1,21 @@
+name: entertainment_manager::final_answer
+class_name: FinalAnswer
+color: blue
+llm_params:
+  engine: gpt-5-mini
+  llm_provider: openai
+  temperature: 1
+allowed_tools: []
+except_tools: []
+user_context_items:
+- date_time
+- task
+- information
+- summary
+- final_answer_content
+- recent_history
+- checklist
+- accomplishments
+- visited_links
+- important_links
+type: agent

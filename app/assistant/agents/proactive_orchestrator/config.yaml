@@ -1,0 +1,29 @@
+name: proactive_orchestrator
+class_name: Agent
+color: "purple"
+llm_params:
+  llm_provider: "gemini"
+  engine: "gemini-3-flash-preview"
+  temperature: 0.8
+
+system_context_items:
+- resource_user_data
+- resource_tracked_activities
+
+user_context_items:
+- date_time
+- day_of_week
+- computer_activity
+- time_since
+- location_summary
+- weather_summary
+- recent_chat_messages
+- calendar_events
+- active_tickets
+- recent_accepted_tickets
+- recent_tickets
+- resource_tracked_activities
+- resource_user_routine
+- resource_user_health
+- resource_daily_context
+

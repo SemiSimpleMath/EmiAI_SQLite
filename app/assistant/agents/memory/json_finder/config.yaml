@@ -1,0 +1,19 @@
+name: memory::json_finder
+class_name: Agent
+color: "orange"
+llm_params:
+  llm_provider: "openai"
+  engine: "gpt-4.1-nano"
+  temperature: 0.1
+
+# No tools - this agent analyzes JSON structure
+allowed_tools: []
+except_tools: []
+
+system_context_items: []
+
+user_context_items:
+  - json_content
+  - query
+
+

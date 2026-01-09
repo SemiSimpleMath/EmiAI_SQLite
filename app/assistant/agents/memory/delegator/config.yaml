@@ -1,0 +1,11 @@
+name: memory::delegator
+class_name: Delegator
+color: "purple"
+llm_provider: "openai"
+llm_params:
+  engine: "gpt-4.1-nano"
+  temperature: 0.1
+
+# No tools required for Delegator
+allowed_tools: []
+

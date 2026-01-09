@@ -1,0 +1,21 @@
+name: memory::json_editor
+class_name: Agent
+color: "green"
+llm_params:
+  llm_provider: "openai"
+  engine: "gpt-4.1-mini"
+  temperature: 0.3
+
+# No tools - this agent decides edits
+allowed_tools: []
+except_tools: []
+
+system_context_items: []
+
+user_context_items:
+  - json_content
+  - query
+  - found_locations
+  - suggested_insert_path
+
+

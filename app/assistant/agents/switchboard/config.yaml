@@ -1,0 +1,17 @@
+name: switchboard
+class_name: Agent
+color: "cyan"
+llm_params:
+  llm_provider: "openai"
+  engine: "gpt-4.1-nano"  # Cheap, fast model for classification
+  temperature: 0.1
+
+# No tools - just classifies and returns
+allowed_tools: []
+except_tools: []
+
+system_context_items: []
+
+user_context_items:
+  - messages  # Window of messages to analyze
+

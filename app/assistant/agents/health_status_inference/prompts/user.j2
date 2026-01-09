@@ -1,0 +1,111 @@
+**Current Time:** {{ date_time }}
+
+---
+
+## 1. Reference Context (The Baseline)
+*Use these to interpret the data. What is "Normal" for this user?*
+
+**Health Profile (What hurts?):**
+{% if resource_user_health %}
+{% if resource_user_health.chronic_conditions %}
+Chronic Conditions:
+{% for condition in resource_user_health.chronic_conditions %}
+- **{{ condition.display }}**: {{ condition.severity }} - {{ condition.accommodation }} (Every {{ condition.suggested_interval_minutes }} min)
+{% endfor %}
+{% endif %}
+{% if resource_user_health.sleep %}
+Sleep: Target bedtime {{ resource_user_health.sleep.target_bedtime }}, Caffeine cutoff {{ resource_user_health.sleep.caffeine_cutoff }}
+{% endif %}
+{% endif %}
+
+**Daily Routine (Energy Patterns):**
+{% if resource_user_routine %}
+{% if resource_user_routine.morning %}
+- Morning: Wake up {{ resource_user_routine.morning.wake_up.usual_time }}
+{% endif %}
+{% if resource_user_routine.work %}
+- Focus Time: {{ resource_user_routine.work.focus_time.best_hours }}
+{% endif %}
+{% endif %}
+
+---
+
+## 2. Hard Data (System Telemetry)
+
+**Sleep Summary (Last 24 Hours):**
+{% if sleep_summary %}
+- **Total Sleep:** {{ sleep_summary.total_sleep_hours }}h
+- **Quality:** {{ sleep_summary.sleep_quality }}{% if sleep_summary.fragmented %} (Fragmented){% endif %}
+
+{% if sleep_summary.sleep_segments %}
+**Sleep Segments:**
+{% for segment in sleep_summary.sleep_segments %}
+- {{ segment.start }} → {{ segment.end }} ({{ segment.duration_hours }}h) [{{ segment.source }}]
+{% endfor %}
+{% else %}
+- No sleep segments in last 24 hours
+{% endif %}
+{% else %}
+[No sleep data available]
+{% endif %}
+
+**Activity Timers (PRE-CALCULATED):**
+*Status indicates if user is neglecting needs.*
+{% if time_since %}
+| Activity | Time Ago | Threshold | Status |
+| :--- | :--- | :--- | :--- |
+{% for key, activity in resource_tracked_activities.activities.items() %}
+{% set field = "minutes_since_" ~ activity.field_name %}
+{% set mins = time_since[field] %}
+{% set threshold = activity.threshold.minutes if activity.threshold else none %}
+| {{ activity.display_name }} | {{ mins if mins is not none else "Unknown" }} min | {{ threshold if threshold else "-" }} | {% if threshold and mins and mins > threshold %} OVERDUE {% else %}OK{% endif %} |
+{% endfor %}
+| Coffees today | {{ time_since.coffees_today }} | - | - |
+{% else %}
+[No time tracking data available]
+{% endif %}
+
+**Recent Ticket Interaction (Last 4 Hours):**
+*Did the user Accept (compliance) or Dismiss (frustration) recent suggestions?*
+{% if recent_tickets %}
+{% for ticket in recent_tickets %}
+- [{{ ticket.state | upper }}] {{ ticket.suggestion_type }}: "{{ ticket.title }}" ({{ ticket.updated_at_local }})
+{% endfor %}
+{% else %}
+[No recent ticket interactions]
+{% endif %}
+
+**Schedule Load:**
+* **Meetings Today:** {{ meetings_today }}
+* **Calendar Context:**
+{% for event in calendar_events %}
+  - {{ event.start_time }}-{{ event.end_time }}: {{ event.event_name }}{% if event.is_meeting %} [MTG]{% endif %}
+{% endfor %}
+{% if not calendar_events %} [Clear Schedule] {% endif %}
+
+**Pending Tasks:**
+{% for task in tasks %}
+{% if not task.completed %}- {{ task.title }}{% endif %}
+{% endfor %}
+
+---
+
+## 3. Soft Signals (Chat History)
+*Crucial for detecting Mood and Acute Pain (headaches, sickness).*
+
+**Recent Messages:**
+{{ recent_chat_history }}
+
+---
+
+## Your Job: ASSESS CURRENT STATE
+
+Synthesize the Timers + Tickets (Section 2) + Chat (Section 3) against the Health Profile (Section 1).
+
+**Infer and Output:**
+1. **Health Status:** Is a chronic condition (Back/Finger) at risk due to "OVERDUE" timers? Any acute pain in chat?
+2. **Physiology:** Estimated energy level and hunger/thirst.
+3. **Cognitive/Emotional:** Mental load and mood based on schedule and chat tone.
+4. **Ticket Signals:** If user recently dismissed items, consider "Interruption Tolerance" to be LOW.
+
+Output the JSON only.

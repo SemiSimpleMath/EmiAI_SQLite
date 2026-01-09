@@ -1,0 +1,11 @@
+## Conversation Window ({{ messages | length }} messages)
+
+{% for msg in messages %}
+**[{{ msg.role | default('unknown') }}]**: {{ msg.message | default('') }}
+{% endfor %}
+
+---
+
+Analyze this conversation window. Extract any user preferences or feedback as tagged chunks.
+If there are no preferences or feedback to extract, return an empty `tagged_chunks` list.
+

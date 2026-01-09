@@ -1,0 +1,95 @@
+Tracked activities (use these exact field_name values):
+{% for key, a in resource_tracked_activities.activities.items() %}
+- {{ a.display_name }} ({{ a.field_name }}){% if a.threshold %}: {{ a.threshold.label }}{% endif %}
+{% endfor %}
+
+What to do:
+
+A) activity_counts (most important)
+- You will receive the current totals for today.
+- If evidence indicates an activity occurred, increment it.
+- Return the NEW TOTAL for every activity you output.
+- If no new evidence for an activity, keep its count unchanged.
+
+Example (fixed):
+- Current: hydration=2, user: "drank water" -> return hydration=3
+- Current: coffee=1, calendar event ended: "Coffee with Sam" -> return coffee=2
+- Current: hydration=2, no evidence -> return hydration=2
+
+B) activities_to_reset
+Reset when evidence strongly indicates the activity occurred:
+- Chat mentions doing it
+- Accepted ticket implies completion
+- Completed calendar event implies it happened
+
+If a statement is ambiguous, choose the single most plausible activity. Do not reset multiple stretches unless the evidence clearly supports it.
+
+C) sleep_events
+Detect sleeping and waking.
+- sleep_events are for actual sleep periods or final wake-up.
+Examples:
+- "slept from 11 to 7" -> start_time 23:00, end_time 07:00
+- "woke up at 7" -> end_time 07:00
+
+D) wake_segments
+Detect nighttime wake-ups that are not final wake-up.
+Fields:
+- start_time (required)
+- end_time (optional)
+- duration_estimate_minutes (optional)
+- notes (optional)
+- raw_mention (required)
+
+Duration estimation:
+- "for a while", "quite a while" -> 45
+- "for a bit", "briefly" -> 20
+- "couldn't sleep", "tossed and turned" -> 60
+- "got up to [task]" (bathroom, water) -> 10
+
+Important:
+- Only create wake_segments for nighttime wake-ups.
+- If user says "woke up at 7" and does not mention going back to sleep, that is a sleep_event end_time, not a wake_segment.
+
+Current time: {{ date_time }}
+
+Current activity counts today:
+{% if current_activity_counts %}
+{% for activity, count in current_activity_counts.items() %}
+- {{ activity }}: {{ count }}
+{% endfor %}
+{% else %}
+All counts are 0.
+{% endif %}
+
+Recent chat messages:
+{% if recent_chat_excerpts %}
+{% for chat in recent_chat_excerpts %}
+- [{{ chat.time_local }}] {{ chat.sender }}: {{ chat.content }}
+{% endfor %}
+{% else %}
+No recent chat messages.
+{% endif %}
+
+Completed calendar events:
+{% if calendar_events_completed %}
+{% for event in calendar_events_completed %}
+- {{ event.event_name }} (ended at {{ event.end_time }})
+{% endfor %}
+{% else %}
+No recently completed calendar events.
+{% endif %}
+
+Recently accepted tickets:
+{% if recent_accepted_tickets %}
+{% for ticket in recent_accepted_tickets %}
+- "{{ ticket.title }}"
+  - Message: {{ ticket.message }}
+  - Type: {{ ticket.suggestion_type }}
+  - Accepted at: {{ ticket.accepted_at_local }}
+  - User action: {{ ticket.user_action }}
+{% if ticket.user_text %}  - User wrote: "{{ ticket.user_text }}"
+{% endif %}
+{% endfor %}
+{% else %}
+No recently accepted tickets.
+{% endif %}

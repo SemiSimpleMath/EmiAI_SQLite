@@ -1,0 +1,167 @@
+**Current Time:** {{ date_time }}
+**Day:** {{ day_of_week }}
+**Context:** {{ location_summary }} | Weather: {{ weather_summary }}
+
+{% if resource_daily_context and (resource_daily_context.day_description or resource_daily_context.milestones) %}
+---
+
+## Daily Context
+*This captures the main themes and milestones of today - use this to avoid redundant suggestions and understand the day's overall state.*
+
+{% if resource_daily_context.day_description %}
+**Day Summary:** {{ resource_daily_context.day_description }}
+{% endif %}
+
+{% if resource_daily_context.milestones %}
+**What's Happened Today:**
+{% for milestone in resource_daily_context.milestones %}
+- {% if milestone.time %}[{{ milestone.time }}]{% endif %} {{ milestone.description }}
+{% endfor %}
+{% endif %}
+
+---
+{% endif %}
+
+**Recent Chat:**
+{% if recent_chat_messages %}
+{% for msg in recent_chat_messages %}
+[{{ msg.time_local }}] {{ msg.sender }}: {{ msg.content }}
+{% endfor %}
+{% else %}
+No recent chat.
+{% endif %}
+
+---
+
+## 1. The Law (User Preferences & Rules)
+*Use these resource files as your decision logic. They contain the user's specific rules for timing, limits, and health.*
+
+**Routine & Timing Preferences:**
+{% if resource_user_routine %}
+{% if resource_user_routine.morning %}
+- **Morning:** Wake up {{ resource_user_routine.morning.wake_up.usual_time }}
+  {% for note in resource_user_routine.morning.wake_up.notes %}- {{ note }}
+  {% endfor %}
+{% endif %}
+{% if resource_user_routine.work %}
+- **Focus Time:** Best hours are {{ resource_user_routine.work.focus_time.best_hours }}
+  {% for note in resource_user_routine.work.focus_time.notes %}- {{ note }}
+  {% endfor %}
+{% endif %}
+{% if resource_user_routine.evening %}
+- **Evening:** Family time starts at {{ resource_user_routine.evening.after_work.family_time_start }}
+  {% if resource_user_routine.evening.wind_down %}
+  Wind-down schedule:
+  {% for item in resource_user_routine.evening.wind_down %}
+    {% if item.time %}- {{ item.time }}: {{ item.activity }}{% endif %}
+    {% if item.preference %}- {{ item.preference }}{% endif %}
+    {% if item.goal %}- {{ item.goal }}{% endif %}
+  {% endfor %}
+  {% endif %}
+{% endif %}
+{% endif %}
+
+**Health Conditions & Accommodations:**
+{% if resource_user_health %}
+{% if resource_user_health.chronic_conditions %}
+{% for condition in resource_user_health.chronic_conditions %}
+- **{{ condition.display }}** ({{ condition.severity }}): {{ condition.accommodation }} (Every {{ condition.suggested_interval_minutes }} min)
+{% endfor %}
+{% endif %}
+{% if resource_user_health.sleep %}
+- **Sleep:** Caffeine cutoff at {{ resource_user_health.sleep.caffeine_cutoff }} ({{ resource_user_health.sleep.caffeine_reason }})
+- **Target Bedtime:** {{ resource_user_health.sleep.target_bedtime }}
+{% endif %}
+{% endif %}
+
+---
+
+## 2. The Facts (System Telemetry)
+
+**Computer Presence:**
+{% if computer_activity.is_afk %}
+[STATUS: USER IS AWAY]
+- Idle Time: {{ computer_activity.idle_minutes | round | int }} minutes.
+- Directive: Do NOT suggest movement or stretches while user is away.
+{% else %}
+[STATUS: USER IS ACTIVE]
+- Idle Time: {{ computer_activity.idle_minutes | round(1) }} minutes.
+{% endif %}
+
+**Consumption Log (Today):**
+- Coffees Consumed: {{ time_since.coffees_today }}
+- Time since last coffee: {{ time_since.minutes_since_coffee }} min
+- Water Consumed: {{ time_since.water_count }} (approx)
+- Time since last water: {{ time_since.minutes_since_hydration }} min
+
+**Activity Timers:**
+*Compare these "Time Since" values against the thresholds below.*
+
+**How to interpret thresholds:**
+- **Number (e.g., 120 min)**: Suggest when "Time Since" exceeds this value
+- **null ("As scheduled", "Max X/day", etc.)**: Use common sense with the description - check calendar events, daily limits, or time windows, NOT the "Time Since" value
+
+| Activity | Time Since Last | Threshold |
+| :--- | :--- | :--- |
+{% for key, activity in resource_tracked_activities.activities.items() %}
+{% set field = "minutes_since_" ~ activity.field_name %}
+{% set mins = time_since[field] %}
+{% set threshold = activity.threshold.minutes if activity.threshold and activity.threshold.minutes else (activity.threshold.label if activity.threshold else activity.guidance) %}
+| {{ activity.display_name }} | {{ mins if mins is not none else "N/A" }} min | {{ threshold }} |
+{% endfor %}
+
+---
+
+## 3. Operational Constraints (The Veto Layer)
+
+**Calendar Status:**
+{% if calendar_events %}
+[UPCOMING EVENTS]
+{% for event in calendar_events %}
+- {{ event.start_time }} - {{ event.end_time }}: {{ event.event_name }}
+{% endfor %}
+*Directive: If an event is starting in <10 mins, suppress complex suggestions.*
+{% else %}
+[CALENDAR CLEAR] No immediate meetings.
+{% endif %}
+
+**Active Tickets (DUPLICATE CHECK):**
+*Do NOT suggest these types again:*
+{% if active_tickets %}
+{% for ticket in active_tickets %}
+- [ACTIVE] {{ ticket.suggestion_type }}: "{{ ticket.title }}"
+{% endfor %}
+{% else %}
+- None.
+{% endif %}
+
+**Recently Completed (ALREADY DONE CHECK):**
+*User just completed these. Do NOT suggest again for at least 2 hours:*
+{% if recent_accepted_tickets %}
+{% for ticket in recent_accepted_tickets %}
+- [COMPLETED] {{ ticket.suggestion_type }}: "{{ ticket.title }}" ({{ ticket.responded_at_local }})
+{% endfor %}
+{% else %}
+- None.
+{% endif %}
+
+**Recently Dismissed (NAG CHECK):**
+*User said NO to these recently. Do not suggest:*
+{% if recent_tickets %}
+{% for ticket in recent_tickets %}
+{% if ticket.state == 'dismissed' %}
+- [DISMISSED] {{ ticket.suggestion_type }} ({{ ticket.created_at_local }})
+{% endif %}
+{% endfor %}
+{% endif %}
+
+---
+
+## Your Task
+Synthesize the **Rules** (Section 1) with the **Data** (Section 2) to generate a prioritized list of suggestions.
+
+**Logic Checklist:**
+1. **Check Hard Constraints:** Is user AFK? Is a duplicate ticket active? -> STOP.
+2. **Check Rules:** Does `resource_routine_preferences` allow this? (e.g., Check "Coffee Cutoff Time" vs Current Time).
+3. **Check Timers:** Is the "Time Since" value high enough based on the User's frequency preferences?
+4. **Check Context:** Does `resource_user_health` demand an override? (e.g., "Back Pain" = suggest stretch sooner).
