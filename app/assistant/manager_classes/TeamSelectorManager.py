@@ -1,6 +1,5 @@
 # team_selector_manager.py
 import sys
-import traceback
 
 from app.assistant.manager_classes.MultiAgentManager import MultiAgentManager
 
@@ -15,9 +14,6 @@ class TeamSelectorManager(MultiAgentManager):
         """
         Initializes an instance of TeamSelectorManager with its specific configuration.
         """
-        print("\n🔍 TeamSelectorManager instantiated")
-        traceback.print_stack(limit=8)
-
         super().__init__(
             name=name,
             manager_config=manager_config,

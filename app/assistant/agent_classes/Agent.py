@@ -326,14 +326,9 @@ class Agent:
 
         # Load context items
         prompt_injections = self.config.get("system_context_items", [])
-        
-        # DEBUG
-        logger.info(f"[{self.name}] system_context_items from config: {prompt_injections}")
 
         if prompt_injections is not None:
             system_context = self.generate_injections_block(prompt_injections, message)
-            # DEBUG
-            logger.info(f"[{self.name}] Generated system_context keys: {list(system_context.keys())}")
         else:
             system_context = None
 
@@ -700,9 +695,7 @@ class Agent:
             #   Source: DI.global_blackboard["resource_daily_schedule"]
             if key.startswith("resource_"):
                 # Keep the full resource_ prefix in the context
-                logger.info(f"[{self.name}] Processing resource: {key}")
                 resolved_value = self._resolve_resource(key)
-                logger.info(f"[{self.name}] Resolved resource '{key}' type: {type(resolved_value)}, value:\n{resolved_value}")
                 context[key] = resolved_value
                 continue
 

@@ -62,9 +62,18 @@ def _extract_blocking(event: Dict[str, Any]) -> bool:
         return True
 
 
-def format_rrule(freq: str, start: str, byday: Optional[str] = None, until: Optional[str] = None) -> str:
+def format_rrule(
+    freq: str, 
+    start: str, 
+    byday: Optional[str] = None, 
+    until: Optional[str] = None,
+    bymonth: Optional[str] = None,
+    bymonthday: Optional[str] = None,
+    count: Optional[str] = None
+) -> str:
     """
-    Formats an RRULE string using UTC for the UNTIL parameter and ensures DTSTART is included.
+    Formats an RRULE string using UTC for the UNTIL parameter.
+    Preserves BYMONTH, BYMONTHDAY, and other common RRULE components.
     """
     freq = freq.upper()
     if freq not in VALID_FREQ:
@@ -78,6 +87,18 @@ def format_rrule(freq: str, start: str, byday: Optional[str] = None, until: Opti
         if invalid_days:
             raise ValueError(f"Invalid BYDAY value(s): {', '.join(invalid_days)}. Must be among {VALID_BYDAY}.")
         rrule += f";BYDAY={','.join(days)}"
+    
+    if bymonth:
+        # BYMONTH: 1-12 (comma-separated list allowed)
+        rrule += f";BYMONTH={bymonth}"
+    
+    if bymonthday:
+        # BYMONTHDAY: day of month, can be negative (e.g., -1 for last day)
+        rrule += f";BYMONTHDAY={bymonthday}"
+    
+    if count:
+        # COUNT: number of occurrences
+        rrule += f";COUNT={count}"
 
     if until:
         # Parse using the existing helper and then force UTC conversion
@@ -279,6 +300,7 @@ class CalendarTool(BaseTool):
             start = arguments.get('start')
             end = arguments.get('end')
             calendar_name = arguments.get('calendar_name', 'primary')
+            all_day = arguments.get('all_day', False)
             recurrence_rule_input = arguments.get('recurrence_rule')
             time_zone = "UTC"
             description = arguments.get('description')
@@ -304,7 +326,10 @@ class CalendarTool(BaseTool):
                 freq=freq,
                 start=start,
                 byday=parts.get('BYDAY'),
-                until=parts.get('UNTIL')
+                until=parts.get('UNTIL'),
+                bymonth=parts.get('BYMONTH'),
+                bymonthday=parts.get('BYMONTHDAY'),
+                count=parts.get('COUNT')
             )
 
             # build attendees list from your list of dicts
@@ -324,6 +349,7 @@ class CalendarTool(BaseTool):
                 "start": start,
                 "end": end,
                 "time_zone": time_zone,
+                "all_day": all_day,
                 "recurrence_rule": formatted_rrule,
                 "description": description,
                 "location": location,
@@ -334,7 +360,16 @@ class CalendarTool(BaseTool):
             }
             logger.debug(f"Prepared Event Dictionary: {event_dict}")
 
-            event = create_repeating_event(self.service, event_dict)
+            # Resolve calendar name to calendar ID
+            from app.assistant.lib.core_tools.calendar_tool.utils.google_calendar import get_calendar_by_name
+            calendar_id = get_calendar_by_name(self.service, calendar_name)
+            if not calendar_id:
+                logger.warning(f"Calendar '{calendar_name}' not found. Falling back to 'primary'.")
+                calendar_id = 'primary'
+            
+            logger.info(f"Creating event in calendar: {calendar_name} (ID: {calendar_id})")
+
+            event = create_repeating_event(self.service, event_dict, calendarId=calendar_id)
             if not event:
                 raise ValueError("Failed to create the repeating event.")
 

@@ -32,12 +32,29 @@ class TimeEvent(db.Model):
             logger.error(f"Invalid JSON in event {self.event_id}: {e}")
             payload = {}
 
+        # Ensure timezone-aware datetime strings
+        start_date_str = None
+        if self.start_date:
+            dt = self.start_date
+            if dt.tzinfo is None:
+                logger.warning(f"Event {self.event_id} has naive start_date in DB, assuming UTC")
+                dt = dt.replace(tzinfo=timezone.utc)
+            start_date_str = dt.isoformat()
+        
+        end_date_str = None
+        if self.end_date:
+            dt = self.end_date
+            if dt.tzinfo is None:
+                logger.warning(f"Event {self.event_id} has naive end_date in DB, assuming UTC")
+                dt = dt.replace(tzinfo=timezone.utc)
+            end_date_str = dt.isoformat()
+
         return BaseEventData(
             event_id=self.event_id,
             event_type=self.event_type,
             interval=self.interval,
-            start_date=self.start_date.isoformat() if self.start_date else None,
-            end_date=self.end_date.isoformat() if self.end_date else None,
+            start_date=start_date_str,
+            end_date=end_date_str,
             jitter=self.jitter,
             event_payload=payload,
         )
@@ -71,6 +88,8 @@ class EventStorage:
             for record in records:
                 if record.start_date and record.start_date.tzinfo is None:
                     record.start_date = record.start_date.replace(tzinfo=timezone.utc)
+                if record.end_date and record.end_date.tzinfo is None:
+                    record.end_date = record.end_date.replace(tzinfo=timezone.utc)
 
                 if record.event_type == "one_time_event" and record.start_date < now:
                     logger.debug(f"Skipping expired one-time event: {record.event_id}")
@@ -102,23 +121,39 @@ class EventStorage:
                 record.event_payload = event.event_payload
 
                 # Handle start_date
+                start_date_aware = None
                 if event.start_date:
                     dt = event.start_date
                     if isinstance(dt, str):
                         dt = datetime.fromisoformat(dt)
-                    record.start_date = dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
+                    dt = dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
+                    record.start_date = dt
+                    start_date_aware = dt.isoformat()
 
                 # Handle end_date
+                end_date_aware = None
                 if event.end_date:
                     dt = event.end_date
                     if isinstance(dt, str):
                         dt = datetime.fromisoformat(dt)
-                    record.end_date = dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
+                    dt = dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
+                    record.end_date = dt
+                    end_date_aware = dt.isoformat()
 
                 session.add(record)
                 session.commit()
 
-                self.time_events[event.event_id] = event
+                # Store timezone-aware version in memory cache
+                event_with_tz = BaseEventData(
+                    event_id=event.event_id,
+                    event_type=event.event_type,
+                    interval=event.interval,
+                    start_date=start_date_aware,
+                    end_date=end_date_aware,
+                    jitter=event.jitter,
+                    event_payload=event.event_payload
+                )
+                self.time_events[event.event_id] = event_with_tz
 
                 logger.info(f"Saved event: {event.event_id}")
 

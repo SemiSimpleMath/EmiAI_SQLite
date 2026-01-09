@@ -70,6 +70,17 @@ def initialize_services(app):
 
     print("✅ EventHandlerHub started in the background.")
 
+    # Initialize proactive ticket manager (for suggestions and tool approvals)
+    from app.assistant.proactive_orchestrator import get_ticket_manager
+    proactive_ticket_manager = get_ticket_manager()
+    ServiceLocator.register('proactive_ticket_manager', proactive_ticket_manager)
+    logger.info("✅ Proactive ticket manager initialized")
+    
+    # Clear stale tool approval tickets from previous session
+    cleared = proactive_ticket_manager.clear_tool_approval_tickets()
+    if cleared > 0:
+        logger.info(f"🧹 Cleared {cleared} stale tool approval tickets")
+
     # Initialize and start background task manager
     # These tasks run independently of the browser/UI
     from app.assistant.background_task_manager import start_background_tasks

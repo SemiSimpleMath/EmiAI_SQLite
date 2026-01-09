@@ -98,20 +98,6 @@ class OpenAILLM(BaseLLMProvider):
         timer_id = performance_monitor.start_timer('llm_structured_output', f"{model}_{len(messages)}")
         
         try:
-            # Use structured output parsing with Pydantic models
-            # completion = self.client.chat.completions.parse(
-            #     model=model,  # Use the model from send_params
-            #     messages=messages,
-            #     response_format=response_format,  # Structured output using Pydantic model
-            #     timeout=timeout,  # Configurable timeout, defaults to 120 seconds
-            #     temperature=temperature
-            # )
-            # print(completion)
-            # # Return the parsed structured output
-            # result = completion.choices[0].message.parsed
-
-           # print(f"DEBUG: {messages}")
-
             if model in ["gpt-5, gpt-5-mini, gpt-5-nano"]:
                 response = self.client.responses.parse(
                     model=model,
@@ -131,35 +117,7 @@ class OpenAILLM(BaseLLMProvider):
                 )
 
             result = response.output_parsed
-            # Extract detailed token usage information
-            # usage = completion.usage if hasattr(completion, 'usage') else None
-            # if usage:
-            #     prompt_tokens = getattr(usage, 'prompt_tokens', 0)
-            #     completion_tokens = getattr(usage, 'completion_tokens', 0)
-            #     cached_tokens = getattr(usage, 'cached_tokens', 0)
-            #     total_tokens = getattr(usage, 'total_tokens', 0)
-            #
-            #     # Log detailed token usage
-            #     logger.info(f"Token usage - Input: {prompt_tokens}, Output: {completion_tokens}, Cached: {cached_tokens}, Total: {total_tokens}")
-            #     print(f"💰 Token usage - Input: {prompt_tokens}, Output: {completion_tokens}, Cached: {cached_tokens}, Total: {total_tokens}")
-            # else:
-            #     prompt_tokens = completion_tokens = cached_tokens = total_tokens = None
-            #     logger.warning("No token usage information available in response")
-            #     print("⚠️ No token usage information available")
             
-            # End timing and record success
-            # performance_monitor.end_timer(timer_id, {
-            #     'status': 'success',
-            #     'model': model,
-            #     'message_count': len(messages),
-            #     'temperature': temperature,
-            #     'timeout': timeout,
-            #     'total_tokens': total_tokens,
-            #     'prompt_tokens': prompt_tokens,
-            #     'completion_tokens': completion_tokens,
-            #     'cached_tokens': cached_tokens
-            # })
-
             return result.model_dump()
 
         except Exception as e:
@@ -283,6 +241,123 @@ class OpenAILLM(BaseLLMProvider):
                 return "LLM rate limit exceeded"
             else:
                 return f"LLM error: {str(e)}"
+
+class GeminiLLM(BaseLLMProvider):
+    _instance = None  # Singleton instance
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super(GeminiLLM, cls).__new__(cls)
+            cls._instance._init_once(*args, **kwargs)
+        return cls._instance
+
+    def _init_once(self, api_key=None, engine="gemini-1.5-flash", temperature=0.1, **kwargs):
+        """Initializes GeminiLLM once using the new google-genai package."""
+        if hasattr(self, "client"):
+            return
+
+        try:
+            from google import genai
+            from google.genai import types
+            self.genai = genai
+            self.types = types
+        except ImportError:
+            logger.error("google-genai is not installed. Please run 'pip install google-genai'")
+            raise
+
+        self.api_key = api_key or os.environ.get('GOOGLE_API_KEY')
+        if not self.api_key:
+             logger.warning("GOOGLE_API_KEY not found in environment. Gemini will fail until set.")
+        
+        # New API uses Client instead of configure
+        self.client = self.genai.Client(api_key=self.api_key)
+        self.engine = engine
+        self.temperature = temperature
+        
+        # Apply additional settings if needed
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+    def _convert_messages_to_contents(self, messages: List[Dict]):
+        """Converts OpenAI-style messages to new Gemini contents format."""
+        from typing import Tuple, Optional
+        system_instruction = None
+        contents = []
+        
+        for msg in messages:
+            role = msg.get("role")
+            content = msg.get("content")
+            
+            if role == "system":
+                system_instruction = content
+            elif role == "user":
+                contents.append(content)
+            elif role == "assistant":
+                # For multi-turn, we'd need to handle this differently
+                # For now, append as user context
+                pass
+                
+        # Join all user messages
+        combined_content = "\n\n".join(contents) if contents else ""
+        return system_instruction, combined_content
+
+    def structured_output(self, messages, **send_params):
+        response_format = send_params.get('response_format')
+        model_name = send_params.get('engine', self.engine)
+        temperature = send_params.get('temperature', self.temperature)
+        timeout = send_params.get('timeout', 240)
+
+        if response_format is None:
+            logger.error("Response format is None for Gemini structured output.")
+            raise ValueError("Invalid response format: None")
+
+        logger.info(f"Using Gemini model: {model_name} for structured output")
+        print(f"🔍 Using Gemini model: {model_name} (temp: {temperature})")
+        
+        timer_id = performance_monitor.start_timer('llm_structured_output_gemini', f"{model_name}_{len(messages)}")
+        
+        try:
+            system_instruction, content = self._convert_messages_to_contents(messages)
+            
+            # Build the full prompt with system instruction
+            if system_instruction:
+                full_prompt = f"{system_instruction}\n\n{content}"
+            else:
+                full_prompt = content
+            
+            # New API accepts Pydantic models directly!
+            response = self.client.models.generate_content(
+                model=model_name,
+                contents=full_prompt,
+                config=self.types.GenerateContentConfig(
+                    response_mime_type='application/json',
+                    response_schema=response_format,  # Pass Pydantic model directly
+                    temperature=temperature,
+                )
+            )
+            
+            # New API has .text attribute for JSON string
+            import json as json_lib
+            result_dict = json_lib.loads(response.text)
+            
+            performance_monitor.end_timer(timer_id, {'status': 'success', 'model': model_name})
+            logger.info(f"✅ Gemini response received successfully")
+            return result_dict
+
+        except Exception as e:
+            performance_monitor.end_timer(timer_id, {'status': 'error', 'model': model_name, 'error': str(e)})
+            logger.error(f"Gemini LLM error: {e}", exc_info=True)
+            
+            # Return a dict to match expected structure
+            return {
+                "error": True,
+                "message": f"Gemini error: {str(e)}",
+                "model": model_name
+            }
+
+    def structured_output_json(self, messages, **send_params):
+        """Gemini equivalent for structured JSON output."""
+        return self.structured_output(messages, **send_params)
 
 
 class LLMInterface:

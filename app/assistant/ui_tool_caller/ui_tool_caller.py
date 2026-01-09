@@ -67,7 +67,11 @@ class UIToolCaller():
     def _execute_tool_async(self, tool_class, tool_message):
         try:
             tool_instance = tool_class()
-            result = tool_instance.execute(tool_message)
+            # Use run() if available (goes through approval check), otherwise execute()
+            if hasattr(tool_instance, 'run'):
+                result = tool_instance.run(tool_message)
+            else:
+                result = tool_instance.execute(tool_message)
 
             if result and hasattr(result, "content"):
                 logger.info(f"Tool execution result: {result.content}")

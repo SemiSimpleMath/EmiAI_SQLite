@@ -1,0 +1,19 @@
+name: daily_context_tracker
+class_name: Agent
+color: "magenta"
+llm_params:
+  llm_provider: "gemini"
+  engine: "gemini-3-flash-preview"
+  temperature: 0.2
+
+system_context_items:
+- resource_user_data
+- resource_user_routine
+
+user_context_items:
+- date_time
+- current_daily_context
+- calendar_events_upcoming
+- recent_chat_excerpts
+- calendar_events_completed
+- recent_accepted_tickets

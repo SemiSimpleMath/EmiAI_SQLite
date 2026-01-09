@@ -118,7 +118,11 @@ class ToolCaller(ControlNode):
             tool_name=tool_name,
             tool_data=arguments or {}
         )
-        tool_result = tool_instance.execute(tool_message)
+        # Use run() if available (goes through approval check), otherwise execute()
+        if hasattr(tool_instance, 'run'):
+            tool_result = tool_instance.run(tool_message)
+        else:
+            tool_result = tool_instance.execute(tool_message)
 
         # Store the tool result in blackboard
         self.blackboard.update_state_value("tool_result", tool_result)

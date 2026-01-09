@@ -1,0 +1,58 @@
+**Current Time:** {{ date_time }}
+
+---
+
+{% set has_description = current_daily_context.day_description and current_daily_context.day_description | length > 0 %}
+{% set has_milestones = current_daily_context.milestones and current_daily_context.milestones | length > 0 %}
+{% set context_is_empty = not has_description and not has_milestones %}
+
+## Current Daily Context
+{% if context_is_empty %}
+*No day assessment yet. Start by looking at the calendar and any other available information and write a summary of the expected day.*
+{% else %}
+*This is what we've captured so far today. You may ADD to or UPDATE this.*
+
+{{ current_daily_context | tojson(indent=2) }}
+{% endif %}
+
+{% if calendar_events_upcoming %}
+## Calendar Events (Rest of Today)
+*These are the dominant structure of the day - major commitments and obligations.*
+{% for event in calendar_events_upcoming %}
+- **{{ event.summary }}** ({{ event.start }} - {{ event.end }})
+{% endfor %}
+{% endif %}
+
+{% if recent_chat_excerpts %}
+## Recent Chat Messages
+{% for chat in recent_chat_excerpts %}
+- [{{ chat.time_local }}] {{ chat.sender }}: {{ chat.content }}
+{% endfor %}
+{% endif %}
+
+{% if calendar_events_completed %}
+## Completed Calendar Events
+{% for event in calendar_events_completed %}
+- **{{ event.event_name }}** (ended at {{ event.end_time }})
+{% endfor %}
+{% endif %}
+
+{% if recent_accepted_tickets %}
+## Recently Accepted Tickets
+*User explicitly responded to these wellness suggestions.*
+{% for ticket in recent_accepted_tickets %}
+- **"{{ ticket.title }}"** ({{ ticket.accepted_at_local }})
+  - Suggested type: {{ ticket.suggestion_type }}
+  - User action: **{{ ticket.user_action }}**
+  {% if ticket.user_text %}
+  - User said: "{{ ticket.user_text }}"
+  {% endif %}
+{% endfor %}
+{% endif %}
+
+---
+
+**Based on all evidence above, what NEW or UPDATED daily context should we add?**
+
+Remember most of the time we are adding nothing.  We only want the significant events of the day that a person would remember as they tink about
+their day.

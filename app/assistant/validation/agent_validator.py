@@ -17,6 +17,10 @@ def _check_namespace_consistency():
     base_dir = Path("app/assistant/agents")
     seen = set()
     for folder in base_dir.rglob("config.yaml"):
+        # Skip archived agents
+        if ".archive" in str(folder):
+            continue
+            
         rel = folder.parent.relative_to(base_dir)
         namespace = str(rel.parent).replace("/", "_") if rel.parent != Path(".") else None
         with open(folder) as f:

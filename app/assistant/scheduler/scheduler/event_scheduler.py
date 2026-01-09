@@ -81,6 +81,14 @@ class EventScheduler:
         for event in all_events:
             start = datetime.fromisoformat(event.start_date) if isinstance(event.start_date, str) else event.start_date
             end = datetime.fromisoformat(event.end_date) if isinstance(event.end_date, str) else event.end_date
+            
+            # Ensure timezone-aware datetimes (assume UTC if naive)
+            if start and start.tzinfo is None:
+                logger.warning(f"Event {event.event_id} has naive 'start' datetime, assuming UTC")
+                start = start.replace(tzinfo=timezone.utc)
+            if end and end.tzinfo is None:
+                logger.warning(f"Event {event.event_id} has naive 'end' datetime, assuming UTC")
+                end = end.replace(tzinfo=timezone.utc)
 
             if event.event_type == "interval":
                 if not start:
@@ -94,6 +102,13 @@ class EventScheduler:
                 else:
                     dtstart = start
 
+                # DEBUG: Print timezone info before comparison
+                logger.debug(f"🐛 DEBUG: Event ID={event.event_id}, interval={event.interval}")
+                logger.debug(f"🐛 DEBUG: filter_end={filter_end} (tzinfo={filter_end.tzinfo})")
+                logger.debug(f"🐛 DEBUG: end={end} (tzinfo={end.tzinfo if end else None})")
+                logger.debug(f"🐛 DEBUG: start={start} (tzinfo={start.tzinfo if start else None})")
+                logger.debug(f"🐛 DEBUG: Event payload={event.event_payload}")
+                
                 recurrence_until = min(filter_end, end) if end else filter_end
 
                 for occ in rrule(freq=SECONDLY, interval=event.interval, dtstart=dtstart, until=recurrence_until):

@@ -60,6 +60,7 @@ class ResourceManager:
                 DI.global_blackboard.update_state_value(resource_id, "")
 
     def _read_file(self, path: Path) -> Any:
+        """Read file and return content - JSON as dict, text files as strings."""
         if path.suffix.lower() in [".json"]:
             with path.open("r", encoding="utf-8") as f:
                 return json.load(f)
@@ -143,7 +144,16 @@ class ResourceManager:
                 DI.global_blackboard.update_state_value(resource_id, content)
                 self._resource_files[resource_id] = file_path
                 loaded_count += 1
-                logger.info(f"✅ Loaded JSON resource '{resource_id}' from {file_path.name}")
+                
+                # Debug: Show what we're storing for user preference files
+                if resource_id.startswith('resource_user_'):
+                    if isinstance(content, str):
+                        preview = content[:150].replace('\n', ' ')
+                        logger.info(f"✅ Loaded JSON resource '{resource_id}' as MARKDOWN ({len(content)} chars): {preview}...")
+                    else:
+                        logger.info(f"✅ Loaded JSON resource '{resource_id}' as DICT with keys: {list(content.keys()) if isinstance(content, dict) else type(content)}")
+                else:
+                    logger.info(f"✅ Loaded JSON resource '{resource_id}' from {file_path.name}")
             except Exception as e:
                 logger.error(f"Failed to load JSON resource '{resource_id}' from {file_path}: {e}")
                 skipped_count += 1

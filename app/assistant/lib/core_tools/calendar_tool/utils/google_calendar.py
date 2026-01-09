@@ -29,31 +29,49 @@ CREDENTIALS_PATH = PROJECT_ROOT / "credentials" / "credentials.json"
 from app.assistant.utils.time_utils import utc_to_local, get_local_timezone
 
 
-def convert_utc_to_local_event_times(event_dict):
+def convert_utc_to_local_event_times(event_dict, all_day=False):
     """
     Converts UTC start and end times in an event dictionary to local time.
+    For all-day events, converts to date format instead of dateTime.
 
     Args:
         event_dict (dict): Dictionary containing event details, including 'start' and 'end' in UTC.
+        all_day (bool): If True, creates all-day event using date format.
 
     Returns:
-        dict: Updated event dictionary with 'start' and 'end' converted to local time.
+        dict: Updated event dictionary with 'start' and 'end' converted appropriately.
     """
     local_timezone = get_local_timezone().key  # Fetch local timezone (e.g., 'America/Los_Angeles')
 
     event_dict = event_dict.copy()  # Ensure we don't modify the original dictionary
 
-    if "start" in event_dict and event_dict["start"]:
-        event_dict["start"] = {
-            "dateTime": utc_to_local(event_dict["start"]).isoformat(),
-            "timeZone": local_timezone
-        }
+    if all_day:
+        # All-day events use 'date' format (YYYY-MM-DD) without time
+        # Google Calendar expects end date to be exclusive (next day)
+        if "start" in event_dict and event_dict["start"]:
+            start_local = utc_to_local(event_dict["start"])
+            event_dict["start"] = {
+                "date": start_local.strftime("%Y-%m-%d")
+            }
+        
+        if "end" in event_dict and event_dict["end"]:
+            end_local = utc_to_local(event_dict["end"])
+            event_dict["end"] = {
+                "date": end_local.strftime("%Y-%m-%d")
+            }
+    else:
+        # Timed events use 'dateTime' format with timezone
+        if "start" in event_dict and event_dict["start"]:
+            event_dict["start"] = {
+                "dateTime": utc_to_local(event_dict["start"]).isoformat(),
+                "timeZone": local_timezone
+            }
 
-    if "end" in event_dict and event_dict["end"]:
-        event_dict["end"] = {
-            "dateTime": utc_to_local(event_dict["end"]).isoformat(),
-            "timeZone": local_timezone
-        }
+        if "end" in event_dict and event_dict["end"]:
+            event_dict["end"] = {
+                "dateTime": utc_to_local(event_dict["end"]).isoformat(),
+                "timeZone": local_timezone
+            }
 
     return event_dict
 
@@ -202,12 +220,15 @@ def create_repeating_event(service, event_dict, calendarId='primary'):
     Create a repeating event on Google Calendar and log full request details.
     Supports extended properties for custom fields like 'flexibility'.
     Supports Google's native 'transparency' field via 'blocking' parameter.
+    Supports all-day events via 'all_day' parameter.
+    Includes idempotency check to prevent duplicate event creation.
     """
     # Extract required fields
     summary = event_dict.get('event_name')
     start = event_dict.get('start')
     end = event_dict.get('end')
     recurrence_rule = event_dict.get('recurrence_rule')
+    all_day = event_dict.get('all_day', False)
 
     # Extract optional fields
     description = event_dict.get('description')
@@ -221,12 +242,59 @@ def create_repeating_event(service, event_dict, calendarId='primary'):
         logger.error("Event dictionary missing required fields.")
         return None
 
-    # Convert UTC→local for Google payload
+    # Generate a deterministic dedupe key for idempotency
+    # Format: calendar|summary|start_date|recurrence_pattern
+    import hashlib
+    from datetime import datetime
+    
+    start_date = start.split('T')[0] if 'T' in start else start
+    # Extract key parts of recurrence rule for deduplication
+    recurrence_parts = recurrence_rule.replace('RRULE:', '').split(';')
+    recurrence_key = '|'.join(sorted([p for p in recurrence_parts if any(x in p for x in ['FREQ', 'BYMONTH', 'BYMONTHDAY'])]))
+    
+    dedupe_string = f"{calendarId}|{summary.lower().strip()}|{start_date}|{recurrence_key}"
+    dedupe_key = hashlib.md5(dedupe_string.encode()).hexdigest()
+    
+    logger.info(f"Idempotency check - dedupe_key: {dedupe_key} (from: {dedupe_string})")
+    
+    # Check for existing event with same dedupe_key
+    try:
+        # Search for events with this dedupe_key in the past 30 days and next 365 days
+        from datetime import timedelta
+        now = datetime.utcnow()
+        time_min = (now - timedelta(days=30)).isoformat() + 'Z'
+        time_max = (now + timedelta(days=365)).isoformat() + 'Z'
+        
+        existing_events = service.events().list(
+            calendarId=calendarId,
+            timeMin=time_min,
+            timeMax=time_max,
+            q=summary,  # Pre-filter by summary for efficiency
+            maxResults=100,
+            singleEvents=False  # Get parent recurring events
+        ).execute()
+        
+        for event in existing_events.get('items', []):
+            # Check if this event has our dedupe_key
+            extended_props = event.get('extendedProperties', {})
+            private_props = extended_props.get('private', {})
+            event_dedupe_key = private_props.get('dedupe_key')
+            
+            if event_dedupe_key == dedupe_key:
+                logger.info(f"Found existing event with same dedupe_key: {event.get('id')} - {event.get('summary')}")
+                logger.info(f"Returning existing event instead of creating duplicate")
+                return event
+        
+        logger.info("No existing event found with this dedupe_key, proceeding with creation")
+    except Exception as e:
+        logger.warning(f"Error during idempotency check: {e}. Proceeding with creation.")
+
+    # Convert UTC→local for Google payload (handles all_day flag)
     times = convert_utc_to_local_event_times({
         "event_name": summary,
         "start": start,
         "end": end
-    })
+    }, all_day=all_day)
 
     event = {
         'summary': summary,
@@ -264,6 +332,8 @@ def create_repeating_event(service, event_dict, calendarId='primary'):
     extended_props = {}
     if flexibility:
         extended_props['flexibility'] = flexibility
+    # Add dedupe_key for idempotency
+    extended_props['dedupe_key'] = dedupe_key
     if extended_props:
         event['extendedProperties'] = {'private': extended_props}
 

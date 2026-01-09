@@ -15,20 +15,20 @@ You receive a **proposed label** (already standardized by another agent) and a l
 - **node_type_mismatch**: Types don't align (already filtered, but double-check)
 
 ### Do NOT Conflate
-- **ownership_vs_membership**: "owns X" ≠ "member of X"
-- **part_whole_vs_membership**: "part of system" ≠ "member of team"
-- **event_vs_state**: "Birthday Party" ≠ "Birthday" (state/property)
+- **ownership_vs_membership**: "owns X" != "member of X"
+- **part_whole_vs_membership**: "part of system" != "member of team"
+- **event_vs_state**: "Birthday Party" != "Birthday" (state/property)
 
 ### Mapping Guidelines
 
 **Map to existing (confidence >= 0.75) when:**
 - Semantic match - synonyms, spelling variants, or very closely related concepts
 - Examples:
-  - "Software Engineer" → "Engineer" ✓
-  - "Tech Company" → "Company" ✓
-  - "Birthday Party" → "Birthday Party" ✓
-  - "Food Preference" → "Preference" ✓
-  - "Item Availability" → "Product Availability" ✓ (close enough semantic overlap)
+  - "Software Engineer" -> "Engineer" ✓
+  - "Tech Company" -> "Company" ✓
+  - "Birthday Party" -> "Birthday Party" ✓
+  - "Food Preference" -> "Preference" ✓
+  - "Item Availability" -> "Product Availability" ✓ (close enough semantic overlap)
 
 **Create new (confidence < 0.75) when:**
 - Distinct concept within the node_type, even if somewhat related

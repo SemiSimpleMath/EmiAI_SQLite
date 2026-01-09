@@ -1,5 +1,5 @@
 import os
-from app.services.llm_client import OpenAILLM
+from app.services.llm_client import OpenAILLM, GeminiLLM
 
 # Configure logging
 from app.assistant.utils.logging_config import get_logger
@@ -15,7 +15,14 @@ LLM_CLASSES = {
             "temperature": 0.1,  # Default temperature
         }
     },
-    # Add more providers here...
+    "gemini": {
+        "class": GeminiLLM,
+        "params": {
+            "api_key": os.getenv("GOOGLE_API_KEY"),
+            "engine": "gemini-1.5-flash",
+            "temperature": 0.1,
+        }
+    }
 }
 
 def get_llm_class(provider_name: str):

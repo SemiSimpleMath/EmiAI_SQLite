@@ -2,8 +2,8 @@ name: emi_agent
 class_name: EmiAgent
 color: "white"
 llm_params:
-  llm_provider: "openai"
-  engine: "gpt-4.1"
+  llm_provider: "gemini"
+  engine: "gemini-3-flash-preview"
   temperature: 0.8
 
 system_context_items:
@@ -16,7 +16,6 @@ system_context_items:
 
 user_context_items:
   - date_time
-  - entity_summary
   - history
   - agent_input
 

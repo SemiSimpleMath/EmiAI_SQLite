@@ -123,6 +123,10 @@ def create_app(config_class="config.DevelopmentConfig"):
     app.register_blueprint(debug_orchestrator_bp)
     app.register_blueprint(proactive_api_bp)
     
+    # Wellness management
+    from app.routes.wellness_mgmt import wellness_mgmt_bp
+    app.register_blueprint(wellness_mgmt_bp)
+    
     # KG/Taxonomy/Graph Visualizer routes - only register if available (disabled in alpha)
     # All of these require chromadb/sentence-transformers
     if kg_visualizer_bp is not None:

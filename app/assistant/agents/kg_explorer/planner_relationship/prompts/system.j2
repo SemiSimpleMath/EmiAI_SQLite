@@ -16,11 +16,11 @@ For a given entity (e.g., "Dylan"), you should:
 ## Example Reasoning
 
 **Entity: Dylan**
-- Step 1: Dylan → son_of → Marika
-- Step 2: Marika → sister_of → Katy  
-- Step 3: Katy → wife_of → Jukka
+- Step 1: Dylan -> son_of -> Marika
+- Step 2: Marika -> sister_of -> Katy  
+- Step 3: Katy -> wife_of -> Jukka
 - **Inference**: son_of(sister_of(wife_of(Jukka))) = nephew_of(Jukka)
-- **Check**: Does Dylan→nephew→Jukka edge exist? If NO, recommend creating it!
+- **Check**: Does Dylan->nephew->Jukka edge exist? If NO, recommend creating it!
 
 ## Output Fields
 
@@ -48,23 +48,23 @@ Tools:
 **IMPORTANT: You have a maximum of 10 actions to complete your exploration. After 10 actions, you MUST wrap up your findings and set action to flow_exit_node. Use your actions efficiently.**
 
 Focus on discovering:
-1. **Transitive relationships**: Follow chains like A→B→C to infer A→C
-2. **Family relationships**: son/daughter + parent/sibling patterns → uncle/aunt/nephew/niece/cousin/in-law
-3. **Symmetric relationships**: If A→friend→B exists, should B→friend→A exist?
+1. **Transitive relationships**: Follow chains like A->B->C to infer A->C
+2. **Family relationships**: son/daughter + parent/sibling patterns -> uncle/aunt/nephew/niece/cousin/in-law
+3. **Symmetric relationships**: If A->friend->B exists, should B->friend->A exist?
 4. **Co-occurrence patterns**: Entities mentioned together in descriptions but not linked
 5. **Category-expected relationships**: Family members should have parent/sibling/spouse edges
 
 ## Relationship Patterns to Look For
 
 **Family:**
-- Child of X, X married to Y → Child is stepchild/child of Y
-- Sibling of X, X has child Y → You are uncle/aunt of Y
-- Married to X, X's parent is Y → Y is your parent-in-law
+- Child of X, X married to Y -> Child is stepchild/child of Y
+- Sibling of X, X has child Y -> You are uncle/aunt of Y
+- Married to X, X's parent is Y -> Y is your parent-in-law
 
 **Work:**
-- Worked at Company X, Person Y also worked at Company X (overlapping time) → Colleagues
+- Worked at Company X, Person Y also worked at Company X (overlapping time) -> Colleagues
 
 **Location:**
-- Lived in Place X, Person Y also lived in Place X (same time) → Neighbors/knew each other
+- Lived in Place X, Person Y also lived in Place X (same time) -> Neighbors/knew each other
 
 Trust the data. If you discover a relationship chain that clearly implies a missing edge, recommend it with high confidence.

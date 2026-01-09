@@ -10,24 +10,29 @@ from app.assistant.utils.logging_config import get_logger
 logger = get_logger(__name__)
 
 class LLMFactory:
-    _llm_interface = None  # Singleton instance
+    _llm_interfaces = {}  # Dict of provider_name -> LLMInterface singleton
 
     @staticmethod
     def get_llm_interface(**kwargs):
-        if LLMFactory._llm_interface is None:
-            LLM_class_name = kwargs.get('llm_provider')
-            LLM_class = get_llm_class(LLM_class_name)
+        provider_name = kwargs.get('llm_provider', 'openai')
+        
+        # Return cached interface if it exists for this provider
+        if provider_name in LLMFactory._llm_interfaces:
+            return LLMFactory._llm_interfaces[provider_name]
+        
+        # Create new singleton for this provider
+        LLM_class = get_llm_class(provider_name)
+        if not LLM_class:
+            raise ValueError(f"Unsupported LLM provider class: {provider_name}")
 
-            if not LLM_class:
-                raise ValueError(f"Unsupported LLM provider class: {LLM_class_name}")
+        # Each provider class (OpenAILLM, GeminiLLM) is already a singleton
+        llm_provider_instance = LLM_class(**kwargs)
 
-            # Create a singleton LLM provider instance
-            llm_provider_instance = LLM_class(**kwargs)
-
-            # Create a singleton LLMInterface with the provider
-            LLMFactory._llm_interface = LLMInterface(llm_provider_instance)
-
-        return LLMFactory._llm_interface
+        # Cache this provider's interface
+        LLMFactory._llm_interfaces[provider_name] = LLMInterface(llm_provider_instance)
+        
+        logger.info(f"Created LLM interface for provider: {provider_name}")
+        return LLMFactory._llm_interfaces[provider_name]
 
 class Link(BaseModel):
     key: str

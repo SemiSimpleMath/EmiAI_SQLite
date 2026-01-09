@@ -1,6 +1,6 @@
 import uuid
 from typing import Type, Iterable, List, Dict, Optional, Any
-from sqlalchemy import create_engine, Column, Integer, Text, JSON, TIMESTAMP, func, String, Boolean
+from sqlalchemy import create_engine, Column, Integer, Text, JSON, TIMESTAMP, func, String, Boolean, Float
 from sqlalchemy.sql import select
 from datetime import date
 
@@ -25,8 +25,9 @@ class UnifiedLog(Base):
     source = Column(Text, nullable=False)
     processed = Column(Boolean, default=False, nullable=False)
     
-    # Switchboard classification (nullable for backwards compatibility)
-    category = Column(String, nullable=True)  # "preference", "task", "fact", "wellness", etc.
+    # Deprecated: Category field no longer used. Classification now handled by SwitchboardRunner
+    # which extracts facts into extracted_facts table. Kept for backwards compatibility.
+    category = Column(String, nullable=True)
 
 class InfoDatabase(Base):
     __tablename__ = 'info_database'
@@ -80,6 +81,36 @@ class EmailCheckState(Base):
     def compute_hash(event_data):
         """Compute a SHA-256 hash of the event data."""
         return sha256(json.dumps(event_data, sort_keys=True).encode()).hexdigest()
+
+
+class ExtractedFact(Base):
+    """
+    Stores extracted facts from Switchboard agent.
+    These are self-contained chunks of conversation that contain user preferences or feedback.
+    """
+    __tablename__ = 'extracted_facts'
+    
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    category = Column(String, nullable=False)  # 'preference', 'state'
+    summary = Column(Text, nullable=False)  # Extracted summary of the fact
+    tags = Column(JSON, nullable=False)  # List of tags for routing (e.g., ['food', 'routine'])
+    confidence = Column(Float, nullable=False)  # Confidence score (0.0-1.0)
+    source_message_ids = Column(JSON, nullable=False)  # List of message IDs in the window
+    window_end_id = Column(String, nullable=False)  # High water mark - last message ID in window
+    processed = Column(Boolean, default=False, nullable=False)  # Whether Memory Manager has processed this
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+
+
+class SwitchboardState(Base):
+    """
+    Tracks the state of SwitchboardRunner processing.
+    Stores the last processed message ID to enable resumable processing.
+    """
+    __tablename__ = 'switchboard_state'
+    
+    id = Column(Integer, primary_key=True, default=1)  # Singleton row
+    last_processed_message_id = Column(String, nullable=True)  # Last message ID processed
+    last_run_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
 
 def initialize_database(force_test_db=False):
     """

@@ -247,7 +247,7 @@ class MaintenanceToolCaller:
             tool_entry = self.tool_registry.get_tool('get_email')
             tool_class = tool_entry["tool_class"]
             tool_instance = tool_class()
-            tool_instance.execute(tool_message)
+            tool_instance.run(tool_message)
 
         self._run_tool_async('get_email', tool_call)
 
@@ -265,7 +265,7 @@ class MaintenanceToolCaller:
             tool_entry = self.tool_registry.get_tool('get_news')
             tool_class = tool_entry["tool_class"]
             tool_instance = tool_class()
-            tool_instance.execute(tool_message)
+            tool_instance.run(tool_message)
 
         self._run_tool_async('get_news', tool_call)
 
@@ -309,7 +309,7 @@ class MaintenanceToolCaller:
             tool_entry = self.tool_registry.get_tool("get_calendar_events")
             tool_class = tool_entry["tool_class"]
             tool_instance = tool_class()
-            tool_instance.execute(tool_message)
+            tool_instance.run(tool_message)
 
         self._run_tool_async('get_calendar_events', tool_call)
 
@@ -342,7 +342,7 @@ class MaintenanceToolCaller:
             tool_entry = self.tool_registry.get_tool('get_todo_tasks')
             tool_class = tool_entry["tool_class"]
             tool_instance = tool_class()
-            tool_instance.execute(tool_message)
+            tool_instance.run(tool_message)
 
         self._run_tool_async('get_todo_tasks', tool_call)
 
@@ -364,7 +364,7 @@ class MaintenanceToolCaller:
             tool_entry = self.tool_registry.get_tool('get_scheduler_events')
             tool_class = tool_entry["tool_class"]
             tool_instance = tool_class()
-            tool_instance.execute(tool_message)
+            tool_instance.run(tool_message)
 
         self._run_tool_async('get_scheduler_events', tool_call)
 
@@ -381,6 +381,6 @@ class MaintenanceToolCaller:
             tool_entry = self.tool_registry.get_tool('get_weather')
             tool_class = tool_entry["tool_class"]
             tool_instance = tool_class()
-            tool_instance.execute(tool_message)
+            tool_instance.run(tool_message)
 
         self._run_tool_async('get_weather', tool_call)
