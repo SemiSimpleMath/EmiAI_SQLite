@@ -18,6 +18,8 @@ user_context_items:
   - date_time
   - history
   - agent_input
+  # Enables EmiAudioAgent's entity-card injection behavior (it only runs when some `entity_*` key is requested)
+  - entity_summary
 
 events:
   - emi_chat_speaking_mode_request

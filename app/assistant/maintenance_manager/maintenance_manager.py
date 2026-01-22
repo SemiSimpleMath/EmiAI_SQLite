@@ -37,8 +37,6 @@ class MaintenanceManager:
             'kg_repair_pipeline': timedelta(minutes=5),
             'taxonomy_processing': timedelta(minutes=20),
             'location_tracking': timedelta(minutes=30),  # Check location every 30 minutes
-            'physical_status': timedelta(minutes=5),  # Check physical/cognitive status every 5 minutes (must be faster than orchestrator)
-            'proactive_orchestrator': timedelta(minutes=10),  # Run proactive suggestions every 10 minutes
         }
 
         self.last_summary_time = datetime.now(timezone.utc)
@@ -138,14 +136,6 @@ class MaintenanceManager:
             logger.warning(f"Error parsing quiet hours: {e}, using default behavior")
             return False
 
-    def _is_kg_processing_window(self) -> bool:
-        """
-        DEPRECATED: Use _is_feature_in_quiet_hours('kg') instead.
-        This method is kept for backwards compatibility but always returns True.
-        KG processing is now controlled by feature settings and quiet hours from UI.
-        """
-        return True
-
     def _is_feature_in_quiet_hours(self, feature: str) -> bool:
         """
         Check if a feature is currently in quiet hours based on user settings.
@@ -242,16 +232,7 @@ class MaintenanceManager:
             else:
                 self.run_taxonomy_processing()
 
-        # 9. Location tracking - NOW HANDLED BY BackgroundTaskManager
-        # Runs every 30 minutes independently of browser
-        
-        # 10. Physical status tracking - NOW HANDLED BY BackgroundTaskManager  
-        # Runs every 5 minutes independently of browser
-        
-        # 11. Proactive Orchestrator - NOW HANDLED BY BackgroundTaskManager
-        # Runs every 10 minutes independently of browser
-
-        # 12. Knowledge Graph Explorer - DISABLED
+        # 9. Knowledge Graph Explorer - DISABLED
         # if self.should_publish("kg_explorer"):
         #     self.run_kg_explorer()
 
@@ -400,69 +381,6 @@ class MaintenanceManager:
             self.location_tracking_running = False
             logger.info("📍 Location tracking background worker finished")
 
-    def _run_physical_status_tracking_async(self):
-        """Run physical status tracking in background thread."""
-        self.physical_status_running = True
-        thread = threading.Thread(target=self._physical_status_tracking_worker, daemon=True)
-        thread.start()
-        logger.info("📊 Started physical status tracking in background thread")
-
-    def _physical_status_tracking_worker(self):
-        """Background worker for physical status tracking."""
-        try:
-            logger.info("Physical status tracking background worker started")
-            self.run_physical_status_tracking()
-        except Exception as e:
-            logger.error(f"Error in physical status tracking worker: {e}", exc_info=True)
-        finally:
-            self.physical_status_running = False
-            logger.info("Physical status tracking background worker finished")
-
-    def _run_proactive_orchestrator_async(self):
-        """Run proactive orchestrator in background thread."""
-        self.proactive_orchestrator_running = True
-        thread = threading.Thread(target=self._proactive_orchestrator_worker, daemon=True)
-        thread.start()
-        logger.info("Started proactive orchestrator in background thread")
-
-    def _proactive_orchestrator_worker(self):
-        """Background worker for proactive orchestrator."""
-        try:
-            logger.info("Proactive orchestrator background worker started")
-            self.run_proactive_orchestrator()
-        except Exception as e:
-            logger.error(f"Error in proactive orchestrator worker: {e}", exc_info=True)
-        finally:
-            self.proactive_orchestrator_running = False
-            logger.info("Proactive orchestrator background worker finished")
-
-    def run_proactive_orchestrator(self):
-        """
-        Run the proactive orchestrator to suggest breaks, hydration, stretches, etc.
-        
-        This runs every ~10 minutes and can create multiple suggestions per run.
-        """
-        print("run_proactive_orchestrator() called")
-        logger.info("run_proactive_orchestrator() starting...")
-        try:
-            from app.assistant.proactive_orchestrator import get_orchestrator_manager
-            
-            orchestrator = get_orchestrator_manager()
-            result = orchestrator.run()
-            
-            suggestions_count = result.get('suggestions_created', 0)
-            if suggestions_count > 0:
-                print(f"Proactive orchestrator created {suggestions_count} suggestion(s)")
-                logger.info(f"Proactive orchestrator created {suggestions_count} suggestion(s)")
-            else:
-                reason = result.get('reason', 'No suggestions needed')
-                print(f"Proactive orchestrator: {reason}")
-                logger.info(f"Proactive orchestrator: {reason}")
-                
-        except Exception as e:
-            print(f"Error in proactive orchestrator: {e}")
-            logger.error(f"Error in proactive orchestrator: {e}", exc_info=True)
-
     def setup_daily_summary_schedule(self):
         """
         Set up the daily summary to run at 7am every day.
@@ -592,18 +510,13 @@ class MaintenanceManager:
             logger.info(f"✅ Entity resolution completed: {entity_result}")
 
             # Step 2: Knowledge graph processing (processed_entity_log → KG)
-            # Use context manager pattern to ensure session is closed after processing
             from app.assistant.kg_core.kg_pipeline import process_all_processed_entity_logs_to_kg
-            from app.assistant.kg_core.knowledge_graph_utils import KnowledgeGraphUtils
 
-            # Create kg_utils with context manager to ensure cleanup
-            with KnowledgeGraphUtils() as kg_utils:
-                kg_result = process_all_processed_entity_logs_to_kg(
-                    batch_size=100,
-                    max_batches=1,  # Process one batch per idle cycle to avoid blocking
-                    role_filter=['user', 'assistant'],
-                    kg_utils=kg_utils
-                )
+            kg_result = process_all_processed_entity_logs_to_kg(
+                batch_size=100,
+                max_batches=1,  # Process one batch per idle cycle to avoid blocking
+                role_filter=['user', 'assistant']
+            )
 
             logger.info(f"✅ Knowledge graph processing completed: {kg_result}")
 
@@ -684,33 +597,6 @@ class MaintenanceManager:
         except Exception as e:
             print(f"❌ Error in location tracking: {e}")
             logger.error(f"❌ Error in location tracking: {e}", exc_info=True)
-
-    def run_physical_status_tracking(self):
-        """
-        Assess and refresh the user's physical, cognitive, and emotional status.
-        
-        This runs periodically to track energy levels, cognitive load, mood, etc.
-        Other agents can query: "Is this a good time for a complex question?"
-        """
-        print("📊 run_physical_status_tracking() called")
-        logger.info("📊 run_physical_status_tracking() starting...")
-        try:
-            from app.assistant.physical_status_manager.physical_status_manager import get_physical_status_manager
-            
-            status_manager = get_physical_status_manager()
-            print("📊 Got physical status manager, calling refresh()...")
-            
-            # Refresh status assessment
-            status_manager.refresh()
-            
-            # Log summary
-            summary = status_manager.get_status_summary()
-            print(f"📊 Physical status refreshed: {summary}")
-            logger.info(f"📊 Physical status refreshed: {summary}")
-            
-        except Exception as e:
-            print(f"❌ Error in physical status tracking: {e}")
-            logger.error(f"❌ Error in physical status tracking: {e}", exc_info=True)
 
     def run_kg_explorer(self):
         """

@@ -1,7 +1,6 @@
+# Note to coding agents: This file should not be modified without user permission.
 from datetime import datetime, timezone
 import uuid
-
-from jinja2 import Template
 
 from app.assistant.ServiceLocator.service_locator import DI
 from app.assistant.lib.blackboard.Blackboard import Blackboard
@@ -83,40 +82,14 @@ class EmiReminderHandler(Agent):
 
 
     def get_user_prompt(self, message: Message = None):
-        user_prompt_template = self.config.get("prompts", {}).get("user", "")
-        if not user_prompt_template:
-            logger.error(f"[{self.name}] No user prompt found.")
-            return f"No user prompt available for {self.name}."
-        prompt_injections = self.config.get("user_context_items", {})
-        print("DEBUG EMI ", prompt_injections)
-        if prompt_injections is not None:
-            try:
-                user_context = self.generate_injections_block(prompt_injections, message)
-            except Exception as e:
-                print(f"\n{'=' * 80}")
-                print(f"🛑 FATAL: EmiReminderHandler failed to generate injections block")
-                print(f"   Error: {e}")
-                print(f"{'=' * 80}\n")
-                exit(1)
-        else:
-            user_context = {}
-        agent_input = None
-        if message:
-            agent_input = message.agent_input
-        if agent_input:
-            user_context["agent_input"] = agent_input
-
-        try:
-            template = Template(user_prompt_template)
-            rendered_output = template.render(**user_context or {}).replace('\n\n', '\n')
-            return rendered_output
-        except Exception as e:
-            logger.error(f"[{self.name}] ERROR while rendering user prompt: {e}")
-            print(f"\n{'=' * 80}")
-            print(f"🛑 FATAL: EmiReminderHandler failed to render user prompt")
-            print(f"   Error: {e}")
-            print(f"{'=' * 80}\n")
-            exit(1)
+        """
+        Use parent class's get_user_prompt() which includes entity detection.
+        """
+        # Parent's get_user_prompt already handles:
+        # - Loading user prompt template
+        # - Generating context injections
+        # - Entity detection and injection
+        return super().get_user_prompt(message)
 
 
     def process_llm_result(self, response):

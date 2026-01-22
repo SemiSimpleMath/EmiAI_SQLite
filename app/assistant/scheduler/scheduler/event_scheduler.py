@@ -102,13 +102,6 @@ class EventScheduler:
                 else:
                     dtstart = start
 
-                # DEBUG: Print timezone info before comparison
-                logger.debug(f"🐛 DEBUG: Event ID={event.event_id}, interval={event.interval}")
-                logger.debug(f"🐛 DEBUG: filter_end={filter_end} (tzinfo={filter_end.tzinfo})")
-                logger.debug(f"🐛 DEBUG: end={end} (tzinfo={end.tzinfo if end else None})")
-                logger.debug(f"🐛 DEBUG: start={start} (tzinfo={start.tzinfo if start else None})")
-                logger.debug(f"🐛 DEBUG: Event payload={event.event_payload}")
-                
                 recurrence_until = min(filter_end, end) if end else filter_end
 
                 for occ in rrule(freq=SECONDLY, interval=event.interval, dtstart=dtstart, until=recurrence_until):

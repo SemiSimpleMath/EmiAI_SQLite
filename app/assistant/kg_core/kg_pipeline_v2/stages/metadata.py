@@ -2,6 +2,8 @@
 Metadata Stage Processor
 
 Processes fact extraction and parser results to add metadata using the meta_data_add agent.
+
+NOTE: This stage uses V1's battle-tested helper functions to ensure feature parity.
 """
 
 import logging
@@ -14,6 +16,9 @@ from app.assistant.kg_core.kg_pipeline_v2.database_schema import (
     PipelineChunk, MetadataResult, StageResult, StageCompletion
 )
 from app.assistant.kg_core.kg_pipeline_v2.utils import wait_for_stage_data
+
+# Import V1 helper functions for feature parity
+from app.assistant.kg_core.kg_pipeline import add_metadata_to_nodes
 
 logger = logging.getLogger(__name__)
 
@@ -98,141 +103,107 @@ class MetadataProcessor:
                 try:
                     # Extract facts from fact extraction result
                     result_data = fact_result.result_data
-                    print(f"🔍 DEBUG: Fact extraction result {i+1} data keys: {list(result_data.keys())}")
-                    print(f"🔍 DEBUG: Full result data: {result_data}")
+                    logger.info(f"🔍 DEBUG: Fact extraction result {i+1} data keys: {list(result_data.keys())}")
                     
                     extracted_facts = result_data.get('extracted_facts', [])
-                    print(f"🔍 DEBUG: Extracted facts type: {type(extracted_facts)}, length: {len(extracted_facts) if isinstance(extracted_facts, list) else 'N/A'}")
-                    
                     logger.info(f"🔍 Processing fact extraction result {i+1}/{len(fact_results)} with {len(extracted_facts)} facts")
-                    logger.info(f"📊 Fact extraction result data keys: {list(result_data.keys())}")
                     
                     # If no extracted facts, skip this result
                     if not extracted_facts:
-                        print(f"🔍 DEBUG: No extracted facts found in result {i+1}, skipping...")
                         logger.warning(f"No extracted facts found in result {i+1}")
                         continue
                     
                     # Process each extracted fact
                     for fact_idx, fact_data in enumerate(extracted_facts):
-                        # Handle both old format (atomic_sentence) and new format (atomic_sentences list)
-                        atomic_sentence = fact_data.get('atomic_sentence', '')
+                        # V1 FORMAT: Get conversation text and metadata from fact extraction
+                        conversation_text = fact_data.get('conversation_text', '')
                         atomic_sentences = fact_data.get('atomic_sentences', [])
+                        original_message_timestamp = fact_data.get('original_message_timestamp')
+                        block_ids = fact_data.get('block_ids', [])  # V1 FEATURE
+                        data_source = fact_data.get('data_source', 'unknown')  # V1 FEATURE
                         
-                        # Use the list if available, otherwise fall back to single sentence
-                        if atomic_sentences:
-                            # Join all sentences for context
-                            atomic_sentence = ' '.join(atomic_sentences)
+                        # Fall back to joining atomic sentences if no conversation text
+                        if not conversation_text and atomic_sentences:
+                            conversation_text = ' '.join(atomic_sentences)
                         
                         extracted_facts_data = fact_data.get('extracted_facts', {})
-                        original_message_timestamp = fact_data.get('original_message_timestamp')  # Extract timestamp
                         
-                        logger.info(f"📝 Fact {fact_idx+1}: atomic_sentence='{atomic_sentence[:50]}...', extracted_facts_data keys: {list(extracted_facts_data.keys()) if isinstance(extracted_facts_data, dict) else type(extracted_facts_data)}")
+                        logger.info(f"📝 Fact {fact_idx+1}: conversation='{conversation_text[:50]}...'")
                         logger.info(f"📅 Original message timestamp: {original_message_timestamp}")
                         
-                        if not atomic_sentence.strip():
-                            logger.warning(f"Skipping empty atomic sentence at fact {fact_idx+1}")
+                        if not conversation_text.strip():
+                            logger.warning(f"Skipping empty conversation at fact {fact_idx+1}")
                             continue
                         
                         # Extract nodes and edges from the extracted facts data
                         nodes = extracted_facts_data.get('nodes', [])
                         edges = extracted_facts_data.get('edges', [])
                         
-                        print(f"🔍 DEBUG: Processing ALL {len(nodes)} nodes at once from fact {fact_idx+1}")
-                        print(f"📅 DEBUG: Timestamp: {original_message_timestamp}")
+                        logger.info(f"🔍 Processing {len(nodes)} nodes from fact {fact_idx+1}")
                         
-                        # Skip facts with no nodes (fact extraction failed or returned empty)
+                        # Skip facts with no nodes
                         if not nodes:
                             logger.warning(f"⚠️ Skipping fact {fact_idx+1} - no nodes extracted")
                             continue
                         
-                        # Process all nodes at once (simpler and faster)
-                        logger.info(f"🔍 Adding metadata to {len(nodes)} nodes from fact {fact_idx+1}...")
+                        # V1 FUNCTION: Add metadata to nodes one at a time with specific sentence context
+                        logger.info(f"🔍 Adding metadata to {len(nodes)} nodes using V1 function...")
                         
-                        # Format the input for the metadata agent
-                        # Pass ALL nodes at once with the atomic sentence
-                        metadata_input = {
-                            "nodes": nodes,  # All nodes from this fact
-                            "edges": edges,  # All edges from this fact
-                            "resolved_sentence": atomic_sentence,  # The atomic sentence for context (must be 'resolved_sentence' per config)
-                            "message_timestamp": original_message_timestamp  # Pass actual timestamp!
-                        }
-                        result = self.agent.action_handler(Message(agent_input=metadata_input))
+                        metadata_result = add_metadata_to_nodes(
+                            original_nodes=nodes,
+                            original_edges=edges,
+                            meta_data_agent=self.agent,
+                            conversation_text=conversation_text,
+                            original_message_timestamp_str=original_message_timestamp
+                        )
                         
-                        # Parse agent response
-                        if result and hasattr(result, 'data') and result.data:
-                            metadata_data = result.data
-                        else:
-                            metadata_data = str(result)
+                        # V1 returns enriched_metadata as a dict keyed by temp_id
+                        enriched_metadata = metadata_result.get("enriched_metadata", {})
+                        logger.info(f"✅ Got metadata for {len(enriched_metadata)} nodes")
                         
-                        # DEBUG: Show what the agent returned
-                        print(f"🔍 DEBUG: Metadata agent response type: {type(metadata_data)}")
-                        if isinstance(metadata_data, dict):
-                            print(f"🔍 DEBUG: Metadata agent response keys: {list(metadata_data.keys())}")
-                        print(f"🔍 DEBUG: Metadata agent response: {str(metadata_data)[:500]}")
-                        
-                        # Extract the enriched nodes from the response and merge with original nodes
+                        # Merge enriched metadata back into nodes
                         enriched_nodes = []
-                        if isinstance(metadata_data, dict) and 'Nodes' in metadata_data:
-                            metadata_nodes = metadata_data.get('Nodes', [])
-                            logger.info(f"✅ Got {len(metadata_nodes)} enriched nodes from agent")
+                        for node in nodes:
+                            temp_id = node.get("temp_id")
+                            enriched_node = node.copy()
                             
-                            # Clear temporal fields for Entity and Concept nodes in metadata response
-                            for meta_node in metadata_nodes:
-                                node_type = meta_node.get('node_type', '')
-                                if node_type in ['Entity', 'Concept']:
-                                    meta_node['valid_during'] = None
-                                    meta_node['start_date'] = None
-                                    meta_node['end_date'] = None
-                                    meta_node['start_date_confidence'] = None
-                                    meta_node['end_date_confidence'] = None
+                            if temp_id and temp_id in enriched_metadata:
+                                # Merge metadata into node
+                                enriched_node.update(enriched_metadata[temp_id])
+                                logger.info(f"✅ Merged metadata for {node.get('label', 'unknown')}")
+                            else:
+                                logger.warning(f"⚠️ No metadata for {node.get('label', 'unknown')}, keeping original")
                             
-                            # Merge metadata with original nodes by temp_id
-                            for original_node in nodes:
-                                # Find matching metadata by temp_id
-                                matching_metadata = None
-                                for meta_node in metadata_nodes:
-                                    if meta_node.get('temp_id') == original_node.get('temp_id'):
-                                        matching_metadata = meta_node
-                                        break
-                                
-                                # Merge: start with original node, overlay metadata
-                                enriched_node = original_node.copy()
-                                if matching_metadata:
-                                    enriched_node.update(matching_metadata)
-                                    print(f"✅ Merged metadata for {original_node.get('label', 'unknown')}")
-                                else:
-                                    print(f"⚠️ No metadata found for {original_node.get('label', 'unknown')}, keeping original")
-                                
-                                enriched_nodes.append(enriched_node)
+                            # V1 FEATURE: Clear temporal fields for Entity and Concept nodes
+                            node_type = enriched_node.get('node_type', '')
+                            if node_type in ['Entity', 'Concept']:
+                                enriched_node['valid_during'] = None
+                                enriched_node['start_date'] = None
+                                enriched_node['end_date'] = None
+                                enriched_node['start_date_confidence'] = None
+                                enriched_node['end_date_confidence'] = None
                             
-                            logger.info(f"✅ Enriched {len(enriched_nodes)} nodes from fact {fact_idx+1}")
-                        else:
-                            logger.warning(f"Unexpected metadata response format, keeping original nodes")
-                            print(f"⚠️ DEBUG: Falling back to original nodes (count: {len(nodes)})")
-                            enriched_nodes = nodes  # Keep original
+                            # V1 FEATURE: Rename 'core' to 'category'
+                            if 'core' in enriched_node:
+                                enriched_node['category'] = enriched_node.pop('core')
+                            
+                            enriched_nodes.append(enriched_node)
                         
-                        # Rename 'core' to 'category' in enriched nodes (handles old fact extraction data)
-                        for node in enriched_nodes:
-                            if 'core' in node:
-                                node['category'] = node.pop('core')
+                        logger.info(f"✅ Enriched {len(enriched_nodes)} nodes from fact {fact_idx+1}")
                         
-                        # DEBUG: Show what we're about to store
-                        if enriched_nodes:
-                            print(f"🔍 DEBUG: About to store {len(enriched_nodes)} enriched nodes")
-                            print(f"🔍 DEBUG: First enriched node keys: {list(enriched_nodes[0].keys())}")
-                            print(f"🔍 DEBUG: First enriched node sample: label={enriched_nodes[0].get('label')}, node_type={enriched_nodes[0].get('node_type')}, category={enriched_nodes[0].get('category')}")
-                        
-                        # Store metadata for this fact with enriched nodes
+                        # Store metadata for this fact with V1 metadata
                         metadata_results.append({
                             'fact_index': fact_idx,
-                            'atomic_sentence': atomic_sentence,
-                            'nodes': enriched_nodes,  # Enriched nodes
-                            'edges': edges,  # Edges pass through unchanged
-                            'fact_result_id': str(fact_result.chunk_id)  # Convert UUID to string
+                            'conversation_text': conversation_text,
+                            'nodes': enriched_nodes,
+                            'edges': edges,
+                            'block_ids': block_ids,  # V1 FEATURE
+                            'data_source': data_source,  # V1 FEATURE
+                            'original_message_timestamp': original_message_timestamp,  # V1 FEATURE
+                            'fact_result_id': str(fact_result.chunk_id)
                         })
                         
-                        processed_count += len(nodes)  # Count processed nodes
+                        processed_count += len(nodes)
                         logger.info(f"✅ Added metadata to {len(nodes)} nodes from fact {fact_idx+1}")
                     
                 except Exception as e:

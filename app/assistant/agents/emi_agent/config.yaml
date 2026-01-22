@@ -18,6 +18,7 @@ user_context_items:
   - date_time
   - history
   - agent_input
+  - entity_summary
 
 events:
   - emi_chat_request

@@ -253,7 +253,7 @@ class UnifiedItemManager:
             date_str = event_data.get('date_received', '')
             try:
                 source_timestamp = parsedate_to_datetime(date_str) if date_str else None
-            except:
+            except (ValueError, TypeError):
                 source_timestamp = None
             importance = event_data.get('importance', 5)
         
@@ -263,7 +263,7 @@ class UnifiedItemManager:
             start_str = event_data.get('start', '')
             try:
                 source_timestamp = datetime.fromisoformat(start_str.replace('Z', '+00:00')) if start_str else None
-            except:
+            except (ValueError, TypeError):
                 source_timestamp = None
             importance = 6  # Calendar events slightly higher priority by default
         
@@ -273,7 +273,7 @@ class UnifiedItemManager:
             due_str = event_data.get('due', '')
             try:
                 source_timestamp = datetime.fromisoformat(due_str.replace('Z', '+00:00')) if due_str else None
-            except:
+            except (ValueError, TypeError):
                 source_timestamp = None
             importance = 7  # Todos are higher priority
         
@@ -283,7 +283,7 @@ class UnifiedItemManager:
             occurrence_str = event_data.get('occurrence', '')
             try:
                 source_timestamp = datetime.fromisoformat(occurrence_str.replace('Z', '+00:00')) if occurrence_str else None
-            except:
+            except (ValueError, TypeError):
                 source_timestamp = None
             importance = event_data.get('event_payload', {}).get('importance', 5)
         

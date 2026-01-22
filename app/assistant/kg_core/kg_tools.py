@@ -491,7 +491,7 @@ def find_nodes_by_type(node_type_value: str, session: Session) -> List[Node]:
 def find_nodes_by_attribute(attr_name: str, attr_value: Any, session: Session) -> List[Node]:
     """
     Return nodes where attributes[attr_name] == attr_value.
-    SQLite compatible using json_extract instead of PostgreSQL .astext operator.
+    Uses SQLite json_extract for JSON field queries.
     """
     return session.query(Node).filter(
         func.json_extract(Node.attributes, f'$.{attr_name}') == str(attr_value)
@@ -566,8 +566,7 @@ def update_node_type(node_id: uuid.UUID, new_node_type: str, session: Session) -
         print(f"Node {node_id} not found")
         return None
 
-    # Node type validation is enforced by PostgreSQL ENUM
-    # Valid types: Entity, Event, State, Goal, Concept
+    # Valid node types: Entity, Event, State, Goal, Concept, Property
     node.node_type = new_node_type
     return node
 
@@ -1482,8 +1481,7 @@ def create_node(session: Session, label: str, node_type_value: str, **kwargs) ->
     NOTE: This function does NOT commit the session. The caller is responsible for committing.
     """
     # Check if the node type is valid
-    # Node type validation is enforced by PostgreSQL ENUM
-    # Valid types: Entity, Event, State, Goal, Concept
+    # Valid node types: Entity, Event, State, Goal, Concept, Property
     
     new_node = Node(
         label=label,

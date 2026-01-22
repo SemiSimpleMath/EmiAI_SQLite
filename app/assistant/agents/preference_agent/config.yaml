@@ -7,5 +7,5 @@ llm_params:
   temperature: 1
 allowed_tools: []
 user_context_items:
-  agent_input
+  - agent_input
 system_context_items: []

@@ -618,7 +618,8 @@ class UserSettingsManager:
         timezone_str = self.get('user_info.timezone', 'America/Los_Angeles')
         try:
             tz = ZoneInfo(timezone_str)
-        except:
+        except Exception:
+            # Invalid timezone string - fall back to default
             tz = ZoneInfo('America/Los_Angeles')
         
         now = datetime.now(tz)

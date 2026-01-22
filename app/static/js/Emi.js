@@ -2563,6 +2563,17 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
     attachIdleListeners();
     resetIdleTimer();
+    // If the tab becomes hidden (user locks screen / switches tabs), browsers may throttle timers.
+    // Send a best-effort idle ping once so server-side maintenance can run.
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            try { invokeIdleRoute(); } catch (e) { /* best-effort */ }
+        }
+    });
+    // Some browsers fire pagehide instead of beforeunload.
+    window.addEventListener('pagehide', () => {
+        try { invokeIdleRoute(); } catch (e) { /* best-effort */ }
+    });
     setupThemeListener();
     setupMenuToggle(); // Initialize the hamburger menu
     setupCalendarNavigation();

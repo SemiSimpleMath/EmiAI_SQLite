@@ -979,7 +979,7 @@ class KnowledgeGraphUtils:
         return candidates[:k]
 
     # ──────────────────  TYPE HELPERS  ───────────────────────
-    # Node types are now enforced by PostgreSQL ENUM: Entity, Event, State, Goal, Concept
+    # Valid node types: Entity, Event, State, Goal, Concept, Property
 
     def get_node_by_id(self, node_id: uuid.UUID) -> Optional[Node]:
         """
@@ -1138,15 +1138,16 @@ class KnowledgeGraphUtils:
         self.session.commit()
         
         # Reassign edges from source to target (only if source node is persisted)
-        if hasattr(source_node, 'id') and source_node.id is not None:
+        # Use SQLAlchemy inspect to check if node is actually in the database
+        from sqlalchemy import inspect as sa_inspect
+        source_state = sa_inspect(source_node, raiseerr=False)
+        is_persisted = source_state is not None and source_state.persistent
+        
+        if is_persisted:
             self._reassign_edges_from_source_to_target(source_node, target_node)
             
-            # Delete the source node (only if it's persisted)
-            try:
-                self.session.delete(source_node)
-            except Exception as e:
-                # If deletion fails (e.g., node not persisted), just log and continue
-                logger.warning(f"Could not delete source node (may not be persisted): {e}")
+            # Delete the source node
+            self.session.delete(source_node)
             
             # Commit edge changes and deletion
             self.session.commit()
@@ -1168,8 +1169,8 @@ class KnowledgeGraphUtils:
         if isinstance(dt_val, str):
             # Strip whitespace and convert to lowercase
             s = dt_val.strip().lower()
-            # Handle various null representations including those with colons and commas
-            if s in {"", "unknown", "null", "none", ":null", ":null,"} or s.startswith(":null"):
+            # Handle various null representations including those with colons, slashes, and commas
+            if s in {"", "unknown", "null", "none", ":null", ":null,", "/null", "_null", "/none", "_none"} or s.startswith(":null") or s.startswith("/null"):
                 return None
             try:
                 # Handle trailing 'Z'
@@ -1194,8 +1195,8 @@ class KnowledgeGraphUtils:
         if isinstance(conf_val, str):
             # Strip whitespace and convert to lowercase
             s = conf_val.strip().lower()
-            # Handle various null representations including those with colons and commas
-            if s in {"", "unknown", "null", "none", ":null", ":null,"} or s.startswith(":null"):
+            # Handle various null representations including those with colons, slashes, and commas
+            if s in {"", "unknown", "null", "none", ":null", ":null,", "/null", "_null", "/none", "_none"} or s.startswith(":null") or s.startswith("/null"):
                 return None
             try:
                 return float(s)

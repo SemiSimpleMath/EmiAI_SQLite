@@ -182,6 +182,30 @@ class ResourceManager:
 
         logger.info(f"📦 Resources loading complete: {loaded_count} loaded, {skipped_count} skipped")
 
+        # ------------------------------------------------------------------
+        # Memory tag catalog: build canonical tag list + tag→files map
+        # ------------------------------------------------------------------
+        try:
+            from app.assistant.memory.tag_router import get_tag_router
+
+            router = get_tag_router()
+            # Ensure router uses the same resources path we just loaded
+            router.resources_dir = resources_path
+            router.reload()
+
+            DI.global_blackboard.update_state_value("memory_available_tags", router.get_all_tags())
+            # Convert sets to lists for JSON-serializable prompt injection
+            DI.global_blackboard.update_state_value(
+                "memory_tag_subscriptions",
+                {tag: sorted(list(files)) for tag, files in router.get_subscriptions().items()},
+            )
+            logger.info(
+                f"🧠 Memory tag catalog loaded: {len(router.get_all_tags())} tag(s), "
+                f"{sum(len(v) for v in router.get_subscriptions().values())} subscription(s)"
+            )
+        except Exception as e:
+            logger.warning(f"🧠 Memory tag catalog build failed (non-fatal): {e}")
+
     def update_resource(self, resource_id: str, value: Any, persist: bool = True) -> None:
         """
         Update a shared resource both in memory and on disk.

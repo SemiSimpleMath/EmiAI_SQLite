@@ -66,7 +66,30 @@ def _check_context_usage(registry: AgentRegistry):
         prompts = config.get("prompts", {})
 
         def check_usage(context_key: str, prompt_text: str, prompt_name: str):
+            loaded_from = config.get("_loaded_from", "unknown")
+
+            if prompt_text is None:
+                raise RuntimeError(
+                    f"❌ {agent_name}: {prompt_name}.j2 prompt text is None (failed to load?). "
+                    f"Loaded from: {loaded_from}"
+                )
+
+            # Strict validation: missing key is fine (treated as empty list), but explicit null is an error.
+            if context_key in config and config.get(context_key) is None:
+                raise RuntimeError(
+                    f"❌ {agent_name}: {context_key} is null in config.yaml. "
+                    f"Use an explicit empty list: `{context_key}: []`. "
+                    f"Loaded from: {loaded_from}"
+                )
+
             fields = config.get(context_key, [])
+
+            if not isinstance(fields, list):
+                raise RuntimeError(
+                    f"❌ {agent_name}: {context_key} must be a list, got {type(fields).__name__}: {fields}. "
+                    f"Loaded from: {loaded_from}"
+                )
+
             for field in fields:
                 # Check if field is a sub-component
                 parent_field = SUB_COMPONENT_MAP.get(field)

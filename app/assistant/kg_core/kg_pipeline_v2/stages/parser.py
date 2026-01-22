@@ -2,6 +2,8 @@
 Parser Stage Processor
 
 Processes conversation data to parse entities and relationships using the parser agent.
+
+NOTE: This stage uses V1's battle-tested helper functions to ensure feature parity.
 """
 
 import logging
@@ -14,6 +16,12 @@ from app.assistant.kg_core.kg_pipeline_v2.database_schema import (
     PipelineChunk, ParserResult, StageResult, StageCompletion
 )
 from app.assistant.kg_core.kg_pipeline_v2.utils import wait_for_stage_data
+
+# Import V1 helper functions for feature parity
+from app.assistant.kg_core.kg_pipeline import (
+    extract_conversation_block,
+    parse_conversation_sentences
+)
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +63,10 @@ class ParserProcessor:
     async def process(self, batch_size: int = 100) -> Dict[str, Any]:
         """
         Process conversation boundary results to extract atomic sentences
+        
+        Uses V1 helper functions for:
+        - extract_conversation_block(): Extract conversation text with block_ids
+        - parse_conversation_sentences(): Parse with proper timestamp handling
         
         Args:
             batch_size: Number of conversation chunks to process
@@ -102,48 +114,62 @@ class ParserProcessor:
                     # Process each conversation chunk
                     for chunk_idx, chunk in enumerate(conversation_chunks):
                         boundary_messages = chunk.get('boundary_messages', [])
-                        message_bounds = chunk.get('message_bounds', [])
                         
-                        # Extract timestamp from the first message (original message timestamp)
-                        original_message_timestamp = None
-                        if boundary_messages:
-                            first_msg = boundary_messages[0]
-                            original_message_timestamp = first_msg.get('timestamp')
+                        # V1 FEATURE: Use conversations_to_process from boundary stage
+                        conversations_to_process = chunk.get('conversations_to_process', [])
+                        original_log_ids = chunk.get('original_log_ids', [])
                         
-                        # Extract conversation text from boundary messages
-                        conversation_text = ""
-                        for msg in boundary_messages:
-                            if msg.get('role') == 'user':
-                                conversation_text += f"User: {msg.get('message', '')}\n"
-                            elif msg.get('role') == 'assistant':
-                                conversation_text += f"Assistant: {msg.get('message', '')}\n"
+                        if not conversations_to_process:
+                            # Fallback: treat entire boundary_messages as one conversation
+                            logger.warning(f"⚠️ No conversations_to_process in chunk {chunk_idx}, using fallback")
+                            conversations_to_process = [{
+                                "start_pos": 0,
+                                "end_pos": len(boundary_messages) - 1,
+                                "target_message_id": f"msg_{len(boundary_messages) - 1}"
+                            }]
                         
-                        if not conversation_text.strip():
-                            logger.warning(f"Skipping empty conversation chunk {chunk_idx}")
-                            continue
-                        
-                        # Call parser agent to extract atomic sentences
-                        logger.info(f"🔍 Parsing conversation chunk {chunk_idx+1}: {conversation_text[:100]}...")
-                        parser_input = {"text": conversation_text}
-                        result = self.agent.action_handler(Message(agent_input=parser_input))
-                        
-                        # Parse agent response
-                        if result and hasattr(result, 'data') and result.data:
-                            parsed_sentences_data = result.data
-                        else:
-                            parsed_sentences_data = str(result)
-                        
-                        # Store parsed sentences for this chunk with timestamp
-                        parsed_sentences.append({
-                            'chunk_index': chunk_idx,
-                            'conversation_text': conversation_text,
-                            'parsed_sentences': parsed_sentences_data,
-                            'original_message_timestamp': original_message_timestamp,  # Preserve timestamp
-                            'boundary_result_id': str(boundary_result.chunk_id)  # Convert UUID to string
-                        })
-                        
-                        processed_count += 1
-                        logger.info(f"✅ Parsed chunk {chunk_idx+1}")
+                        # V1 FEATURE: Process each selected conversation using extract_conversation_block
+                        for conv_idx, conversation in enumerate(conversations_to_process):
+                            logger.info(f"🔍 Processing conversation {conv_idx+1}/{len(conversations_to_process)}")
+                            
+                            # V1 FUNCTION: Extract conversation block with metadata
+                            conv_data = extract_conversation_block(conversation, boundary_messages)
+                            conversation_text = conv_data["conversation_text"]
+                            block_ids = conv_data["block_ids"]
+                            data_source = conv_data["data_source"]
+                            original_message_timestamp_str = conv_data["original_message_timestamp_str"]
+                            
+                            if not conversation_text.strip():
+                                logger.warning(f"Skipping empty conversation {conv_idx+1}")
+                                continue
+                            
+                            # V1 FUNCTION: Parse conversation sentences
+                            logger.info(f"🔍 Parsing conversation {conv_idx+1}: {conversation_text[:100]}...")
+                            parse_result = parse_conversation_sentences(
+                                conversation_text,
+                                self.agent,
+                                original_message_timestamp_str
+                            )
+                            
+                            if parse_result is None:
+                                logger.warning(f"⚠️ No sentences parsed from conversation {conv_idx+1}")
+                                continue
+                            
+                            # Store parsed sentences for this conversation with V1 metadata
+                            parsed_sentences.append({
+                                'chunk_index': chunk_idx,
+                                'conversation_index': conv_idx,
+                                'conversation_text': conversation_text,
+                                'atomic_sentences': parse_result["atomic_sentences"],
+                                'sentence_window_text': parse_result["sentence_window_text"],
+                                'block_ids': block_ids,  # V1 FEATURE: Track message IDs
+                                'data_source': data_source,  # V1 FEATURE: Track data source
+                                'original_message_timestamp': original_message_timestamp_str,
+                                'boundary_result_id': str(boundary_result.chunk_id)
+                            })
+                            
+                            processed_count += 1
+                            logger.info(f"✅ Parsed conversation {conv_idx+1}: {len(parse_result['atomic_sentences'])} sentences")
                     
                 except Exception as e:
                     logger.error(f"❌ Error processing conversation boundary result {i+1}: {e}")

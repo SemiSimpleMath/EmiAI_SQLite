@@ -3,6 +3,8 @@ Conversation Boundary Stage Processor
 
 Processes input sentences to identify conversation boundaries using the conversation_boundary agent.
 This is stage 0 - the first stage that parses input sentences.
+
+NOTE: This stage uses V1's battle-tested helper functions to ensure feature parity.
 """
 
 import logging
@@ -13,6 +15,15 @@ from app.assistant.utils.pydantic_classes import Message
 from app.assistant.kg_core.kg_pipeline_v2.pipeline_coordinator import PipelineCoordinator
 from app.assistant.kg_core.kg_pipeline_v2.database_schema import (
     PipelineChunk, StageResult, StageCompletion
+)
+
+# Import V1 helper functions for feature parity
+from app.assistant.kg_core.kg_pipeline import (
+    is_html_message,
+    find_conversation_boundaries,
+    find_optimal_window_boundary,
+    WINDOW_SIZE,
+    THRESHOLD_POSITION
 )
 
 logger = logging.getLogger(__name__)
@@ -61,6 +72,11 @@ class ConversationBoundaryProcessor:
         """
         Process conversation boundary detection for unprocessed logs from processed_entity_log
         
+        Uses V1 helper functions for:
+        - is_html_message(): Filter HTML search results
+        - find_optimal_window_boundary(): Adaptive window sizing
+        - find_conversation_boundaries(): Greedy non-overlap selection
+        
         Args:
             batch_size: Number of logs to process in this batch
             
@@ -90,11 +106,22 @@ class ConversationBoundaryProcessor:
             # These chunks are then passed to the parser stage for atomic sentence extraction
             
             processed_count = 0
+            filtered_count = 0
             conversation_chunks = []  # Store conversation chunks for parser stage
             
             # Convert log entries to boundary_messages format (like original pipeline)
+            # V1 FEATURE: Filter HTML messages using is_html_message()
             boundary_messages = []
+            original_log_ids = []  # Track original log IDs for each boundary message
             for i, log_entry in enumerate(log_entries):
+                message_text = log_entry.get("message", "").strip()
+                
+                # V1 FEATURE: Filter HTML messages (search results, etc.)
+                if is_html_message(message_text):
+                    logger.info(f"🔍 Filtering HTML message at index {i}")
+                    filtered_count += 1
+                    continue
+                
                 # Convert datetime to string for JSON serialization
                 timestamp = log_entry.get("timestamp")
                 if timestamp and hasattr(timestamp, 'isoformat'):
@@ -105,14 +132,19 @@ class ConversationBoundaryProcessor:
                     timestamp = None
                 
                 boundary_messages.append({
-                    "id": f"msg_{i}",
+                    "id": f"msg_{len(boundary_messages)}",  # Use sequential index after filtering
                     "role": log_entry.get("role", "unknown"),
-                    "message": log_entry.get("message", "").strip(),
-                    "timestamp": timestamp
+                    "message": message_text,
+                    "timestamp": timestamp,
+                    "original_log_id": log_entry.get("id")  # Track original log ID
                 })
+                original_log_ids.append(log_entry.get("id"))
+            
+            if filtered_count > 0:
+                logger.info(f"🔍 Filtered {filtered_count} HTML messages")
             
             if not boundary_messages:
-                logger.warning("⚠️ No valid messages to process")
+                logger.warning("⚠️ No valid messages to process after filtering")
                 return {"processed_count": 0, "message": "No valid messages to process"}
             
             try:
@@ -127,11 +159,32 @@ class ConversationBoundaryProcessor:
                 
                 logger.info(f"📊 Found {len(message_bounds)} message bounds")
                 
+                # V1 FEATURE: Find optimal window boundary using adaptive window approach
+                optimal_boundary_exclusive = find_optimal_window_boundary(
+                    message_bounds, 
+                    len(boundary_messages), 
+                    THRESHOLD_POSITION
+                )
+                logger.info(f"🎯 Optimal boundary (exclusive): {optimal_boundary_exclusive}")
+                
+                # V1 FEATURE: Apply greedy non-overlap selection
+                conv_sel_result = find_conversation_boundaries(message_bounds, optimal_boundary_exclusive)
+                conversations_to_process = conv_sel_result["conversations"]
+                skipped_messages = conv_sel_result["skipped_messages"]
+                
+                logger.info(f"📊 Selected {len(conversations_to_process)} conversations to process")
+                if skipped_messages:
+                    logger.info(f"⏭️ Skipped {len(skipped_messages)} messages due to boundary/overlap")
+                
                 # Store conversation boundary results for parser stage
                 conversation_chunks.append({
                     'boundary_messages': boundary_messages,
                     'message_bounds': message_bounds,
                     'boundary_result': boundary_result,
+                    'conversations_to_process': conversations_to_process,  # V1 FEATURE: Include selected conversations
+                    'skipped_messages': skipped_messages,  # V1 FEATURE: Track skipped messages
+                    'optimal_boundary_exclusive': optimal_boundary_exclusive,  # V1 FEATURE: Include boundary
+                    'original_log_ids': original_log_ids,  # Track original log IDs
                     'processed_count': len(boundary_messages)
                 })
                 

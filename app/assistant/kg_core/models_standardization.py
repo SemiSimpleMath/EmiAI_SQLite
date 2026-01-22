@@ -1,5 +1,5 @@
 # ASCII only.
-# SQLite version - no PostgreSQL types or pgvector
+# SQLite version - uses JSON fields instead of specialized vector types
 
 from sqlalchemy import Column, String, Integer, DateTime, Text, Boolean, func, JSON
 from app.models.base import Base

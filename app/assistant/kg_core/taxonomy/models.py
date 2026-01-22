@@ -24,7 +24,7 @@ from datetime import datetime
 
 from app.models.base import Base
 
-# SQLite compatibility: No pgvector, no PostgreSQL-specific types
+# SQLite version: Uses JSON fields, embeddings stored in ChromaDB
 
 # Forward reference for Node - actual import would cause circular dependency
 # The relationship will be resolved at runtime when Node is defined

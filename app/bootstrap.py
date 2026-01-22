@@ -33,6 +33,13 @@ def initialize_services(app):
     ServiceLocator.register('user_settings', user_settings)
     logger.info("✅ User settings manager initialized")
 
+    # Initialize and start AFK monitor (standalone service, used by multiple consumers)
+    from app.assistant.afk_manager import AFKMonitor
+    afk_monitor = AFKMonitor()
+    afk_monitor.start()
+    ServiceLocator.register('afk_monitor', afk_monitor)
+    logger.info("✅ AFK monitor started")
+
     ServiceLocator.register('agent_registry', AgentRegistry())
     ServiceLocator.register('tool_registry', ToolRegistry())
     DI.tool_registry.load_tools()
@@ -70,14 +77,14 @@ def initialize_services(app):
 
     print("✅ EventHandlerHub started in the background.")
 
-    # Initialize proactive ticket manager (for suggestions and tool approvals)
-    from app.assistant.proactive_orchestrator import get_ticket_manager
-    proactive_ticket_manager = get_ticket_manager()
-    ServiceLocator.register('proactive_ticket_manager', proactive_ticket_manager)
-    logger.info("✅ Proactive ticket manager initialized")
+    # Initialize ticket manager (for suggestions and tool approvals)
+    from app.assistant.ticket_manager import get_ticket_manager
+    ticket_manager = get_ticket_manager()
+    ServiceLocator.register('ticket_manager', ticket_manager)
+    logger.info("✅ Ticket manager initialized")
     
     # Clear stale tool approval tickets from previous session
-    cleared = proactive_ticket_manager.clear_tool_approval_tickets()
+    cleared = ticket_manager.clear_tool_approval_tickets()
     if cleared > 0:
         logger.info(f"🧹 Cleared {cleared} stale tool approval tickets")
 

@@ -1,3 +1,4 @@
+# Note to coding agents: This file should not be modified without user permission.
 from datetime import datetime, timezone
 from jinja2 import Template
 from app.assistant.ServiceLocator.service_locator import DI

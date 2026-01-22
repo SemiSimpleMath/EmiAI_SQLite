@@ -1,3 +1,4 @@
+# Note to coding agents: This file should not be modified without user permission.
 from datetime import datetime, timezone
 import json
 import os
@@ -362,8 +363,46 @@ class Agent:
 
         try:
             template = Template(user_prompt_template)
+            # Pass 1: render with empty entity fields (generate_injections_block ensures placeholders)
             rendered_output = template.render(**user_context or {}).replace('\n\n', '\n')
-            return rendered_output
+
+            # If no entity_* fields are requested, return as-is
+            entity_keys = [k for k in (prompt_injections or []) if isinstance(k, str) and k.startswith("entity_")]
+            if not entity_keys:
+                return rendered_output
+
+            # Pass 2: detect entities from the rendered prompt (without entity cards) and re-render with entity_info.
+            entity_field_keys = [k[len("entity_"):] for k in entity_keys if k.startswith("entity_")]
+
+            detected_entities = []
+            try:
+                from app.assistant.entity_management.entity_card_injector import EntityCardInjector
+                injector = EntityCardInjector()
+                detected = injector.detect_entities_in_text(rendered_output) or []
+                # Deduplicate while preserving order
+                seen = set()
+                for ent in detected:
+                    if ent not in seen:
+                        seen.add(ent)
+                        detected_entities.append(ent)
+            except Exception as e:
+                logger.error(f"[{self.name}] Entity detection failed (rendered prompt scan): {e}")
+                detected_entities = []
+
+            if not detected_entities or not entity_field_keys:
+                return rendered_output
+
+            try:
+                user_context = dict(user_context or {})
+                user_context["entity_info"] = self._format_entity_multi_field(detected_entities, entity_field_keys)
+                # Keep entity_* keys empty; entity_info is the canonical grouped injection.
+                for k in entity_keys:
+                    user_context[k] = ""
+                rendered_with_entities = template.render(**user_context).replace('\n\n', '\n')
+                return rendered_with_entities
+            except Exception as e:
+                logger.error(f"[{self.name}] Failed to render user prompt with entity_info: {e}")
+                return rendered_output
         except Exception as e:
             logger.error(f"[{self.name}] ERROR while rendering user prompt: {e}")
             raise
@@ -641,8 +680,9 @@ class Agent:
         Phase 1:
           - Resolve all non-entity injections from blackboard and helpers.
         Phase 2:
-          - If any entity_* keys are requested, run a single entity detection pass
-            over the serialized context and fill all entity_* injections from that.
+          - If any entity_* keys are requested, entity injection is handled as a two-pass render
+            in get_user_prompt() (render-without-entities -> detect -> render-with-entities).
+            This method only ensures entity placeholders exist.
         """
 
         if not isinstance(prompt_injections, list):
@@ -755,79 +795,11 @@ class Agent:
         if not entity_keys:
             return context
 
-        # ------------------------------------------------------------
-        # Phase 2: single entity detection over selected context values
-        # ------------------------------------------------------------
-
-        # Only use user facing text fields for entity detection.
-        # You can override this per agent in config["entity_detection_keys"] if needed.
-        detection_keys = self.config.get(
-            "entity_detection_keys",
-            ["incoming_message", "recent_history", "task"]
-        )
-
-        detection_values = []
-        for key in detection_keys:
-            if key not in context:
-                continue
-            value = context[key]
-            if value is None:
-                continue
-            if isinstance(value, (dict, list)):
-                continue
-            detection_values.append(str(value))
-
-        try:
-            # Join values only; do not include JSON keys like "rag"
-            serialized_context = "\n\n".join(detection_values)
-        except Exception as e:
-            logger.error(f"[{self.name}] Failed to build detection text for entity detection: {e}")
-            serialized_context = " ".join(
-                str(v) for v in detection_values if v is not None
-            )
-
-        detected_entities: List[str] = []
-        if serialized_context.strip():
-            try:
-                from app.assistant.entity_management.entity_card_injector import EntityCardInjector
-                injector = EntityCardInjector()
-                detected = injector.detect_entities_in_text(serialized_context) or []
-                # Deduplicate while preserving order
-                seen = set()
-                for ent in detected:
-                    if ent not in seen:
-                        seen.add(ent)
-                        detected_entities.append(ent)
-                if detected_entities:
-                    logger.info(f"[{self.name}] Detected entities in composed context: {detected_entities}")
-            except Exception as e:
-                logger.error(f"[{self.name}] Entity detection failed: {e}")
-
-        # If no entities found, still set all requested entity_* keys to ""
-        if not detected_entities:
-            for key in entity_keys:
-                context.setdefault(key, "")
-            # Also set entity_info if any entity fields were requested (even just one)
-            if len(entity_field_keys) > 0:
-                context["entity_info"] = ""
-            return context
-
-        # ------------------------------------------------------------
-        # Phase 3: populate entity_* injections from detected_entities
-        # ------------------------------------------------------------
-        # Always group entity fields under "entity_info" (even if just one field)
-        # This ensures consistent grouping by entity rather than by field
-
-        # Check if we have any entity fields
-        has_entity_fields = len(entity_field_keys) > 0
-
-        if has_entity_fields:
-            # Gather ALL entity info, then group by entity under "entity_info"
-            context["entity_info"] = self._format_entity_multi_field(detected_entities, entity_field_keys)
-            # Set all individual entity_* keys to empty since we're using entity_info instead
-            for key in entity_keys:
-                if key.startswith("entity_"):
-                    context[key] = ""  # Empty since we're using entity_info instead
+        # Ensure consistent placeholders exist for two-pass render logic.
+        for key in entity_keys:
+            context.setdefault(key, "")
+        if len(entity_field_keys) > 0:
+            context.setdefault("entity_info", "")
 
         return context
 
@@ -973,7 +945,7 @@ class Agent:
         print(json.dumps(result, indent=2) if isinstance(result, dict) else result)
         print("---------------------------------\n")
 
-        # Step 1: Validate input HARD
+        # Step 1: Validate input
         if isinstance(result, str):
             logger.error(f"[{self.name}] LLM returned plain string (invalid structured output): {result}")
             raise ValueError(f"[{self.name}] Expected dict from LLM, got string.")

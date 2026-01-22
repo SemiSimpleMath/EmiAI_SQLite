@@ -21,22 +21,22 @@ Usage:
     python app/assistant/kg_core/kg_pipeline_v2/stages/fact_extraction.py
     python app/assistant/kg_core/kg_pipeline_v2/stages/metadata.py
     python app/assistant/kg_core/kg_pipeline_v2/stages/merge.py
+
+NOTE: Stage processors are imported lazily to avoid SQLAlchemy table conflicts.
+Import them directly from their modules when needed.
 """
 
 from .pipeline_coordinator import PipelineCoordinator
-from .stages import (
-    ConversationBoundaryProcessor, FactExtractionProcessor, ParserProcessor, MetadataProcessor,
-    MergeProcessor, TaxonomyProcessor
-)
 from .database_schema import (
     PipelineBatch, PipelineChunk, PipelineEdge, StageResult, StageCompletion,
     FactExtractionResult, ParserResult, MetadataResult, MergeResult, TaxonomyResult
 )
 
+# Stage processors are available via lazy import from .stages
+# Example: from app.assistant.kg_core.kg_pipeline_v2.stages import MergeProcessor
+
 __all__ = [
     'PipelineCoordinator',
-    'ConversationBoundaryProcessor', 'FactExtractionProcessor', 'ParserProcessor', 'MetadataProcessor',
-    'MergeProcessor', 'TaxonomyProcessor',
     'PipelineBatch', 'PipelineChunk', 'PipelineEdge', 'StageResult', 'StageCompletion',
     'FactExtractionResult', 'ParserResult', 'MetadataResult', 'MergeResult', 'TaxonomyResult'
 ]

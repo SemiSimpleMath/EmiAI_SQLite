@@ -18,6 +18,7 @@ class MessageSourceMapping(Base):
     
     __table_args__ = (
         Index('ix_message_source_mapping_source_table', 'source_table'),
+        {'extend_existing': True},
     )
 
 
@@ -64,9 +65,9 @@ class Node(Base):
     importance = Column(Float, nullable=True)
     source = Column(String, nullable=True)
     
-    # ORM relationships
-    outgoing_edges = relationship("Edge", back_populates="source_node", foreign_keys="Edge.source_id")
-    incoming_edges = relationship("Edge", back_populates="target_node", foreign_keys="Edge.target_id")
+    # ORM relationships (fully qualified to avoid ambiguity with 'nodes'/'edges' tables)
+    outgoing_edges = relationship("app.assistant.kg_core.knowledge_graph_db_sqlite.Edge", back_populates="source_node", foreign_keys="app.assistant.kg_core.knowledge_graph_db_sqlite.Edge.source_id")
+    incoming_edges = relationship("app.assistant.kg_core.knowledge_graph_db_sqlite.Edge", back_populates="target_node", foreign_keys="app.assistant.kg_core.knowledge_graph_db_sqlite.Edge.target_id")
     
     @property
     def label_embedding(self):
@@ -134,9 +135,9 @@ class Edge(Base):
     importance = Column(Float, nullable=True)
     source = Column(String, nullable=True)
     
-    # ORM relationships
-    source_node = relationship("Node", back_populates="outgoing_edges", foreign_keys=[source_id])
-    target_node = relationship("Node", back_populates="incoming_edges", foreign_keys=[target_id])
+    # ORM relationships (fully qualified to avoid ambiguity with 'nodes'/'edges' tables)
+    source_node = relationship("app.assistant.kg_core.knowledge_graph_db_sqlite.Node", back_populates="outgoing_edges", foreign_keys=[source_id])
+    target_node = relationship("app.assistant.kg_core.knowledge_graph_db_sqlite.Node", back_populates="incoming_edges", foreign_keys=[target_id])
     
     @property
     def sentence_embedding(self):

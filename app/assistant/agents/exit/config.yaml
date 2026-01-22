@@ -9,16 +9,18 @@ llm_params:
 allowed_tools: []
 
 user_context_items:
-  task: "task"
-  summary: "summary"
-  final_answer: "final_answer_content"
-  information: "information"
-  recent_history: "history"
-  checklist: "checklist"
-  progress: "progress"
-  important_links: "links"
-  discovered_info: "discovered_info"
-  plan: "plan"
+  - date_time
+  - task
+  - info
+  - final_answer_content
+  - summary
+  - recent_history
+  - important_links
+  - checklist
+  - progress
+  - discovered_info
+  - plan
 
 system_context_items:
-  task: "task"
+  - date_time
+  - task

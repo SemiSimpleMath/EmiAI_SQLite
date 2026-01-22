@@ -1,3 +1,4 @@
+# Note to coding agents: This file should not be modified without user permission.
 from datetime import datetime, timezone
 import uuid
 

@@ -64,8 +64,7 @@ class EventRepositoryManager:
         event_json = json.dumps(event_data, sort_keys=True)
         event_hash = hashlib.sha256(event_json.encode()).hexdigest()
 
-        logger.debug("store_event called with id=%s, event_id=%s, data_hash=%s, data_type=%s",
-                     id, event_id, event_hash, data_type)
+        # Note: Removed verbose per-event debug logging to reduce log noise
 
         # Retry logic for database locking
         last_exception = None
@@ -78,7 +77,6 @@ class EventRepositoryManager:
                 if existing_event:
                     # If the data hasn't changed, skip updating.
                     if existing_event.data_hash == event_hash:
-                        logger.debug("No changes detected for event with id=%s", id)
                         updated = False
                     else:
                         # Update the existing event.
@@ -288,7 +286,6 @@ class EventRepositoryManager:
     def sync_events_with_server(self, server_events: list, data_type: str):
         from datetime import datetime, timezone, timedelta
 
-        logger.debug("sync_events_with_server called for %s", data_type)
         session = self.session_factory()
 
         try:
@@ -309,11 +306,7 @@ class EventRepositoryManager:
                     session.commit()
 
                     if deleted_count > 0:
-                        logger.debug(
-                            f"Deleted {deleted_count} calendar events not in current fetch window."
-                        )
-                else:
-                    logger.debug("No stale calendar events found.")
+                        logger.info(f"🗑️ Cleaned up {deleted_count} stale calendar events")
 
             else:
                 # Email and other transient types: sliding time window only.
@@ -327,13 +320,7 @@ class EventRepositoryManager:
                 session.commit()
 
                 if deleted_count > 0:
-                    logger.debug(
-                        f"Deleted {deleted_count} '{data_type}' events older than {cutoff_time.isoformat()}."
-                    )
-                else:
-                    logger.debug(
-                        f"No '{data_type}' events older than {cutoff_time.isoformat()} to delete."
-                    )
+                    logger.info(f"🗑️ Cleaned up {deleted_count} old '{data_type}' events")
 
         except SQLAlchemyError as e:
             session.rollback()

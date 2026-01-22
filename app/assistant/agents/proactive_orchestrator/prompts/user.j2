@@ -1,20 +1,24 @@
 **Current Time:** {{ date_time }}
 **Day:** {{ day_of_week }}
-**Context:** {{ location_summary }} | Weather: {{ weather_summary }}
+{% if entity_info %}
+**Entity Context**:
+{{ entity_info }}
+{% endif %}
+**Context:** {{ location_summary }}{% if resource_weather and resource_weather.current %} | Weather: {{ resource_weather.location.city }}: {{ resource_weather.current.temperature }}, {{ resource_weather.current.condition }}{% endif %}
 
-{% if resource_daily_context and (resource_daily_context.day_description or resource_daily_context.milestones) %}
+{% if resource_daily_context_generator_output and (resource_daily_context_generator_output.day_description or resource_daily_context_generator_output.milestones) %}
 ---
 
 ## Daily Context
 *This captures the main themes and milestones of today - use this to avoid redundant suggestions and understand the day's overall state.*
 
-{% if resource_daily_context.day_description %}
-**Day Summary:** {{ resource_daily_context.day_description }}
+{% if resource_daily_context_generator_output.day_description %}
+**Day Summary:** {{ resource_daily_context_generator_output.day_description }}
 {% endif %}
 
-{% if resource_daily_context.milestones %}
+{% if resource_daily_context_generator_output.milestones %}
 **What's Happened Today:**
-{% for milestone in resource_daily_context.milestones %}
+{% for milestone in resource_daily_context_generator_output.milestones %}
 - {% if milestone.time %}[{{ milestone.time }}]{% endif %} {{ milestone.description }}
 {% endfor %}
 {% endif %}
@@ -79,13 +83,13 @@ No recent chat.
 ## 2. The Facts (System Telemetry)
 
 **Computer Presence:**
-{% if computer_activity.is_afk %}
+{% if resource_afk_statistics_output and resource_afk_statistics_output.is_afk %}
 [STATUS: USER IS AWAY]
-- Idle Time: {{ computer_activity.idle_minutes | round | int }} minutes.
+- Idle Time: {{ resource_afk_statistics_output.idle_minutes | default(0) | round | int }} minutes.
 - Directive: Do NOT suggest movement or stretches while user is away.
 {% else %}
 [STATUS: USER IS ACTIVE]
-- Idle Time: {{ computer_activity.idle_minutes | round(1) }} minutes.
+- Idle Time: {{ resource_afk_statistics_output.idle_minutes | default(0) | round(1) }} minutes.
 {% endif %}
 
 **Consumption Log (Today):**
@@ -100,14 +104,22 @@ No recent chat.
 **How to interpret thresholds:**
 - **Number (e.g., 120 min)**: Suggest when "Time Since" exceeds this value
 - **null ("As scheduled", "Max X/day", etc.)**: Use common sense with the description - check calendar events, daily limits, or time windows, NOT the "Time Since" value
+- **Important**: It should be **very rare** to suggest an action **before** the threshold is reached. Only do so when there is a clear reason (e.g., acute pain/health override, safety issue, or a strong schedule constraint).
 
-| Activity | Time Since Last | Threshold |
-| :--- | :--- | :--- |
+| Activity | Time Since Last | Threshold | Minutes Until Threshold |
+| :--- | :--- | :--- | :--- |
 {% for key, activity in resource_tracked_activities.activities.items() %}
 {% set field = "minutes_since_" ~ activity.field_name %}
 {% set mins = time_since[field] %}
-{% set threshold = activity.threshold.minutes if activity.threshold and activity.threshold.minutes else (activity.threshold.label if activity.threshold else activity.guidance) %}
-| {{ activity.display_name }} | {{ mins if mins is not none else "N/A" }} min | {{ threshold }} |
+{% set threshold_mins = activity.threshold.minutes if activity.threshold and activity.threshold.minutes is not none else none %}
+{% set threshold_label = threshold_mins if threshold_mins is not none else (activity.threshold.label if activity.threshold else activity.guidance) %}
+{% if mins is not none and threshold_mins is not none %}
+{% set delta = threshold_mins - mins %}
+{% set mins_until = (delta ~ " min") if delta > 0 else ("0 min (over by " ~ (-delta) ~ " min)") %}
+{% else %}
+{% set mins_until = "N/A" %}
+{% endif %}
+| {{ activity.display_name }} | {{ mins if mins is not none else "N/A" }} min | {{ threshold_label }} | {{ mins_until }} |
 {% endfor %}
 
 ---
@@ -129,17 +141,18 @@ No recent chat.
 *Do NOT suggest these types again:*
 {% if active_tickets %}
 {% for ticket in active_tickets %}
-- [ACTIVE] {{ ticket.suggestion_type }}: "{{ ticket.title }}"
+- [ACTIVE] {{ ticket.suggestion_type }}: "{{ ticket.title }}"{% if ticket.message %} — "{{ ticket.message[:220] }}"{% endif %}
 {% endfor %}
 {% else %}
 - None.
 {% endif %}
 
 **Recently Completed (ALREADY DONE CHECK):**
-*User just completed these. Do NOT suggest again for at least 2 hours:*
+*User completed these. Note how long it has been since user accepted. Sometimes it maybe appropriate to nudge again.  Especially if you are reminding about something.  Other activities you do not need to
+notify until the threshold is met.  Use common sense.
 {% if recent_accepted_tickets %}
 {% for ticket in recent_accepted_tickets %}
-- [COMPLETED] {{ ticket.suggestion_type }}: "{{ ticket.title }}" ({{ ticket.responded_at_local }})
+- [COMPLETED] {{ ticket.suggestion_type }}: "{{ ticket.title }}" ({{ ticket.responded_at_local }}){% if ticket.message %} — "{{ ticket.message[:220] }}"{% endif %}{% if ticket.user_response_raw or ticket.user_text %} — user said: "{{ (ticket.user_response_raw or ticket.user_text)[:180] }}"{% endif %}
 {% endfor %}
 {% else %}
 - None.
@@ -150,7 +163,7 @@ No recent chat.
 {% if recent_tickets %}
 {% for ticket in recent_tickets %}
 {% if ticket.state == 'dismissed' %}
-- [DISMISSED] {{ ticket.suggestion_type }} ({{ ticket.created_at_local }})
+- [DISMISSED] {{ ticket.suggestion_type }} ({{ ticket.created_at_local }}){% if ticket.title %}: "{{ ticket.title }}"{% endif %}{% if ticket.message %} — "{{ ticket.message[:220] }}"{% endif %}{% if ticket.user_response_raw or ticket.user_text %} — user said: "{{ (ticket.user_response_raw or ticket.user_text)[:180] }}"{% endif %}
 {% endif %}
 {% endfor %}
 {% endif %}
@@ -161,7 +174,8 @@ No recent chat.
 Synthesize the **Rules** (Section 1) with the **Data** (Section 2) to generate a prioritized list of suggestions.
 
 **Logic Checklist:**
-1. **Check Hard Constraints:** Is user AFK? Is a duplicate ticket active? -> STOP.
 2. **Check Rules:** Does `resource_routine_preferences` allow this? (e.g., Check "Coffee Cutoff Time" vs Current Time).
 3. **Check Timers:** Is the "Time Since" value high enough based on the User's frequency preferences?
 4. **Check Context:** Does `resource_user_health` demand an override? (e.g., "Back Pain" = suggest stretch sooner).
+5. **Check Current time:** It is fine to remind user of upcoming things, but check current time vs. time of the event.  How close are they?  Do not
+say things like an event 6 hours away is close!

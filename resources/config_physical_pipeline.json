@@ -1,0 +1,55 @@
+{
+    "schema_version": 1,
+    "enabled": true,
+
+    "state_resource_file": "resource_user_physical_status_state.json",
+
+    "daily_reset": {
+        "boundary_hour_local": 5
+    },
+
+    "stages": [
+        {
+            "id": "wellness_ticket_processor",
+            "enabled": true,
+            "stage_class": "app.assistant.physical_status_manager.stages.wellness_ticket_processor_stage:WellnessTicketProcessorStage",
+            "run_policy": { "type": "always", "min_interval_seconds": 30 }
+        },
+        {
+            "id": "sleep",
+            "enabled": true,
+            "stage_class": "app.assistant.physical_status_manager.stages.sleep_stage:SleepStage",
+            "run_policy": { "type": "always", "min_interval_seconds": 300 }
+        },
+        {
+            "id": "activity_tracker",
+            "enabled": true,
+            "stage_class": "app.assistant.physical_status_manager.stages.activity_tracker_stage:ActivityTrackerStage",
+            "run_policy": {
+                "type": "on_new_chat",
+                "cursor_key": "chat_last_seen_utc",
+                "lookback_hours_if_missing": 2,
+                "min_new_messages": 1,
+                "max_messages": 40
+            }
+        },
+        {
+            "id": "daily_context_generator",
+            "enabled": true,
+            "stage_class": "app.assistant.physical_status_manager.stages.daily_context_generator_stage:DailyContextGeneratorStage",
+            "run_policy": { "type": "always", "min_interval_seconds": 300 }
+        },
+        {
+            "id": "health_inference",
+            "enabled": true,
+            "stage_class": "app.assistant.physical_status_manager.stages.health_inference_stage:HealthInferenceStage",
+            "run_policy": { "type": "always", "min_interval_seconds": 300 }
+        },
+        {
+            "id": "physical_orchestrator",
+            "enabled": true,
+            "stage_class": "app.assistant.physical_status_manager.stages.physical_orchestrator_stage:PhysicalOrchestratorStage",
+            "run_policy": { "type": "always", "min_interval_seconds": 300 }
+        }
+    ]
+}

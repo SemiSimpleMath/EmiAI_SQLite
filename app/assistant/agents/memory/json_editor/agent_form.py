@@ -1,12 +1,18 @@
 from pydantic import BaseModel, Field
-from typing import List, Literal, Optional, Dict
+from typing import List, Literal, Optional
 
 
 class JsonEdit(BaseModel):
     """A single edit operation on the JSON."""
     operation: Literal['delete', 'update', 'insert', 'no_change']
     path: str = Field(description="JSON path to edit (e.g., 'food.likes[2]' or 'drinks.coffee.cutoff_time')")
-    new_value: Optional[Dict[str, str]] = Field(default=None, description="New value to set (for insert/update)")
+    new_value: Optional[str] = Field(
+        default=None,
+        description=(
+            "JSON-encoded value to set (for insert/update). "
+            "Example: '{\"item\":\"pizza\",\"display\":\"Pizza\"}' or 'true' or '\"a string\"'."
+        ),
+    )
     reason: str = Field(description="Why this edit is needed")
 
 

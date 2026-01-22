@@ -8,10 +8,8 @@ llm_params:
 
 # Tools the planner can call
 allowed_tools:
-  - read_memory_file
-  - memory_section_finder
-  - memory_section_editor
-  - update_memory_file
+  # JSON-native subscription-based memory editing
+  - memory_apply_fact
 except_tools: []
 
 allowed_nodes:
@@ -25,8 +23,10 @@ user_context_items:
   - summary
   - recent_history
   - action_count
+  - memory_available_tags
 
 system_context_items:
   - allowed_nodes
+  # Optional: kept for backwards compatibility / human auditability
   - resource_memory_file_index
 

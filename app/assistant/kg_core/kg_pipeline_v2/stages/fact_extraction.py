@@ -2,6 +2,8 @@
 Fact Extraction Stage Processor
 
 Processes conversation data to extract facts using the fact_extractor agent.
+
+NOTE: This stage uses V1's battle-tested helper functions to ensure feature parity.
 """
 
 import logging
@@ -15,7 +17,13 @@ from app.assistant.kg_core.kg_pipeline_v2.database_schema import (
 )
 from app.assistant.kg_core.kg_pipeline_v2.utils import wait_for_stage_data
 
+# Import V1 helper functions for feature parity
+from app.assistant.kg_core.kg_pipeline import extract_facts_from_sentences
+
 logger = logging.getLogger(__name__)
+
+# Track fact extractor calls for debugging (V1 feature)
+_fact_extractor_call_count = 0
 
 
 class FactExtractionProcessor:
@@ -56,12 +64,17 @@ class FactExtractionProcessor:
         """
         Process parser results to extract facts from atomic sentences
         
+        Uses V1 helper function:
+        - extract_facts_from_sentences(): Extract facts with proper timestamp and core->category mapping
+        
         Args:
             batch_size: Number of parsed sentences to process
             
         Returns:
             Dict containing processing results
         """
+        global _fact_extractor_call_count
+        
         try:
             # Read ONE unprocessed parser result from the waiting area
             logger.info(f"📖 Reading one chunk from parser waiting area...")
@@ -97,70 +110,55 @@ class FactExtractionProcessor:
                     result_data = parser_result.result_data
                     parsed_sentences = result_data.get('parsed_sentences', [])
                     
-                    logger.info(f"🔍 Processing parser result {i+1}/{len(parser_results)} with {len(parsed_sentences)} sentences")
+                    logger.info(f"🔍 Processing parser result {i+1}/{len(parser_results)} with {len(parsed_sentences)} conversation entries")
                     
-                    # Collect all atomic sentences from all parsed sentence groups
-                    all_sentences = []
-                    original_message_timestamp = None
-                    
+                    # V1 FEATURE: Process each conversation entry separately (from parser stage)
                     for sentence_idx, sentence_data in enumerate(parsed_sentences):
-                        parsed_sentences_data = sentence_data.get('parsed_sentences', {})
-                        sentences_list = parsed_sentences_data.get('parsed_sentences', [])
+                        # V1 FORMAT: Parser now provides atomic_sentences and metadata directly
+                        atomic_sentences = sentence_data.get('atomic_sentences', [])
+                        conversation_text = sentence_data.get('conversation_text', '')
+                        original_message_timestamp = sentence_data.get('original_message_timestamp')
+                        block_ids = sentence_data.get('block_ids', [])
+                        data_source = sentence_data.get('data_source', 'unknown')
                         
-                        # Extract timestamp from first sentence group
-                        if original_message_timestamp is None:
-                            original_message_timestamp = sentence_data.get('original_message_timestamp')
+                        if not atomic_sentences:
+                            logger.warning(f"⚠️ No atomic sentences in entry {sentence_idx+1}, skipping")
+                            continue
                         
-                        # Collect all atomic sentences
-                        for atomic_sentence in sentences_list:
-                            sentence_text = atomic_sentence.get('sentence', '')
-                            if sentence_text.strip():
-                                all_sentences.append(sentence_text)
-                    
-                    # Call fact extractor agent ONCE with ALL sentences from this chunk
-                    if all_sentences:
-                        logger.info(f"🔍 Extracting facts from {len(all_sentences)} sentences in one call...")
-                        fact_input = {"text": all_sentences}
-                        if original_message_timestamp:
-                            fact_input["original_message_timestamp"] = original_message_timestamp
+                        # V1 FUNCTION: Extract facts using V1 helper
+                        _fact_extractor_call_count += 1
+                        logger.info(f"🔍 Extracting facts from {len(atomic_sentences)} sentences (call #{_fact_extractor_call_count})...")
                         
-                        result = self.agent.action_handler(Message(agent_input=fact_input))
+                        facts_result = extract_facts_from_sentences(
+                            atomic_sentences=atomic_sentences,
+                            fact_extractor_agent=self.agent,
+                            conversation_text=conversation_text,
+                            original_message_timestamp_str=original_message_timestamp,
+                            fact_extractor_call_count=_fact_extractor_call_count
+                        )
                         
-                        # Parse agent response
-                        if result and hasattr(result, 'data') and result.data:
-                            facts_data = result.data
-                        else:
-                            facts_data = str(result)
+                        nodes = facts_result.get("original_nodes", [])
+                        edges = facts_result.get("original_edges", [])
                         
-                        # Normalize the response: rename 'Nodes' -> 'nodes', 'Edges' -> 'edges', 'core' -> 'category'
-                        if isinstance(facts_data, dict):
-                            # Rename capital keys to lowercase
-                            if 'Nodes' in facts_data:
-                                facts_data['nodes'] = facts_data.pop('Nodes')
-                            if 'Edges' in facts_data:
-                                facts_data['edges'] = facts_data.pop('Edges')
-                            
-                            # Rename 'core' to 'category' in all nodes (prompt engineering workaround)
-                            nodes_before = facts_data.get('nodes', [])
-                            print(f"🔍 FACT EXTRACTION DEBUG: Processing {len(nodes_before)} nodes")
-                            for node in nodes_before:
-                                if 'core' in node:
-                                    print(f"  - Renaming 'core' to 'category' for node: {node.get('label')}")
-                                    node['category'] = node.pop('core')
-                                else:
-                                    print(f"  - Node {node.get('label')} has no 'core' field (keys: {list(node.keys())})")
+                        logger.info(f"📊 Extracted {len(nodes)} nodes and {len(edges)} edges")
                         
-                        # Store extracted facts for this chunk (all sentences processed together)
+                        # Store extracted facts with V1 metadata
                         extracted_facts.append({
-                            'sentence_index': 0,  # All sentences processed together
-                            'atomic_sentences': all_sentences,  # Store all sentences
-                            'extracted_facts': facts_data,
+                            'sentence_index': sentence_idx,
+                            'atomic_sentences': atomic_sentences,
+                            'conversation_text': conversation_text,
+                            'extracted_facts': {
+                                'nodes': nodes,
+                                'edges': edges
+                            },
+                            'block_ids': block_ids,  # V1 FEATURE: Track message IDs
+                            'data_source': data_source,  # V1 FEATURE: Track data source
                             'original_message_timestamp': original_message_timestamp,
                             'parser_result_id': str(parser_result.chunk_id)
                         })
                         
-                        processed_count += len(all_sentences)
-                        logger.info(f"✅ Extracted facts from {len(all_sentences)} sentences")
+                        processed_count += len(atomic_sentences)
+                        logger.info(f"✅ Extracted facts from entry {sentence_idx+1}: {len(nodes)} nodes, {len(edges)} edges")
                     
                 except Exception as e:
                     logger.error(f"❌ Error processing parser result {i+1}: {e}")

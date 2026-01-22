@@ -86,7 +86,7 @@ class BaseTool(ABC):
         try:
             from app.assistant.ServiceLocator.service_locator import DI
             
-            ticket_manager = DI.proactive_ticket_manager
+            ticket_manager = DI.ticket_manager
             if not ticket_manager:
                 raise RuntimeError("ProactiveTicketManager not available")
             

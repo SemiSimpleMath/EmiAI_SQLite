@@ -51,19 +51,16 @@ try:
     for stage_name, stage_script in stages:
         print(f"🔄 Starting {stage_name}...")
         
-        # Start the process
+        # Start the process - don't pipe output so we can see errors
+        # Note: All output will be mixed in the terminal
         process = subprocess.Popen(
             [sys.executable, stage_script],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            bufsize=1,  # Line buffered
-            universal_newlines=True
+            # stdout and stderr go directly to terminal (not captured)
         )
         
         processes.append((stage_name, process))
         print(f"✅ {stage_name} started (PID: {process.pid})")
-        time.sleep(1)  # Small delay between starts
+        time.sleep(5)  # Longer delay to let each stage initialize before starting next
     
     print()
     print("=" * 70)
@@ -95,15 +92,7 @@ try:
                 returncode = process.returncode
                 if returncode != 0:
                     print(f"\n❌ {stage_name} stopped unexpectedly (exit code: {returncode})")
-                    print(f"   Check logs for errors")
-                    
-                    # Read stderr if available
-                    try:
-                        stderr = process.stderr.read()
-                        if stderr:
-                            print(f"   Error output: {stderr[:500]}")  # First 500 chars
-                    except:
-                        pass
+                    print(f"   Error output should be visible above in the terminal")
 
 except KeyboardInterrupt:
     print("\n")
@@ -159,9 +148,9 @@ finally:
             try:
                 process.terminate()
                 process.wait(timeout=2)
-            except:
+            except Exception:
                 try:
                     process.kill()
-                except:
-                    pass
+                except Exception:
+                    pass  # Process already terminated
 

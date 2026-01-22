@@ -62,9 +62,9 @@ class AgentForm(BaseModel):
         default_factory=list,
         description="List of activity field names to reset (e.g., ['hydration', 'finger_stretch', 'meal'])"
     )
-    activity_counts: Optional[Dict[str, str]] = Field(
+    activity_counts: Optional[Dict[str, int]] = Field(
         default_factory=dict,
-        description="Dict of activity names to their NEW TOTAL counts today (e.g., {'hydration': '3', 'coffee': '1'}). CRITICAL: Return the complete updated total, not the increment!"
+        description="Dict of activity names to their NEW TOTAL counts today (e.g., {'hydration': 3, 'coffee': '}). CRITICAL: Return the complete updated total, not the increment!"
     )
     sleep_events: List[SleepEvent] = Field(
         default_factory=list,

@@ -23,7 +23,8 @@ def get_assistant_name():
             with open(personality_file, 'r') as f:
                 data = json.load(f)
                 return data.get('name', 'Emi')
-        except:
+        except Exception:
+            # File not found or JSON parse error - use default name
             return 'Emi'
     return 'Emi'
 

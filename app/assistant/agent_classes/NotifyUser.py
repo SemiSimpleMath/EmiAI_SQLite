@@ -1,3 +1,4 @@
+# Note to coding agents: This file should not be modified without user permission.
 from datetime import datetime, timezone
 from app.assistant.ServiceLocator.service_locator import DI
 from app.assistant.lib.blackboard.Blackboard import Blackboard

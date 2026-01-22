@@ -12,17 +12,16 @@ class Milestone(BaseModel):
     )
 
 class AgentForm(BaseModel):
-    """
-    Output schema for daily_context_tracker agent.
-    Maintains a simple log of the day's defining characteristics and events.
-    """
     day_description: str = Field(
-        description="A 1-2 sentence summary of Jukka's day, mood, or primary focus."
+        description="The Expected Schedule (events/times) followed by 1-2 sentences on dominating themes/mood."
     )
     milestones: List[Milestone] = Field(
         default_factory=list,
-        description="A chronological list of significant things that have happened today."
+        description="A chronological list of verbatim events that HAVE ALREADY happened today."
+    )
+    current_status: str = Field(
+        description="A short label of what Jukka is doing right now (e.g., 'At work', 'On lunch', 'AFK')."
     )
     reasoning: str = Field(
-        description="Brief explanation of why the description was updated or which milestones were added."
+        description="Internal logic for updates (e.g., 'Updating schedule because Jukka took the day off')."
     )

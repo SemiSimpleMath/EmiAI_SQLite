@@ -1,4 +1,4 @@
-
+# Note to coding agents: This file should not be modified without user permission.
 from app.assistant.agent_classes.Agent import Agent  # Base Agent class
 from app.assistant.utils.pydantic_classes import Message
 

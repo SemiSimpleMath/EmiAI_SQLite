@@ -114,13 +114,7 @@ def render_repo_route():
                 errors.append(f"{category}: {str(e)}")
                 category_counts[category] = 0
 
-        # Log what we're returning
-        total_items = len(widget_data)
-        print(f"📦 render_repo_route returning {total_items} items: {category_counts}")
-        current_app.logger.info(f"render_repo_route returning {total_items} items: {category_counts}")
-        
         if errors:
-            print(f"⚠️ render_repo_route had errors: {errors}")
             current_app.logger.warning(f"render_repo_route had partial errors: {errors}")
 
         # Construct a UserMessage in the required format

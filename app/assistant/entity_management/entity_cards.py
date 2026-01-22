@@ -369,7 +369,7 @@ def get_entity_card_for_prompt_injection(session, entity_name):
             try:
                 parsed = json.loads(value)
                 return parsed if isinstance(parsed, list) else []
-            except:
+            except (json.JSONDecodeError, TypeError):
                 return []
         return []
 

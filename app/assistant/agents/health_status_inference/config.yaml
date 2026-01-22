@@ -14,8 +14,7 @@ user_context_items:
 - calendar_events
 - todo
 - time_since
-- sleep_summary
-- afk_data
+- resource_sleep_output
 - resource_tracked_activities
 - recent_tickets
 - recent_chat_history

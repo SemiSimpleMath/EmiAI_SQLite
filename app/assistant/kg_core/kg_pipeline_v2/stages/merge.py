@@ -2,11 +2,14 @@
 Merge Stage Processor
 
 Processes all previous stage results to merge and consolidate nodes and edges.
+
+NOTE: This stage uses V1's battle-tested helper functions to ensure feature parity.
 """
 
 import logging
 from typing import Dict, Any, List
 from sqlalchemy.orm import Session
+from sqlalchemy import select
 from app.assistant.ServiceLocator.service_locator import DI
 from app.assistant.utils.pydantic_classes import Message
 from app.assistant.kg_core.kg_pipeline_v2.pipeline_coordinator import PipelineCoordinator
@@ -15,7 +18,13 @@ from app.assistant.kg_core.kg_pipeline_v2.database_schema import (
 )
 from app.assistant.kg_core.kg_pipeline_v2.utils import wait_for_stage_data
 
+# Import V1 helper functions for feature parity
+from app.assistant.kg_core.kg_pipeline import process_nodes, process_edges
+
 logger = logging.getLogger(__name__)
+
+# NOTE: knowledge_graph_db and knowledge_graph_utils are imported lazily inside methods
+# to avoid SQLAlchemy table redefinition errors when running as subprocess
 
 
 def sanitize_null_values(value):
@@ -46,8 +55,8 @@ def sanitize_date_field(value):
     try:
         from dateutil import parser
         return parser.parse(str(value))
-    except:
-        # If it can't be parsed, it's not a valid date
+    except Exception:
+        # If it can't be parsed, it's not a valid date (ValueError, TypeError, etc.)
         return None
 
 
@@ -57,8 +66,11 @@ class MergeProcessor:
     def __init__(self, coordinator: PipelineCoordinator, session: Session):
         self.coordinator = coordinator
         self.session = session
+        # Node merge agents (same as V1)
         self.merge_agent = DI.agent_factory.create_agent("knowledge_graph_add::node_merger")
         self.node_data_merger = DI.agent_factory.create_agent("knowledge_graph_add::node_data_merger")
+        # Edge merge agent (from V1 - LLM-based intelligent edge merging)
+        self.edge_merge_agent = DI.agent_factory.create_agent("knowledge_graph_add::edge_merger")
     
     def wait_for_data(self, batch_id: int = None, max_wait_time: int = 300) -> bool:
         """
@@ -89,7 +101,10 @@ class MergeProcessor:
     async def process(self, batch_size: int = 1) -> Dict[str, Any]:
         """
         Process ONE chunk from metadata results and merge with existing KG database.
-        This matches the original kg_pipeline.py behavior where each chunk is processed independently.
+        
+        Uses V1 helper functions for:
+        - process_nodes(): Full node processing with LLM merge, metadata enrichment
+        - process_edges(): Full edge processing with LLM merge, orphan detection
         
         Args:
             batch_size: Number of chunks to process (default 1 for one chunk at a time)
@@ -98,15 +113,11 @@ class MergeProcessor:
             Dict containing processing results
         """
         try:
-            # Import KnowledgeGraphUtils to access the KG database
-            from app.assistant.kg_core.knowledge_graph_utils import KnowledgeGraphUtils
-            
             # Read ONE unprocessed metadata result (one chunk) from the waiting area
             logger.info(f"📖 Reading one chunk from metadata waiting area...")
             
             # Get one metadata result that hasn't been processed by merge stage yet
             # Use StageCompletion to track which chunks have been processed
-            from sqlalchemy import select
             processed_chunk_ids = select(StageCompletion.chunk_id).filter(
                 StageCompletion.stage_name == 'merge',
                 StageCompletion.status == 'completed'
@@ -121,24 +132,18 @@ class MergeProcessor:
                 logger.warning("⚠️ No metadata chunks available in waiting area")
                 return {"processed_count": 0, "message": "No chunks to process"}
             
+            # Lazy import to avoid SQLAlchemy table redefinition when running as subprocess
+            from app.assistant.kg_core.knowledge_graph_utils import KnowledgeGraphUtils
+            
             # Initialize KG utils for this chunk
             kg_utils = KnowledgeGraphUtils()
             
             # Extract the chunk data
             result_data = metadata_result.result_data
             
-            # DEBUG: Show exactly what we're reading from the table
-            import json
-            print(f"\n{'='*80}")
-            print(f"🔍 DEBUG: READING FROM DATABASE")
-            print(f"{'='*80}")
-            print(f"result_data keys: {list(result_data.keys())}")
+            logger.info(f"🔍 DEBUG: result_data keys: {list(result_data.keys())}")
             metadata_results_list = result_data.get('metadata_results', [])
-            print(f"Total metadata_results entries: {len(metadata_results_list)}")
-            if metadata_results_list:
-                print(f"\nFirst metadata_results entry:")
-                print(json.dumps(metadata_results_list[0], indent=2, default=str))
-            print(f"{'='*80}\n")
+            logger.info(f"📊 Total metadata_results entries: {len(metadata_results_list)}")
             
             if not metadata_results_list:
                 logger.warning("⚠️ Empty metadata results list in chunk")
@@ -146,151 +151,114 @@ class MergeProcessor:
             
             logger.info(f"🔍 Processing chunk with {len(metadata_results_list)} metadata entries")
             
-            # DEBUG: Show structure of first metadata entry
-            if metadata_results_list:
-                first_entry = metadata_results_list[0]
-                print(f"🔍 DEBUG: First metadata entry keys: {list(first_entry.keys())}")
-                print(f"🔍 DEBUG: First metadata entry structure: {str(first_entry)[:500]}")
-                logger.info(f"🔍 DEBUG: First metadata entry keys: {list(first_entry.keys())}")
-                logger.info(f"🔍 DEBUG: First metadata entry structure: {str(first_entry)[:500]}")
+            # Track totals
+            total_nodes_processed = 0
+            total_edges_created = 0
+            total_edges_merged = 0
+            total_edges_skipped = 0
             
-            # Collect all nodes and edges from all metadata entries in this chunk
-            all_nodes = []
-            all_edges = []
-            
-            for i, metadata_entry in enumerate(metadata_results_list):
-                # Metadata stage stores nodes and edges directly (not in 'extracted_facts')
+            # V1 FEATURE: Process each metadata entry separately (preserves conversation context)
+            for conv_idx, metadata_entry in enumerate(metadata_results_list):
+                # Extract V1 metadata from entry
                 nodes = metadata_entry.get('nodes', [])
                 edges = metadata_entry.get('edges', [])
+                conversation_text = metadata_entry.get('conversation_text', '')
+                block_ids = metadata_entry.get('block_ids', [])
+                data_source = metadata_entry.get('data_source', 'unknown')
+                original_message_timestamp = metadata_entry.get('original_message_timestamp')
                 
-                print(f"🔍 DEBUG: Entry {i+1} has {len(nodes)} nodes and {len(edges)} edges")
-                logger.info(f"🔍 DEBUG: Entry {i+1} has {len(nodes)} nodes and {len(edges)} edges")
+                logger.info(f"🔍 Processing entry {conv_idx+1}/{len(metadata_results_list)}: {len(nodes)} nodes, {len(edges)} edges")
                 
-                all_nodes.extend(nodes)
-                all_edges.extend(edges)
-            
-            logger.info(f"📊 Chunk contains {len(all_nodes)} nodes and {len(all_edges)} edges")
-            
-            # Define canonical entities that should never be duplicated
-            CANONICAL_ENTITIES = {"Jukka", "Emi"}
-            
-            # Process nodes one at a time, finding candidates for each
-            node_map = {}
-            for node in all_nodes:
-                temp_id = node.get("temp_id")
-                label = node.get("label", "")
-                node_type = node.get("node_type", "")
-                category = node.get("category")
+                if not nodes:
+                    logger.warning(f"⚠️ Skipping entry {conv_idx+1} - no nodes")
+                    continue
                 
-                logger.info(f"🔍 Processing node: {label} (type: {node_type})")
+                # Build enriched_metadata dict from nodes (V1 format: temp_id -> metadata)
+                # The metadata has already been enriched by the metadata stage
+                enriched_metadata = {}
+                for node in nodes:
+                    temp_id = node.get("temp_id")
+                    if temp_id:
+                        enriched_metadata[temp_id] = node
                 
-                # Check if this is a canonical entity (Jukka or Emi)
-                if label in CANONICAL_ENTITIES:
-                    logger.info(f"🔑 Canonical entity detected: {label} - looking for existing node")
-                    
-                    # Find the existing canonical node (should be exactly one)
-                    from app.assistant.kg_core.knowledge_graph_db import Node
-                    canonical_node = kg_utils.session.query(Node).filter(
-                        Node.label == label
-                    ).first()
-                    
-                    if canonical_node:
-                        logger.info(f"✅ Using existing canonical node: {label} (ID: {canonical_node.id})")
-                        node_map[temp_id] = canonical_node
-                        continue
-                    else:
-                        logger.warning(f"⚠️ Canonical entity '{label}' not found in KG - will create it")
-                        # Fall through to normal creation logic
+                # Build atomic sentences list for edge processing
+                all_atomic_sentences = []
+                for node in nodes:
+                    sentence = node.get("sentence", "")
+                    if sentence:
+                        all_atomic_sentences.append(sentence)
                 
-                # Use kg_utils.add_node which:
-                # 1. Finds 1-3 similar nodes in KG database
-                # 2. Calls merge agent to decide merge or create
-                # 3. Returns the node (merged or new)
+                sentence_window_text = " ".join(all_atomic_sentences)
+                
+                # V1 FUNCTION: Process nodes with full LLM merge logic
+                logger.info(f"🔍 Processing {len(nodes)} nodes using V1 process_nodes...")
                 try:
-                    new_node, status = kg_utils.add_node(
-                        node_type=node_type.title() if node_type else "Unknown",
-                        label=label,
-                        aliases=node.get("aliases", []),
-                        description="",
-                        category=category,
-                        attributes={},
-                        valid_during=sanitize_null_values(node.get("valid_during")),
-                        hash_tags=node.get("hash_tags"),
-                        start_date=sanitize_date_field(node.get("start_date")),
-                        end_date=sanitize_date_field(node.get("end_date")),
-                        start_date_confidence=sanitize_null_values(node.get("start_date_confidence")),
-                        end_date_confidence=sanitize_null_values(node.get("end_date_confidence")),
-                        semantic_label=sanitize_null_values(node.get("semantic_label")),
-                        goal_status=sanitize_null_values(node.get("goal_status")),
-                        confidence=node.get("confidence"),
-                        importance=node.get("importance"),
-                        source=sanitize_null_values(node.get("source")),
-                        original_message_id=sanitize_null_values(node.get("original_message_id")),
-                        original_sentence=node.get("sentence"),
-                        sentence_id=sanitize_null_values(node.get("sentence_id")),
-                        # Pass both merge agents
+                    nodes_result = process_nodes(
+                        original_nodes=nodes,
+                        enriched_metadata=enriched_metadata,
+                        original_edges=edges,
+                        conversation_text=conversation_text,
+                        sentence_window_text=sentence_window_text,
+                        data_source=data_source,
+                        original_message_timestamp_str=original_message_timestamp,
+                        kg_utils=kg_utils,
                         merge_agent=self.merge_agent,
-                        node_data_merger=self.node_data_merger
+                        node_data_merger=self.node_data_merger,
+                        block_ids=block_ids,
+                        sentence_id=None
                     )
                     
-                    node_map[temp_id] = new_node
+                    node_map = nodes_result.get("node_map", {})
+                    passthrough_edges = nodes_result.get("edges", edges)
                     
-                    if status == "created":
-                        logger.info(f"✅ NODE CREATED: '{label}' (ID: {new_node.id})")
-                    elif status == "merged":
-                        logger.info(f"🔀 NODE MERGED: '{label}' merged into existing node (ID: {new_node.id})")
-                    else:
-                        logger.info(f"✅ NODE {status.upper()}: '{label}' (ID: {new_node.id})")
-                        
+                    total_nodes_processed += len(node_map)
+                    logger.info(f"✅ Processed {len(node_map)} nodes")
+                    
                 except Exception as e:
-                    logger.error(f"❌ Failed to process node '{label}': {e}")
+                    logger.error(f"❌ Failed to process nodes: {e}")
+                    continue
+                
+                # V1 FUNCTION: Process edges with LLM merge and orphan detection
+                logger.info(f"🔍 Processing {len(passthrough_edges)} edges using V1 process_edges...")
+                try:
+                    edges_result = process_edges(
+                        edges=passthrough_edges,
+                        node_map=node_map,
+                        conversation_text=conversation_text,
+                        all_atomic_sentences=all_atomic_sentences,
+                        data_source=data_source,
+                        original_message_timestamp_str=original_message_timestamp,
+                        kg_utils=kg_utils,
+                        edge_merge_agent=self.edge_merge_agent,
+                        conv_idx=conv_idx,
+                        block_ids=block_ids,
+                        sentence_id=None
+                    )
+                    
+                    total_edges_created += edges_result.get("edges_created", 0)
+                    total_edges_merged += edges_result.get("edges_merged", 0)
+                    total_edges_skipped += edges_result.get("edges_skipped_missing_nodes", 0)
+                    
+                    logger.info(f"✅ Edge summary: {edges_result.get('edges_created', 0)} created, "
+                               f"{edges_result.get('edges_merged', 0)} merged")
+                    
+                except RuntimeError as e:
+                    # V1 FEATURE: Orphan node detection raises RuntimeError
+                    logger.error(f"❌ Data integrity error: {e}")
+                    # Continue processing other entries
+                    continue
+                except Exception as e:
+                    logger.error(f"❌ Failed to process edges: {e}")
                     continue
             
-            # Process edges for this chunk
-            for edge in all_edges:
-                source_temp_id = edge.get("source")
-                target_temp_id = edge.get("target")
-                edge_label = edge.get("label")
-                sentence = edge.get("sentence", "")
-                
-                source_node = node_map.get(source_temp_id)
-                target_node = node_map.get(target_temp_id)
-                
-                if not source_node or not target_node:
-                    logger.warning(f"⚠️ Skipping edge due to missing nodes: {source_temp_id} -> {target_temp_id}")
-                    continue
-                
-                try:
-                    edge_obj, status = kg_utils.safe_add_relationship_by_id(
-                        source_id=source_node.id,
-                        target_id=target_node.id,
-                        relationship_type=edge_label.title() if edge_label else "Unknown",
-                        attributes={},
-                        sentence=sentence,
-                        original_message_timestamp=None,
-                        confidence=None,
-                        importance=None,
-                        source=node.get("source"),
-                        original_message_id=node.get("original_message_id"),
-                        sentence_id=node.get("sentence_id"),
-                        relationship_descriptor=edge.get("relationship_descriptor")
-                    )
-                    
-                    if status == "created":
-                        logger.info(f"✅ EDGE CREATED: {source_node.label} -> {edge_label} -> {target_node.label}")
-                    elif status == "merged":
-                        logger.info(f"🔀 EDGE MERGED: {source_node.label} -> {edge_label} -> {target_node.label}")
-                    else:
-                        logger.info(f"✅ EDGE {status.upper()}: {source_node.label} -> {edge_label} -> {target_node.label}")
-                        
-                except Exception as e:
-                    logger.error(f"❌ Failed to process edge: {e}")
-                    continue
+            logger.info(f"📊 Total: {total_nodes_processed} nodes, "
+                       f"{total_edges_created} edges created, {total_edges_merged} edges merged")
             
             # Commit changes for this chunk
             try:
                 kg_utils.session.commit()
-                logger.info(f"✅ Committed chunk: {len(node_map)} nodes, {len(edges)} edges")
+                total_edges_processed = total_edges_created + total_edges_merged
+                logger.info(f"✅ Committed chunk: {total_nodes_processed} nodes, {total_edges_processed} edges")
             except Exception as e:
                 logger.error(f"❌ Failed to commit chunk: {e}")
                 kg_utils.session.rollback()
@@ -312,13 +280,17 @@ class MergeProcessor:
             self.session.add(stage_completion)
             self.session.commit()
             
-            logger.info(f"✅ Chunk processing completed and marked as processed: {len(node_map)} nodes, {len(edges)} edges")
+            total_edges_processed = total_edges_created + total_edges_merged
+            logger.info(f"✅ Chunk processing completed: {total_nodes_processed} nodes, {total_edges_processed} edges")
             
             return {
-                "processed_count": len(node_map) + len(edges),
-                "nodes_processed": len(node_map),
-                "edges_processed": len(edges),
-                "message": f"Processed 1 chunk: {len(node_map)} nodes and {len(edges)} edges into knowledge graph"
+                "processed_count": total_nodes_processed + total_edges_processed,
+                "nodes_processed": total_nodes_processed,
+                "edges_processed": total_edges_processed,
+                "edges_created": total_edges_created,
+                "edges_merged": total_edges_merged,
+                "edges_skipped": total_edges_skipped,
+                "message": f"Processed 1 chunk: {total_nodes_processed} nodes and {total_edges_processed} edges into knowledge graph"
             }
             
         except Exception as e:

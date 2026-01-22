@@ -52,7 +52,7 @@ logging.Logger.model_output = model_output
 # ========================
 # 2. Configure Logger
 # ========================
-GLOBAL_LOG_LEVEL = logging.INFO  # Default global logging level
+GLOBAL_LOG_LEVEL = logging.DEBUG  # Debug level to see all error messages
 
 # Use SafeFormatter to include %(parent_name)s in our format string.
 LOG_FORMATTER = SafeFormatter(

@@ -32,18 +32,24 @@ Sleep: Target bedtime {{ resource_user_health.sleep.target_bedtime }}, Caffeine 
 
 ## 2. Hard Data (System Telemetry)
 
-**Sleep Summary (Last 24 Hours):**
-{% if sleep_summary %}
-- **Total Sleep:** {{ sleep_summary.total_sleep_hours }}h
-- **Quality:** {{ sleep_summary.sleep_quality }}{% if sleep_summary.fragmented %} (Fragmented){% endif %}
+**Sleep (resource_sleep_output.json):**
+{% if resource_sleep_output %}
+- **Total Sleep (last 24h):** {{ resource_sleep_output.total_sleep_minutes }} min
+- **Last night sleep:** {{ resource_sleep_output.last_night_sleep_minutes }} min
+- **Quality:** {{ resource_sleep_output.sleep_quality }}{% if resource_sleep_output.fragmented %} (Fragmented){% endif %}
+- **Time in bed:** {{ resource_sleep_output.time_in_bed_minutes }} min
+- **Wake minutes:** {{ resource_sleep_output.total_wake_minutes }} min
+- **Bedtime:** {{ resource_sleep_output.bedtime_previous_local or resource_sleep_output.bedtime_previous }}
+- **Wake time:** {{ resource_sleep_output.wake_time_today_local or resource_sleep_output.wake_time_today }}
+{% if resource_sleep_output.timezone %}- **Timezone:** {{ resource_sleep_output.timezone }}{% endif %}
 
-{% if sleep_summary.sleep_segments %}
-**Sleep Segments:**
-{% for segment in sleep_summary.sleep_segments %}
-- {{ segment.start }} → {{ segment.end }} ({{ segment.duration_hours }}h) [{{ segment.source }}]
+{% if resource_sleep_output.sleep_periods %}
+**Sleep Periods:**
+{% for p in resource_sleep_output.sleep_periods %}
+- {{ p.start_local or p.start }} -> {{ p.end_local or p.end }} ({{ p.duration_minutes }} min) [{{ p.type }}]
 {% endfor %}
 {% else %}
-- No sleep segments in last 24 hours
+- No sleep periods in last 24h
 {% endif %}
 {% else %}
 [No sleep data available]

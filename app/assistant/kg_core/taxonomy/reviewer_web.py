@@ -43,8 +43,8 @@ def shutdown_session(exception=None):
     for session in sessions:
         try:
             session.close()
-        except:
-            pass
+        except Exception:
+            pass  # Session might already be closed
 
 def get_tracked_session():
     """Get a session that will be automatically closed"""

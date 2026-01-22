@@ -487,8 +487,8 @@ def process_nodes(
 
 
     def _ensure_type(nt: str):
-        """Validate node type against ENUM."""
-        # Node types are enforced by PostgreSQL ENUM: Entity, Event, State, Goal, Concept, Property
+        """Validate node type against valid types."""
+        # Valid node types: Entity, Event, State, Goal, Concept, Property
         valid_types = {'Entity', 'Event', 'State', 'Goal', 'Concept', 'Property'}
         if nt not in valid_types:
             logger.warning(f"Invalid node type '{nt}', will be rejected by database. Valid types: {valid_types}")
@@ -1522,8 +1522,8 @@ def model_to_dict(instance: Any) -> Dict[str, Any]:
     d = {c: getattr(instance, c) for c in columns if c != 'embedding'}
     return d
 
-# Node types are now enforced by PostgreSQL ENUM (Entity, Event, State, Goal, Concept)
-# No need to create node types - they are part of the database schema
+# Valid node types: Entity, Event, State, Goal, Concept, Property
+# Node types are validated at the application level
 
 
 def process_text_to_kg(log_context_items: List[Dict[str, Any]], kg_utils: Optional[KnowledgeGraphUtils] = None):

@@ -1,22 +1,49 @@
 **Current Time:** {{ date_time }}
+**Day:** {{ day_of_week }}
 
 ---
 
+{% if resource_user_data %}
+## User Context
+- **Name:** {{ resource_user_data.preferred_name or resource_user_data.first_name }}
+- **Work:** {{ resource_user_data.job }}
+{% if resource_user_data.important_people %}
+- **Family:** {% for person in resource_user_data.important_people %}{{ person.name }} ({{ person.relationship }}){% if not loop.last %}, {% endif %}{% endfor %}
+{% endif %}
+{% endif %}
+
+{% if resource_user_routine %}
+## Typical Routine (for reference)
+- Wake: {{ resource_user_routine.morning.wake_up.usual_time }}
+- Focus hours: {{ resource_user_routine.work.focus_time.best_hours }}
+- Family time: {{ resource_user_routine.evening.after_work.family_time_start }}
+{% endif %}
+
+---
+
+{% if entity_info %}
+**Entity Context**:
+{{ entity_info }}
+
+---
+{% endif %}
+
+{% set mode = daily_context_mode or "incremental" %}
 {% set has_description = current_daily_context.day_description and current_daily_context.day_description | length > 0 %}
 {% set has_milestones = current_daily_context.milestones and current_daily_context.milestones | length > 0 %}
 {% set context_is_empty = not has_description and not has_milestones %}
 
 ## Current Daily Context
-{% if context_is_empty %}
-*No day assessment yet. Start by looking at the calendar and any other available information and write a summary of the expected day.*
+{% if mode == "rebuild" or context_is_empty %}
+*REBUILD MODE: The daily context is missing or for a different day. Recreate it from scratch using today's calendar + any available chat/tickets.*
 {% else %}
-*This is what we've captured so far today. You may ADD to or UPDATE this.*
+*INCREMENTAL MODE: Keep the existing context. Only update if new information materially changes the expected schedule or the day's dominant themes.*
 
 {{ current_daily_context | tojson(indent=2) }}
 {% endif %}
 
 {% if calendar_events_upcoming %}
-## Calendar Events (Rest of Today)
+## Calendar Events (included because it is new/changed)
 *These are the dominant structure of the day - major commitments and obligations.*
 {% for event in calendar_events_upcoming %}
 - **{{ event.summary }}** ({{ event.start }} - {{ event.end }})
@@ -25,6 +52,7 @@
 
 {% if recent_chat_excerpts %}
 ## Recent Chat Messages
+*Only NEW chat messages since the last time you ran (or since start of day in rebuild mode).*
 {% for chat in recent_chat_excerpts %}
 - [{{ chat.time_local }}] {{ chat.sender }}: {{ chat.content }}
 {% endfor %}
@@ -32,6 +60,7 @@
 
 {% if calendar_events_completed %}
 ## Completed Calendar Events
+*Only NEW completed events since the last time you ran (or since start of day in rebuild mode).*
 {% for event in calendar_events_completed %}
 - **{{ event.event_name }}** (ended at {{ event.end_time }})
 {% endfor %}
@@ -40,6 +69,7 @@
 {% if recent_accepted_tickets %}
 ## Recently Accepted Tickets
 *User explicitly responded to these wellness suggestions.*
+*Only NEW accepted tickets since the last time you ran (or since start of day in rebuild mode).*
 {% for ticket in recent_accepted_tickets %}
 - **"{{ ticket.title }}"** ({{ ticket.accepted_at_local }})
   - Suggested type: {{ ticket.suggestion_type }}
@@ -50,9 +80,20 @@
 {% endfor %}
 {% endif %}
 
+{% if recent_afk_intervals %}
+## Recent AFK (Away From Computer)
+*Only NEW AFK intervals since the last time you ran (or since start of day in rebuild mode).*
+*Treat long AFK blocks as meaningful sections of the day (e.g., out of the house, meals, errands, rest).*
+{% for i in recent_afk_intervals %}
+- {{ i.start_local }} -> {{ i.end_local }} ({{ i.duration_minutes | round(0) | int }} min)
+{% endfor %}
+{% endif %}
+
 ---
 
-**Based on all evidence above, what NEW or UPDATED daily context should we add?**
+**Output requirements**
+- Return a full updated `day_description` (schedule + 1-2 sentences on dominant themes).
+- Return ONLY *new* milestones that should be appended (do not repeat prior milestones).
+- Most runs should add nothing.
 
-Remember most of the time we are adding nothing.  We only want the significant events of the day that a person would remember as they tink about
-their day.
+Remember: we only want significant events a person would remember as the pillars of their day.
