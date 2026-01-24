@@ -1,0 +1,621 @@
+{
+  "current_location": {
+    "latitude": null,
+    "longitude": null,
+    "address": {
+      "city": "Irvine",
+      "state": "CA"
+    },
+    "label": "Home"
+  },
+  "home_location": {
+    "latitude": 33.6846,
+    "longitude": -117.8265,
+    "address": {
+      "street": "",
+      "city": "Irvine",
+      "state": "CA",
+      "zip": "92618",
+      "country": "USA"
+    }
+  },
+  "work_location": {
+    "latitude": null,
+    "longitude": null,
+    "address": {
+      "street": "",
+      "city": "",
+      "state": "",
+      "zip": "",
+      "country": ""
+    }
+  },
+  "last_updated": "2025-12-30T02:15:43.607211+00:00",
+  "location_timeline": [
+    {
+      "start": "2025-12-30T02:14:50+00:00",
+      "end": "2025-12-30T04:00:00+00:00",
+      "label": "Home",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "Family time event at home starting 18:00, user already at home at 18:14:50."
+    },
+    {
+      "start": "2025-12-30T04:00:00+00:00",
+      "end": "2025-12-30T05:00:00+00:00",
+      "label": "Home",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "Martin event likely at home or nearby, no travel needed."
+    },
+    {
+      "start": "2025-12-30T05:00:00+00:00",
+      "end": "2025-12-30T05:30:00+00:00",
+      "label": "Home",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "Walk the dogs around home, no travel."
+    },
+    {
+      "start": "2025-12-30T05:30:00+00:00",
+      "end": "2025-12-30T16:00:00+00:00",
+      "label": "Home",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "Night time, user at home sleeping."
+    },
+    {
+      "start": "2025-12-30T16:00:00+00:00",
+      "end": "2025-12-30T16:30:00+00:00",
+      "label": "Home",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "Take out the dogs at home."
+    },
+    {
+      "start": "2025-12-30T16:30:00+00:00",
+      "end": "2025-12-30T17:00:00+00:00",
+      "label": "Home",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "Preparation time before work hours, at home."
+    },
+    {
+      "start": "2025-12-30T17:00:00+00:00",
+      "end": "2025-12-31T00:30:00+00:00",
+      "label": "Home",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "Work hours from home."
+    },
+    {
+      "start": "2025-12-31T00:30:00+00:00",
+      "end": "2025-12-31T02:00:00+00:00",
+      "label": "Home",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "After work, before family time, at home."
+    },
+    {
+      "start": "2025-12-31T02:00:00+00:00",
+      "end": "2025-12-31T04:00:00+00:00",
+      "label": "Home",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "Family time at home."
+    },
+    {
+      "start": "2025-12-31T04:00:00+00:00",
+      "end": "2025-12-31T05:00:00+00:00",
+      "label": "Home",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "Evening time, likely at home."
+    },
+    {
+      "start": "2025-12-31T05:00:00+00:00",
+      "end": "2025-12-31T05:30:00+00:00",
+      "label": "Home",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "Walk the dogs at home."
+    },
+    {
+      "start": "2025-12-31T05:30:00+00:00",
+      "end": "2025-12-31T16:00:00+00:00",
+      "label": "Home",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "Night time, sleeping at home."
+    },
+    {
+      "start": "2025-12-31T08:00:00+00:00",
+      "end": "2026-01-01T16:00:00+00:00",
+      "label": "Home",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "Night time after event, sleeping at home."
+    },
+    {
+      "start": "2025-12-31T16:00:00+00:00",
+      "end": "2025-12-31T16:30:00+00:00",
+      "label": "Home",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "Take out the dogs at home."
+    },
+    {
+      "start": "2025-12-31T16:30:00+00:00",
+      "end": "2025-12-31T17:00:00+00:00",
+      "label": "Home",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "Preparation before work hours, at home."
+    },
+    {
+      "start": "2025-12-31T17:00:00+00:00",
+      "end": "2025-12-31T17:15:00+00:00",
+      "label": "Home",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "Start of work hours at home before meeting."
+    },
+    {
+      "start": "2025-12-31T17:15:00+00:00",
+      "end": "2025-12-31T18:00:00+00:00",
+      "label": "Home",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "Analytics Team Meeting likely virtual or at home office."
+    },
+    {
+      "start": "2025-12-31T18:00:00+00:00",
+      "end": "2026-01-01T00:30:00+00:00",
+      "label": "Home",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "Work hours at home after meeting."
+    },
+    {
+      "start": "2026-01-01T00:30:00+00:00",
+      "end": "2026-01-01T02:00:00+00:00",
+      "label": "Home",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "After work, before family time, at home."
+    },
+    {
+      "start": "2026-01-01T02:00:00+00:00",
+      "end": "2026-01-01T04:00:00+00:00",
+      "label": "Home",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "Family time at home."
+    },
+    {
+      "start": "2026-01-01T04:00:00+00:00",
+      "end": "2026-01-01T04:25:00+00:00",
+      "label": "Traveling to Virtanen House",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "Travel to Virtanen House for Trash Night event starting 20:00."
+    },
+    {
+      "start": "2026-01-01T04:25:00+00:00",
+      "end": "2026-01-01T05:00:00+00:00",
+      "label": "Virtanen House",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "Trash Night event location."
+    },
+    {
+      "start": "2026-01-01T05:00:00+00:00",
+      "end": "2026-01-01T05:30:00+00:00",
+      "label": "Virtanen House",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "Walk the dogs during Trash Night event, staying at location."
+    },
+    {
+      "start": "2026-01-01T05:30:00+00:00",
+      "end": "2025-12-31T08:00:00+00:00",
+      "label": "Virtanen House",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "Continue Trash Night event until midnight."
+    },
+    {
+      "start": "2026-01-01T16:00:00+00:00",
+      "end": "2026-01-01T16:30:00+00:00",
+      "label": "Home",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "Take out the dogs at home."
+    },
+    {
+      "start": "2026-01-01T16:30:00+00:00",
+      "end": "2026-01-01T17:00:00+00:00",
+      "label": "Home",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "Preparation before work hours, at home."
+    },
+    {
+      "start": "2026-01-01T17:00:00+00:00",
+      "end": "2026-01-02T00:30:00+00:00",
+      "label": "Home",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "Work hours at home."
+    },
+    {
+      "start": "2026-01-02T00:30:00+00:00",
+      "end": "2026-01-02T02:00:00+00:00",
+      "label": "Home",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "After work, before family time, at home."
+    },
+    {
+      "start": "2026-01-02T02:00:00+00:00",
+      "end": "2026-01-02T04:00:00+00:00",
+      "label": "Home",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "Family time at home."
+    },
+    {
+      "start": "2026-01-02T04:00:00+00:00",
+      "end": "2026-01-02T05:00:00+00:00",
+      "label": "Home",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "Evening time, likely at home."
+    },
+    {
+      "start": "2026-01-02T05:00:00+00:00",
+      "end": "2026-01-02T05:30:00+00:00",
+      "label": "Home",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "Walk the dogs at home."
+    },
+    {
+      "start": "2026-01-02T05:30:00+00:00",
+      "end": "2026-01-02T16:00:00+00:00",
+      "label": "Home",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "Night time, sleeping at home."
+    },
+    {
+      "start": "2026-01-02T16:00:00+00:00",
+      "end": "2026-01-02T16:30:00+00:00",
+      "label": "Home",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "Take out the dogs at home."
+    },
+    {
+      "start": "2026-01-02T16:30:00+00:00",
+      "end": "2026-01-02T17:00:00+00:00",
+      "label": "Home",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "Preparation before work hours, at home."
+    },
+    {
+      "start": "2026-01-02T17:00:00+00:00",
+      "end": "2026-01-02T17:15:00+00:00",
+      "label": "Home",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "Start of work hours at home before meeting."
+    },
+    {
+      "start": "2026-01-02T17:15:00+00:00",
+      "end": "2026-01-02T18:00:00+00:00",
+      "label": "Home",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "Analytics Team Meeting likely virtual or at home office."
+    },
+    {
+      "start": "2026-01-02T18:00:00+00:00",
+      "end": "2026-01-03T00:30:00+00:00",
+      "label": "Home",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "Work hours at home after meeting."
+    },
+    {
+      "start": "2026-01-03T00:30:00+00:00",
+      "end": "2026-01-03T02:00:00+00:00",
+      "label": "Home",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "After work, before family time, at home."
+    },
+    {
+      "start": "2026-01-03T02:00:00+00:00",
+      "end": "2026-01-03T04:00:00+00:00",
+      "label": "Home",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "Family time at home."
+    },
+    {
+      "start": "2026-01-03T04:00:00+00:00",
+      "end": "2026-01-03T04:25:00+00:00",
+      "label": "Traveling to Friday Night Meats",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "Travel to Friday Night Meats event starting 20:00."
+    },
+    {
+      "start": "2026-01-03T04:25:00+00:00",
+      "end": "2026-01-03T06:00:00+00:00",
+      "label": "Friday Night Meats",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "Event location for Friday Night Meats."
+    },
+    {
+      "start": "2026-01-03T06:00:00+00:00",
+      "end": "2026-01-03T06:25:00+00:00",
+      "label": "Traveling home from Friday Night Meats",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "Travel back home after event."
+    },
+    {
+      "start": "2026-01-03T06:25:00+00:00",
+      "end": "2026-01-03T06:55:00+00:00",
+      "label": "Home",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "At home after event before dog walk."
+    },
+    {
+      "start": "2026-01-03T06:55:00+00:00",
+      "end": "2026-01-03T07:25:00+00:00",
+      "label": "Home",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "Walk the dogs at home."
+    },
+    {
+      "start": "2026-01-03T07:25:00+00:00",
+      "end": "2026-01-03T15:00:00+00:00",
+      "label": "Home",
+      "address": {
+        "city": "Irvine",
+        "state": "CA"
+      },
+      "source": "inferred",
+      "event_summary": "",
+      "confidence": 1.0,
+      "reasoning": "Night time, sleeping at home."
+    }
+  ]
+}

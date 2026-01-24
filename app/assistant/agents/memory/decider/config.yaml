@@ -1,0 +1,21 @@
+name: memory::decider
+class_name: Agent
+color: "orange"
+
+llm_params:
+  llm_provider: "openai"
+  engine: "gpt-4.1-nano"
+  temperature: 0.2
+
+allowed_tools: []
+except_tools: []
+
+system_context_items: []
+
+user_context_items:
+  - task
+  - information
+  - recent_history
+  - entity_info
+  - memory_available_tags
+

@@ -1,0 +1,16 @@
+{
+  "date": "2026-01-24",
+  "timezone": "America/Los_Angeles",
+  "last_updated": "2026-01-24 08:29 AM PST",
+  "sleep_periods": [
+    {
+      "start": "2026-01-24T07:54:25.604498",
+      "end": "2026-01-24T15:22:25.063552",
+      "duration_minutes": 447.991,
+      "type": "main_sleep",
+      "source": "inferred_sleep",
+      "start_local": "2026-01-23 11:54 PM PST",
+      "end_local": "2026-01-24 07:22 AM PST"
+    }
+  ]
+}

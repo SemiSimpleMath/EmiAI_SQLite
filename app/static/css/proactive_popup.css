@@ -1,0 +1,301 @@
+/**
+ * Proactive Suggestion Popup Styles
+ * ==================================
+ */
+
+/* ===== Popup Container ===== */
+.proactive-popup {
+    position: fixed;
+    top: 80px;
+    right: 24px;
+    width: 400px;
+    max-width: calc(100vw - 48px);
+    max-height: calc(100vh - 120px);
+    background: linear-gradient(135deg, #1a1f35 0%, #0f1320 100%);
+    border: 1px solid rgba(99, 179, 237, 0.3);
+    border-radius: 12px;
+    box-shadow: 
+        0 20px 40px rgba(0, 0, 0, 0.4),
+        0 0 30px rgba(99, 179, 237, 0.1);
+    z-index: 9998;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    color: #e8ecf4;
+    overflow: hidden;
+    animation: slideIn 0.3s ease-out;
+    display: flex;
+    flex-direction: column;
+}
+
+.proactive-popup.hidden {
+    display: none;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* ===== Header ===== */
+.proactive-popup-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: rgba(99, 179, 237, 0.1);
+    border-bottom: 1px solid rgba(99, 179, 237, 0.2);
+    flex-shrink: 0;
+}
+
+.proactive-popup-icon {
+    font-size: 0.9em;
+    font-weight: 600;
+    color: #63b3ed;
+}
+
+.proactive-popup-title {
+    flex: 1;
+    font-weight: 600;
+    font-size: 1em;
+    color: #fff;
+}
+
+.proactive-popup-count {
+    font-size: 0.8em;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.proactive-popup-close {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.9em;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.proactive-popup-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+/* ===== List Container ===== */
+.proactive-popup-list {
+    overflow-y: auto;
+    max-height: 400px;
+    padding: 8px;
+}
+
+/* ===== Individual Suggestion Item ===== */
+.proactive-item {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 8px;
+}
+
+.proactive-item:last-child {
+    margin-bottom: 0;
+}
+
+.proactive-item-content {
+    margin-bottom: 10px;
+}
+
+.proactive-item-title {
+    font-weight: 600;
+    font-size: 0.95em;
+    color: #fff;
+    margin-bottom: 4px;
+}
+
+.proactive-item-message {
+    font-size: 0.85em;
+    color: #b8c4d4;
+    line-height: 1.4;
+}
+
+.proactive-item-meta {
+    font-size: 0.75em;
+    color: rgba(255, 255, 255, 0.4);
+    margin-top: 6px;
+    text-transform: capitalize;
+}
+
+/* ===== Action Buttons ===== */
+.proactive-item-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.proactive-text-container {
+    width: 100%;
+}
+
+.proactive-user-text {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    color: #e8ecf4;
+    font-size: 0.85em;
+    font-family: inherit;
+}
+
+.proactive-user-text::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.proactive-user-text:focus {
+    outline: none;
+    border-color: rgba(99, 179, 237, 0.5);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.proactive-actions-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.proactive-btn-sm {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.8em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.proactive-btn-sm.proactive-btn-done {
+    background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+    color: white;
+}
+
+.proactive-btn-sm.proactive-btn-done:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(72, 187, 120, 0.4);
+}
+
+.proactive-btn-sm.proactive-btn-skip {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.proactive-btn-sm.proactive-btn-skip:hover {
+    background: rgba(245, 101, 101, 0.2);
+    color: #fc8181;
+}
+
+.proactive-btn-sm.proactive-btn-later {
+    background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
+    color: white;
+}
+
+.proactive-btn-sm.proactive-btn-later:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(237, 137, 54, 0.4);
+}
+
+.proactive-btn-sm.proactive-btn-accept {
+    background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+    color: white;
+}
+
+.proactive-btn-sm.proactive-btn-accept:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(72, 187, 120, 0.4);
+}
+
+.proactive-btn-sm.proactive-btn-snooze {
+    background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
+    color: white;
+}
+
+.proactive-btn-sm.proactive-btn-snooze:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(237, 137, 54, 0.4);
+}
+
+.proactive-btn-sm.proactive-btn-dismiss {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.proactive-btn-sm.proactive-btn-dismiss:hover {
+    background: rgba(245, 101, 101, 0.2);
+    color: #fc8181;
+}
+
+.proactive-snooze-select {
+    padding: 5px 8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    color: #e8ecf4;
+    font-size: 0.75em;
+    cursor: pointer;
+}
+
+.proactive-snooze-select:focus {
+    outline: none;
+    border-color: rgba(99, 179, 237, 0.5);
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 480px) {
+    .proactive-popup {
+        top: 60px;
+        right: 8px;
+        left: 8px;
+        width: auto;
+    }
+    
+    .proactive-item-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .proactive-btn-sm {
+        text-align: center;
+    }
+}
+
+/* ===== Tool Approval Items ===== */
+.proactive-item.tool-approval {
+    border-color: rgba(237, 137, 54, 0.4);
+    background: rgba(237, 137, 54, 0.08);
+}
+
+.proactive-item.tool-approval .proactive-item-meta {
+    color: #ed8936;
+}
+
+.proactive-item.tool-approval .proactive-btn-accept {
+    background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+}
+
+.proactive-item.tool-approval .proactive-btn-accept:hover {
+    box-shadow: 0 2px 8px rgba(66, 153, 225, 0.4);
+}
+
+.proactive-item.tool-approval .proactive-btn-dismiss {
+    background: rgba(245, 101, 101, 0.15);
+    color: #fc8181;
+}
+
+.proactive-item.tool-approval .proactive-btn-dismiss:hover {
+    background: rgba(245, 101, 101, 0.3);
+}

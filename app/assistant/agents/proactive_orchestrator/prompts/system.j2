@@ -53,6 +53,9 @@ NEVER suggest an activity before its threshold is met unless there is a very goo
 ```
 
 **Use one of these suggestion types:**
-{% for key, activity in resource_tracked_activities.activities.items() %}
-- `{{ activity.field_name }}` ({{ activity.display_name }})
+{% for key, activity in resource_tracked_activities_output.activities.items() %}
+- `{{ key }}` ({{ activity.display_name }})
 {% endfor %}
+
+For generic wellness suggestion that is not one of the types above use `general_wellness` for suggestion_type.  These can be suggestions to address
+anything else than the tracked activities that are helpful to the user.

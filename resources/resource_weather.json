@@ -1,0 +1,17 @@
+{
+  "location": {
+    "city": "Irvine",
+    "country": "US",
+    "latitude": 33.6856969,
+    "longitude": -117.8259819
+  },
+  "current": {
+    "temperature": 60.2,
+    "feels_like": null,
+    "humidity": null,
+    "condition": "Mainly clear",
+    "wind_speed": 1.0
+  },
+  "forecast": [],
+  "last_updated": "2026-01-24 09:49 AM"
+}

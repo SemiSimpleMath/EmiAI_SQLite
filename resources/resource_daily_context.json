@@ -1,0 +1,69 @@
+{
+  "date": "2026-01-19",
+  "day_start_time": "2026-01-19T17:15:50.503241+00:00",
+  "day_description": "08:00 AM - 08:30 AM: Take out the dogs; 09:00 AM - 04:30 PM: Work Hours; 06:00 PM - 08:00 PM: Family time; 08:00 PM - 09:00 PM: Martin (Zoom call); 09:00 PM - 09:30 PM: Walk the dogs. Today is Martin Luther King Jr. Day, but Jukka is following his standard work routine. The evening is focused on family and his weekly social connection with Martin.",
+  "milestones": [
+    {
+      "timestamp": "2026-01-19T17:31:16.928554+00:00",
+      "time": "08:00 AM",
+      "description": "Took out the dogs"
+    },
+    {
+      "timestamp": "2026-01-19T17:31:16.928554+00:00",
+      "time": "09:00 AM",
+      "description": "Started work"
+    },
+    {
+      "timestamp": "2026-01-19T19:30:30.687350+00:00",
+      "time": "11:10 AM",
+      "description": "Lunch"
+    },
+    {
+      "timestamp": "2026-01-19T23:25:37.423689+00:00",
+      "time": "03:09 PM",
+      "description": "Afternoon snack"
+    },
+    {
+      "timestamp": "2026-01-20T01:05:50.817526+00:00",
+      "time": "04:48 PM",
+      "description": "Dinner preparation"
+    }
+  ],
+  "_meta": {
+    "schema_version": 1,
+    "last_run_utc": "2026-01-20T01:44:55.937732+00:00",
+    "last_chat_seen_utc": null,
+    "seen_ticket_ids": [
+      "proactive_standing_break_20260120_001353_1ae49bb7",
+      "proactive_finger_stretch_20260119_213210_1ee4341f",
+      "proactive_finger_stretch_20260119_184547_da00f4ec",
+      "proactive_standing_break_20260119_231523_583c7b26",
+      "proactive_coffee_20260119_180311_728b2f95",
+      "proactive_finger_stretch_20260119_215907_5de19c59",
+      "proactive_finger_stretch_20260119_191617_58f05eab",
+      "proactive_finger_stretch_20260119_172446_d95e7dc3",
+      "proactive_finger_stretch_20260119_194207_52647ee4",
+      "proactive_standing_break_20260119_211740_7bccd3dc",
+      "proactive_finger_stretch_20260119_200813_6226fd98",
+      "proactive_standing_break_20260119_202618_54be4b09",
+      "proactive_meal_20260119_185631_69fdc7c7",
+      "proactive_finger_stretch_20260119_233705_9d258403",
+      "proactive_finger_stretch_20260119_223917_d44bc1ae",
+      "proactive_standing_break_20260119_184211_1660876b",
+      "proactive_meal_20260120_004744_84db2858",
+      "proactive_standing_break_20260119_193508_a55e586d",
+      "proactive_standing_break_20260119_221857_05dbb7c7",
+      "proactive_standing_break_20260119_172446_abe273fa",
+      "proactive_finger_stretch_20260119_181318_067cbe7b",
+      "proactive_snack_20260119_230114_6dce5f15",
+      "proactive_hydration_20260119_214820_dc4ff559",
+      "proactive_hydration_20260119_194523_081c182a",
+      "proactive_finger_stretch_20260120_000300_72a83ac6",
+      "proactive_hydration_20260119_171643_f448fa0b",
+      "proactive_coffee_20260119_172804_bf7e207c",
+      "proactive_finger_stretch_20260119_203329_6b9c2e60",
+      "proactive_hydration_20260120_002008_b7b4fb1d"
+    ],
+    "calendar_hash": "2658035334222ff394397ce0c8dfdedab611778c4f46698e12accbbc6b5cbf0f"
+  }
+}

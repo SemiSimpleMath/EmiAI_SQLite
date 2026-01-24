@@ -1,0 +1,148 @@
+{
+  "timestamp": "2026-01-07T01:27:34.567440+00:00",
+  "last_updated": "2026-01-07T01:27:34.567440+00:00",
+  "day_started": true,
+  "day_start_time": "2026-01-06T06:43:12.631100+00:00",
+  "morning_greeting_sent": false,
+  "sleep_segments": [
+    {
+      "start": "2026-01-02T22:09:18.384920+00:00",
+      "end": "2026-01-03T06:39:18.384920+00:00",
+      "duration_minutes": 510.0,
+      "source": "cold_start_assumed"
+    },
+    {
+      "start": "2026-01-03T22:09:20.195854+00:00",
+      "end": "2026-01-04T06:39:20.195854+00:00",
+      "duration_minutes": 510.0,
+      "source": "cold_start_assumed"
+    },
+    {
+      "start": "2026-01-05T05:15:51.561432+00:00",
+      "end": "2026-01-05T06:06:44.718567+00:00",
+      "duration_minutes": 50.9,
+      "source": "afk_detection"
+    },
+    {
+      "start": "2026-01-04T22:11:49.104759+00:00",
+      "end": "2026-01-05T06:41:49.104759+00:00",
+      "duration_minutes": 510.0,
+      "source": "cold_start_assumed"
+    },
+    {
+      "start": "2026-01-05T22:13:12.631100+00:00",
+      "end": "2026-01-06T06:43:12.631100+00:00",
+      "duration_minutes": 510.0,
+      "source": "cold_start_assumed"
+    }
+  ],
+  "last_night_sleep": {
+    "total_minutes": 510.0,
+    "total_hours": 8.5,
+    "quality": "unknown",
+    "fragmented": false,
+    "segment_count": 1,
+    "segments": [
+      {
+        "start": "2026-01-05T22:13:12.631100+00:00",
+        "end": "2026-01-06T06:43:12.631100+00:00",
+        "duration_minutes": 510.0,
+        "source": "cold_start_assumed"
+      }
+    ],
+    "bedtime": "2026-01-05 14:13",
+    "source": "cold_start_assumed"
+  },
+  "computer_activity": {
+    "idle_seconds": 32.0,
+    "idle_minutes": 0.5,
+    "status": "active",
+    "is_active": true,
+    "last_checked": "2026-01-07T01:27:33.526277+00:00",
+    "active_work_session_minutes": 13.7,
+    "is_afk": false,
+    "is_potentially_afk": false,
+    "total_afk_time_today": 633.4,
+    "total_active_time_today": 444.4,
+    "last_afk_start": "2026-01-07T00:38:14.355784+00:00",
+    "active_work_session_start": "2026-01-07T01:13:54.374911+00:00"
+  },
+  "wellness_activities": {
+    "coffees_today": 3,
+    "coffees_today_date": "2026-01-06",
+    "last_hydration": "2026-01-07T00:00:27.629638+00:00",
+    "last_coffee": "2026-01-06T21:44:47.506304+00:00",
+    "last_finger_stretch": "2026-01-07T01:13:51.373837+00:00",
+    "last_standing_break": "2026-01-07T01:13:51.373837+00:00",
+    "last_back_stretch": "2026-01-07T01:13:51.373837+00:00",
+    "last_meal": "2026-01-06T19:59:50.289135+00:00",
+    "last_snack": "2026-01-07T00:11:34.147830+00:00",
+    "last_walk": "2026-01-06T18:26:05.440940+00:00",
+    "last_exercise": null,
+    "last_rest": "2025-12-29T20:41:20.895724+00:00",
+    "hydrations_today": 1,
+    "hydrations_today_date": "2026-01-04",
+    "snacks_today": 0,
+    "snacks_today_date": "2026-01-03",
+    "finger_stretchs_today": 1,
+    "finger_stretchs_today_date": "2026-01-04",
+    "back_stretchs_today": 0,
+    "back_stretchs_today_date": "2026-01-03",
+    "standing_breaks_today": 0,
+    "standing_breaks_today_date": "2026-01-03",
+    "walks_today": 1,
+    "walks_today_date": "2026-01-04",
+    "meals_today": 1,
+    "meals_today_date": "2026-01-04",
+    "exercises_today": 0,
+    "exercises_today_date": "2026-01-03"
+  },
+  "health_status": {
+    "overall_wellness": "Good",
+    "acute_conditions": [],
+    "chronic_conditions": [],
+    "recent_mentions": [],
+    "wellness_score": 0.7,
+    "acute_conditions_detected": [],
+    "chronic_conditions_flaring": []
+  },
+  "physiology": {
+    "energy_level": "Normal",
+    "hunger_probability": "High",
+    "sleep_deficit": "Unknown",
+    "hydration_reminder": "Unknown",
+    "caffeine_window": "Unknown",
+    "physical_activity": "Unknown",
+    "hydration_need": "Medium",
+    "caffeine_state": "Cutoff-Reached"
+  },
+  "cognitive_state": {
+    "load": "Low",
+    "current_context": "Unknown",
+    "interruption_tolerance": "High",
+    "decision_fatigue": "Unknown",
+    "focus_depth": "Normal",
+    "context_switches_today": 0,
+    "mental_clarity": "Unknown"
+  },
+  "emotional_state": {
+    "mood": "Neutral",
+    "stress_level": "Unknown",
+    "frustration_indicators": "None",
+    "accomplishment_boost": "Unknown",
+    "social_battery": "Available"
+  },
+  "schedule_pressure": {
+    "meetings_remaining": 0,
+    "back_to_back_risk": false,
+    "deadlines_24h": [],
+    "buffer_time_available": "Unknown",
+    "overcommitment_score": 0.0,
+    "meeting_density": "Open",
+    "next_free_block_minutes": 33,
+    "imminent_deadline": false
+  },
+  "status_timeline": [],
+  "pending_sleep_start": "2026-01-05T07:07:00+00:00",
+  "last_activity_tracker_run_time": "2026-01-07T01:27:25.495961+00:00"
+}

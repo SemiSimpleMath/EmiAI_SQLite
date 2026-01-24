@@ -1,0 +1,62 @@
+{
+  "_metadata": {
+    "resource_id": "resource_user_routine",
+    "version": "2.0",
+    "last_updated": "2025-12-28",
+    "tags": ["routine", "schedule", "timing"],
+    "description": "User's daily routines and timing preferences"
+  },
+  "morning": {
+    "wake_up": {
+      "usual_time": "7:00 AM",
+      "notes": [
+        "Needs coffee immediately after waking",
+        "Not a morning person - slow start"
+      ]
+    },
+    "pre_work": [
+      {
+        "time": "8:00 AM",
+        "activity": "Take dogs out"
+      },
+      {
+        "activity": "Light breakfast or skip entirely"
+      }
+    ]
+  },
+  "work": {
+    "focus_time": {
+      "best_hours": "9:00 AM - 12:00 PM",
+      "notes": [
+        "Morning hours before lunch are typically best for deep work"
+      ]
+    },
+    "breaks": [
+      "Short walk helps reset focus",
+      "Standing desk breaks for back pain"
+    ]
+  },
+  "evening": {
+    "after_work": {
+      "family_time_start": "6:00 PM",
+      "notes": [
+        "Family time starts around 6pm, this is very flexible, however.  Usually family time is over before 8pm",
+        "Dinner with family is important"
+      ]
+    },
+    "wind_down": [
+      {
+        "time": "9:00 PM",
+        "activity": "Walk dogs"
+      },
+      {
+        "preference": "Needs 30min wind-down before sleep"
+      },
+      {
+        "goal": "No screens after 10.30pm"
+      }
+    ]
+  }
+}
+
+

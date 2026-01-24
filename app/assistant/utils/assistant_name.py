@@ -2,6 +2,7 @@
 Utility to get the assistant's name from configuration
 """
 from pathlib import Path
+from app.assistant.utils.path_utils import get_resources_dir
 import json
 from typing import Optional
 
@@ -14,7 +15,7 @@ def get_assistant_name() -> str:
         str: The assistant's name
     """
     try:
-        resources_dir = Path(__file__).resolve().parents[3] / 'resources'
+        resources_dir = get_resources_dir()
         assistant_data_file = resources_dir / 'resource_assistant_data.json'
         
         if assistant_data_file.exists():

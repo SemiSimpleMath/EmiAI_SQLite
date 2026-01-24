@@ -1,0 +1,7 @@
+{
+  "error": true,
+  "message": "Gemini error: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'The model is overloaded. Please try again later.', 'status': 'UNAVAILABLE'}}",
+  "model": "gemini-3-flash-preview",
+  "last_updated": "2026-01-24 08:29 AM",
+  "tickets_created": 0
+}

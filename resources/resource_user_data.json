@@ -1,0 +1,31 @@
+{
+  "first_name": "Jukka",
+  "middle_name": null,
+  "last_name": "Virtanen",
+  "preferred_name": "Jukka",
+  "full_name": "Jukka Virtanen",
+  "pronouns": {
+    "subjective": "he",
+    "objective": "him"
+  },
+  "birthdate": "1975-03-18",
+  "job": "Data Scientist",
+  "important_people": [
+    {
+      "name": "Katy",
+      "relationship": "wife",
+      "birthdate": "1976-08-18"
+    },
+    {
+      "name": "Peter",
+      "relationship": "son",
+      "birthdate": "2010-06-02"
+    },
+    {
+      "name": "Annika",
+      "relationship": "daughter",
+      "birthdate": "2013-08-12"
+    }
+  ],
+  "additional_context": "Jukka has a PhD in Math\n Jukka works at Seyfarth and Shaw (full remote, works from home.)\nJukka has two dogs, Bonnie and Clyde\nJukka and his family live in Irvine CA"
+}

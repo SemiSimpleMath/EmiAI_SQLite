@@ -4,6 +4,7 @@ User and Assistant preferences management
 """
 from flask import Blueprint, render_template, request, jsonify
 from pathlib import Path
+from app.assistant.utils.path_utils import get_resources_dir as _get_resources_dir
 import json
 import os
 from app.assistant.ServiceLocator.service_locator import DI
@@ -13,7 +14,7 @@ preferences_bp = Blueprint('preferences', __name__)
 
 def get_resources_dir():
     """Get the resources directory path"""
-    return Path(__file__).resolve().parents[2] / 'resources'
+    return _get_resources_dir()
 
 def update_resource_data(resource_id, json_data):
     """

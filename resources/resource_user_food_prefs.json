@@ -1,0 +1,79 @@
+{
+  "_metadata": {
+    "resource_id": "resource_user_food_prefs",
+    "version": "2.0",
+    "last_updated": "2026-01-16",
+    "tags": [
+      "food",
+      "drink"
+    ],
+    "description": "User's food and beverage preferences, likes, dislikes, and dietary restrictions"
+  },
+  "food": {
+    "likes": [
+      {
+        "item": "pasta_carbonara",
+        "display": "Pasta (especially carbonara)",
+        "added": "2025-12-28",
+        "expiry": null
+      },
+      {
+        "item": "sushi",
+        "display": "Sushi",
+        "added": "2025-12-28",
+        "expiry": null
+      },
+      {
+        "item": "scrambled_eggs_with_lox",
+        "display": "Scrambled eggs with lox",
+        "added": "2025-12-28",
+        "expiry": null
+      }
+    ],
+    "dislikes": [
+      {
+        "item": "tomato",
+        "display": "Tomato",
+        "added": "2025-12-28",
+        "expiry": null
+      }
+    ],
+    "preferences": [
+      {
+        "text": "Prefers to order Thai food rather than cook at home because they are not good at cooking",
+        "added": "2025-12-28",
+        "expiry": null
+      },
+      {
+        "text": "Prefers simple and basic food preparations",
+        "added": "2025-12-28",
+        "expiry": null
+      }
+    ],
+    "allergies": []
+  },
+  "drinks": {
+    "coffee": {
+      "timing": "Right after waking up",
+      "daily_amount": "1-2 cups per day",
+      "cutoff_time": "16:00",
+      "cutoff_reason": "Strict cutoff to avoid sleep disruption",
+      "added": "2025-12-28",
+      "expiry": null
+    },
+    "other": [
+      {
+        "item": "water",
+        "preference": "Prefers water for hydration",
+        "added": "2025-12-28",
+        "expiry": null
+      }
+    ],
+    "milk": "User drinks probably 200% more milk than average, preferring milk over water."
+  },
+  "meal_timing": {
+    "breakfast": "Usually skip or have something light",
+    "lunch": "Around noon",
+    "dinner": "6-7pm with family"
+  }
+}

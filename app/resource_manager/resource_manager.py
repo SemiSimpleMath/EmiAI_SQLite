@@ -226,3 +226,29 @@ class ResourceManager:
                 logger.info(f"Persisted shared resource '{resource_id}' to {path}")
             except Exception as e:
                 logger.error(f"Failed to persist resource '{resource_id}' to {path}: {e}")
+
+    def refresh_resource(self, resource_id: str) -> None:
+        """
+        Reload a resource from disk into the global blackboard cache.
+        """
+        if not hasattr(DI, "global_blackboard") or DI.global_blackboard is None:
+            raise RuntimeError("Global blackboard not initialized.")
+
+        if not resource_id:
+            return
+
+        path = self._resource_files.get(resource_id)
+        if path is None:
+            candidate = (self.base_dir / "resources" / f"{resource_id}.json").resolve()
+            if candidate.exists():
+                path = candidate
+                self._resource_files[resource_id] = candidate
+            else:
+                logger.warning(f"Resource file not found for refresh: {resource_id}")
+                return
+
+        try:
+            content = self._read_file(path)
+            DI.global_blackboard.update_state_value(resource_id, content)
+        except Exception as e:
+            logger.error(f"Failed to refresh resource '{resource_id}' from {path}: {e}")

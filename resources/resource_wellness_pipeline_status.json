@@ -1,0 +1,91 @@
+{
+  "schema_version": 2,
+  "last_updated_utc": "2026-01-24T17:39:38.749772+00:00",
+  "boundary_date_local": "2026-01-24",
+  "last_daily_reset_utc": "2026-01-24T13:03:06.154076+00:00",
+  "last_daily_reset_boundary": "2026-01-24",
+  "day_started": true,
+  "day_start_time_utc": "2026-01-24T15:22:25.063552+00:00",
+  "day_start_time": "2026-01-24 07:22 AM PST",
+  "wake_time_today": "2026-01-24 07:22",
+  "user_is_up": true,
+  "cursors": {
+    "chat_last_seen_utc": "2026-01-24T07:41:13.312396+00:00"
+  },
+  "stage_runs": {
+    "sleep": {
+      "last_run_utc": "2026-01-24T16:29:36.431906+00:00",
+      "last_reason": "policy=always",
+      "last_debug": {
+        "total_sleep_minutes": 448.0,
+        "segment_count": 1,
+        "wake_time": "07:22",
+        "user_is_up": true,
+        "day_start_time": "2026-01-24 07:22 AM PST"
+      }
+    },
+    "activity_tracker": {
+      "last_run_utc": "2026-01-24T16:05:25.190574+00:00",
+      "last_reason": "policy=on_new_chat (new=2)",
+      "last_debug": {
+        "chat_messages_processed": 2,
+        "calendar_events": 0,
+        "tickets_processed": 5
+      }
+    },
+    "daily_context_generator": {
+      "last_run_utc": "2026-01-24T16:29:36.431906+00:00",
+      "last_reason": "policy=always",
+      "last_debug": {
+        "mode": "incremental",
+        "output_keys": [
+          "day_description",
+          "milestones",
+          "current_status",
+          "reasoning"
+        ]
+      }
+    },
+    "health_inference": {
+      "last_run_utc": "2026-01-24T16:29:36.431906+00:00",
+      "last_reason": "policy=always",
+      "last_debug": {
+        "output_keys": [
+          "mental",
+          "cognitive",
+          "physical",
+          "physiology",
+          "health_concerns_today",
+          "general_health_assessment"
+        ]
+      }
+    },
+    "physical_orchestrator": {
+      "last_run_utc": "2026-01-24T16:29:36.431906+00:00",
+      "last_reason": "policy=always",
+      "last_debug": {
+        "output_keys": [
+          "error",
+          "message",
+          "model"
+        ],
+        "tickets_created": 0
+      }
+    },
+    "wellness_ticket_processor": {
+      "last_run_utc": "2026-01-24T16:29:36.431906+00:00",
+      "last_reason": "policy=always",
+      "last_debug": {
+        "tickets_processed": 0
+      }
+    },
+    "activity_timers": {
+      "last_run_utc": "2026-01-24T16:29:36.431906+00:00",
+      "last_reason": "policy=always",
+      "last_debug": {
+        "refreshed": true
+      }
+    }
+  },
+  "signals": {}
+}

@@ -1,0 +1,16 @@
+Today is {{ date_time }}.
+{{ entity_info }}
+
+## Original Request
+{{ task }}
+
+{% if information %}
+## Additional Context
+{{ information }}
+{% endif %}
+
+## Recent History (if any)
+{{ recent_history }}
+
+Decide if the request should be stored as long-term memory. If yes, output 1-2 tags and a canonical one-sentence fact_summary.
+

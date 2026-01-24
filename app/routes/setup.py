@@ -4,6 +4,7 @@ First-run setup wizard for Emi SQLite
 """
 from flask import Blueprint, render_template, request, jsonify, session, redirect, url_for
 from pathlib import Path
+from app.assistant.utils.path_utils import get_resources_dir
 import json
 import uuid
 from datetime import datetime
@@ -15,13 +16,13 @@ setup_bp = Blueprint('setup', __name__)
 
 def is_setup_complete():
     """Check if initial setup has been completed"""
-    resources_dir = Path(__file__).resolve().parents[2] / 'resources'
+    resources_dir = get_resources_dir()
     user_data_file = resources_dir / 'resource_user_data.json'
     return user_data_file.exists()
 
 def get_setup_status():
     """Get detailed setup status"""
-    resources_dir = Path(__file__).resolve().parents[2] / 'resources'
+    resources_dir = get_resources_dir()
     return {
         'resource_user_data': (resources_dir / 'resource_user_data.json').exists(),
         'resource_assistant_data': (resources_dir / 'resource_assistant_data.json').exists(),

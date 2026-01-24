@@ -1,0 +1,26 @@
+{
+  "window_start_utc": "2026-01-19T06:30:00+00:00",
+  "window_end_utc": "2026-01-19T17:00:00+00:00",
+  "computed_at_utc": "2026-01-19T19:33:00+00:00",
+
+  "total_minutes": 0.0,
+  "total_hours": 0.0,
+  "quality": "unknown",
+  "fragmented": false,
+
+  "segment_count": 0,
+  "segments": [],
+  "wake_interruptions": [],
+  "total_wake_minutes": 0.0,
+  "primary_sleep_minutes": 0.0,
+
+  "bedtime_local": null,
+  "wake_time_local": null,
+
+  "source_breakdown": {
+    "user_chat_minutes": 0.0,
+    "afk_computed_minutes": 0.0
+  },
+
+  "source": "database"
+}

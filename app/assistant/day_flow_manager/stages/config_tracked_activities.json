@@ -1,0 +1,68 @@
+{
+  "version": 2,
+  "description": "Wellness activities tracked today. Use field_name values exactly in outputs.",
+  "activities": {
+    "coffee": {
+      "display_name": "Coffee",
+      "field_name": "coffee",
+      "guidance": "Max 2 per day before 4pm",
+      "init_on_cold_start": false
+    },
+    "finger_stretch": {
+      "display_name": "Finger Stretch",
+      "field_name": "finger_stretch",
+      "init_on_cold_start": true,
+      "reset_on_afk": true,
+      "threshold": {
+        "label": "Every 20 to 30 min of typing (chronic pain)",
+        "minutes": 25
+      }
+    },
+    "hydration": {
+      "display_name": "Hydration",
+      "field_name": "hydration",
+      "init_on_cold_start": true,
+      "threshold": {
+        "label": "Every 2 to 3 hours",
+        "minutes": 120
+      }
+    },
+    "meal": {
+      "calendar_keywords": [
+        "Breakfast",
+        "Lunch",
+        "Dinner",
+        "Meal"
+      ],
+      "display_name": "Meal",
+      "field_name": "meal",
+      "guidance": "Typical windows: 7 to 9am, 11am to 1pm, 5 to 7pm",
+      "init_on_cold_start": false,
+      "reset_triggers": [
+        "chat",
+        "ticket",
+        "calendar"
+      ]
+    },
+    "snack": {
+      "display_name": "Snack",
+      "field_name": "snack",
+      "guidance": "As needed",
+      "init_on_cold_start": false,
+      "reset_triggers": [
+        "chat",
+        "ticket"
+      ]
+    },
+    "standing_break": {
+      "display_name": "Standing Break",
+      "field_name": "standing_break",
+      "init_on_cold_start": true,
+      "reset_on_afk": true,
+      "threshold": {
+        "label": "Every 45 to 60 min of sitting",
+        "minutes": 50
+      }
+    }
+  }
+}

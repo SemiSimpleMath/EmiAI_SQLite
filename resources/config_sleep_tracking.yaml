@@ -1,0 +1,53 @@
+# Sleep Tracking Configuration
+# Minimal parameters to detect sleep intervals and when user is actually up
+
+# Sleep Window
+# AFK during this period counts as sleep
+sleep_window:
+  start: "22:30"  # 10:30 PM
+  end: "09:00"    # 9:00 AM
+
+# Sleep/Awake Divider
+# After this time, AFK is treated as awake time rather than sleep.
+sleep_awake_divider: "05:30"
+
+# Minimum AFK duration to count as sleep (minutes)
+# Sleep-like AFK must be this long AND overlap with sleep window
+min_sleep_afk_minutes: 60  # 1 hour minimum
+
+# Minimum overlap ratio with sleep window to classify as sleep
+# 0.60 = at least 60% of AFK period must overlap with sleep window
+min_sleep_overlap_ratio: 0.60
+
+# AFK Detection Thresholds
+# These control when the system considers the user "away"
+afk_thresholds:
+  is_potentially_afk_minutes: 1  # Grace period - wellness cycle pauses but user not yet considered AFK
+  confirmed_afk_minutes: 3       # User is confirmed AFK
+
+# AFK-based activity resets
+# If user was away from the computer for >= min_minutes, reset timers for activities
+# that have reset_on_afk: true in config_tracked_activities.json (e.g., stretches).
+afk_resets:
+  min_minutes: 10
+
+# Normal Sleep Hours
+# Used for cold start assumptions and calculating expected wake time
+normal_sleep:
+  start: "22:30"  # Typical bedtime
+  end: "07:30"    # Typical wake time
+  duration_hours: 8.5  # Default assumption for cold starts
+
+# Greeting Messages
+greetings:
+  # After confirmed awake
+  morning_greeting: "☀️ Good morning! How did you sleep last night?"
+  
+  # Early wake (before ambiguous window, deprecated)
+  early_contact: "You're up very early. Are you getting up or planning to go back to sleep?"
+
+# Administrative Daily Reset
+# Fixed time for resetting daily counters (separate from behavioral wake logic)
+daily_reset:
+  hour: 5  # 5 AM - when daily counters reset
+

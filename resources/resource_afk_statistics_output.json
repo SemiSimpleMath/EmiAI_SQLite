@@ -1,0 +1,18 @@
+{
+  "is_afk": false,
+  "idle_minutes": 0.0,
+  "active_start": "2026-01-24 09:36 AM",
+  "afk_start": null,
+  "total_active_time_today": 79.3,
+  "total_afk_time_today": 210.4,
+  "afk_count_today": 2,
+  "active_segment_count_today": 1,
+  "total_active_time_since_wake": 79.3,
+  "total_afk_time_since_wake": 68.4,
+  "active_work_session_minutes": 13.2,
+  "current_afk_minutes": 0.0,
+  "boundary_time": "2026-01-24 05:00 AM",
+  "wake_time": "2026-01-24 07:22 AM",
+  "wake_time_source": "sleep_stage",
+  "last_updated": "2026-01-24 09:49 AM"
+}
