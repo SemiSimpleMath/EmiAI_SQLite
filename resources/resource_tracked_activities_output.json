@@ -1,0 +1,90 @@
+{
+  "computed_at_utc": "2026-01-24T16:29:36.431906+00:00",
+  "source": "tracked_activities_state",
+  "activities": {
+    "coffee": {
+      "display_name": "Coffee",
+      "threshold_minutes": null,
+      "minutes_since": 24.2,
+      "is_overdue": null,
+      "next_due_in_minutes": null,
+      "count_today": 8,
+      "count_date_local": "2026-01-24",
+      "last_utc": "2026-01-24T16:05:25.190574+00:00",
+      "last_reset_utc": "2026-01-24T16:12:05.720471+00:00",
+      "minutes_since_reset": 17.5,
+      "last_reset_reason": "init",
+      "guidance": "Max 2 per day before 4pm"
+    },
+    "finger_stretch": {
+      "display_name": "Finger Stretch",
+      "threshold_minutes": 25,
+      "minutes_since": 24.2,
+      "is_overdue": false,
+      "next_due_in_minutes": 0.8,
+      "count_today": 8,
+      "count_date_local": "2026-01-24",
+      "last_utc": "2026-01-24T16:05:25.190574+00:00",
+      "last_reset_utc": "2026-01-24T16:12:05.720471+00:00",
+      "minutes_since_reset": 17.5,
+      "last_reset_reason": "init",
+      "guidance": null
+    },
+    "hydration": {
+      "display_name": "Hydration",
+      "threshold_minutes": 120,
+      "minutes_since": 24.2,
+      "is_overdue": false,
+      "next_due_in_minutes": 95.8,
+      "count_today": 8,
+      "count_date_local": "2026-01-24",
+      "last_utc": "2026-01-24T16:05:25.190574+00:00",
+      "last_reset_utc": "2026-01-24T16:12:05.720471+00:00",
+      "minutes_since_reset": 17.5,
+      "last_reset_reason": "init",
+      "guidance": null
+    },
+    "meal": {
+      "display_name": "Meal",
+      "threshold_minutes": null,
+      "minutes_since": 24.2,
+      "is_overdue": null,
+      "next_due_in_minutes": null,
+      "count_today": 8,
+      "count_date_local": "2026-01-24",
+      "last_utc": "2026-01-24T16:05:25.190574+00:00",
+      "last_reset_utc": "2026-01-24T16:12:05.720471+00:00",
+      "minutes_since_reset": 17.5,
+      "last_reset_reason": "init",
+      "guidance": "Typical windows: 7 to 9am, 11am to 1pm, 5 to 7pm"
+    },
+    "snack": {
+      "display_name": "Snack",
+      "threshold_minutes": null,
+      "minutes_since": null,
+      "is_overdue": null,
+      "next_due_in_minutes": null,
+      "count_today": 0,
+      "count_date_local": "2026-01-24",
+      "last_utc": null,
+      "last_reset_utc": "2026-01-24T16:12:05.720471+00:00",
+      "minutes_since_reset": 17.5,
+      "last_reset_reason": "init",
+      "guidance": "As needed"
+    },
+    "standing_break": {
+      "display_name": "Standing Break",
+      "threshold_minutes": 50,
+      "minutes_since": 24.2,
+      "is_overdue": false,
+      "next_due_in_minutes": 25.8,
+      "count_today": 8,
+      "count_date_local": "2026-01-24",
+      "last_utc": "2026-01-24T16:05:25.190574+00:00",
+      "last_reset_utc": "2026-01-24T16:12:05.720471+00:00",
+      "minutes_since_reset": 17.5,
+      "last_reset_reason": "init",
+      "guidance": null
+    }
+  }
+}

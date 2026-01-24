@@ -1,6 +1,7 @@
 from flask import Flask, render_template
 from flask import Blueprint, redirect, url_for
 from pathlib import Path
+from app.assistant.utils.path_utils import get_resources_dir
 import json
 
 chat_bot_bp = Blueprint('chat_bot', __name__)
@@ -8,14 +9,14 @@ chat_bot_bp = Blueprint('chat_bot', __name__)
 
 def is_first_time_user():
     """Check if this is a first-time user (no setup completed)"""
-    resources_dir = Path(__file__).resolve().parents[2] / 'resources'
+    resources_dir = get_resources_dir()
     user_data_file = resources_dir / 'resource_user_data.json'
     return not user_data_file.exists()
 
 
 def get_assistant_name():
     """Get the assistant name from config"""
-    resources_dir = Path(__file__).resolve().parents[2] / 'resources'
+    resources_dir = get_resources_dir()
     personality_file = resources_dir / 'resource_assistant_personality_data.json'
     
     if personality_file.exists():

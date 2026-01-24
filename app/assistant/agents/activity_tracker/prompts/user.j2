@@ -1,7 +1,7 @@
 Today is: {{date_time}}
 Tracked activities (use these exact field_name values):
-{% for key, a in resource_tracked_activities.activities.items() %}
-- {{ a.display_name }} ({{ a.field_name }}){% if a.threshold %}: {{ a.threshold.label }}{% endif %}
+{% for key, a in resource_tracked_activities_output.activities.items() %}
+- {{ a.display_name }} ({{ key }}){% if a.threshold_minutes %}: {{ a.threshold_minutes }} min{% endif %}{% if a.guidance %} ({{ a.guidance }}){% endif %}
 {% endfor %}
 
 Current activity counts today:

@@ -1,0 +1,58 @@
+name: memory_manager
+class_name: MultiAgentManager
+description: "Manages user memory/preferences by finding relevant sections and updating markdown resource files."
+max_cycles: 20
+
+role_bindings:
+  delegator: memory::delegator
+  tool_selector: shared::tool_selector
+
+agents:
+  - name: memory::delegator
+    class: Delegator
+  - name: memory::planner
+    class: Planner
+  - name: shared::tool_arguments
+    class: Agent
+
+control_nodes:
+  - name: tool_caller
+    class: ToolCaller
+  - name: tool_result_handler
+    class: ToolResultHandler
+  - name: exit_node
+    class: ExitNode
+  - name: flow_exit_node
+    class: FlowExitNode
+  - name: manager_exit_node
+    class: ManagerExitNode
+  - name: graceful_exit_control_node
+    class: GracefulExitControlNode
+
+tools:
+  allowed_tools:
+    # JSON-native subscription-based memory editing
+    - memory_apply_fact
+    # Keep legacy markdown tools available for now (agent-specific prefs still may be .md)
+    - read_memory_file
+    - memory_section_finder
+    - memory_section_editor
+    - update_memory_file
+  except_tools: []
+
+flow_config:
+  state_map:
+    # Delegator routes to planner
+    "memory::delegator": "memory::planner"
+    
+    # Tool calling flow
+    "shared::tool_arguments": "tool_caller"
+    "tool_caller": "tool_result_handler"
+    
+    # Planner exit exits the manager (this pipeline is internal; no user-facing summary step)
+    "memory::planner_flow_exit_node": "manager_exit_node"
+    
+    # Graceful exit handling
+    "graceful_exit": "graceful_exit_control_node"
+    "graceful_exit_control_node": "manager_exit_node"
+

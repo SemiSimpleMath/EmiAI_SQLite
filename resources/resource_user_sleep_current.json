@@ -1,0 +1,28 @@
+{
+  "timezone": "America/Los_Angeles",
+  "date": "2026-01-19",
+  "total_sleep_minutes": 602.9,
+  "last_night_sleep_minutes": 602.9,
+  "main_sleep_minutes": 602.9,
+  "sleep_quality": "poor",
+  "fragmented": false,
+  "segment_count": 1,
+  "total_wake_minutes": 0.0,
+  "time_in_bed_minutes": 602.9,
+  "sleep_periods": [
+    {
+      "start": "2026-01-19T06:35:47.652150",
+      "end": "2026-01-19T16:38:41.881574",
+      "duration_minutes": 602.9038237333333,
+      "type": "main_sleep",
+      "start_local": "2026-01-18 10:35 PM PST",
+      "end_local": "2026-01-19 08:38 AM PST"
+    }
+  ],
+  "wake_time": "08:38",
+  "wake_time_today": "2026-01-19 08:38",
+  "wake_time_today_local": "2026-01-19 08:38 AM PST",
+  "bedtime_previous": "2026-01-18 22:35",
+  "bedtime_previous_local": "2026-01-18 10:35 PM PST",
+  "last_updated": "2026-01-20T01:40:43.942030+00:00"
+}

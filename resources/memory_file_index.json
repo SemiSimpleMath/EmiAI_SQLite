@@ -1,0 +1,124 @@
+{
+  "description": "Index of user-editable memory/preference files. JSON resources are now canonical; subscriptions are via each file's _metadata.tags. (Kept for auditability / legacy planner context.)",
+  "categories": {
+    "shared_memory": {
+      "description": "Core user knowledge - shared across multiple agents",
+      "files": {
+        "resource_user_food_prefs.json": {
+          "description": "Food and drink preferences, dietary restrictions, favorite places",
+          "topics": [
+            "food likes and dislikes",
+            "favorite foods",
+            "favorite restaurants",
+            "favorite brands (ice cream, coffee, etc.)",
+            "food allergies and dietary restrictions",
+            "drink preferences (coffee, tea, water, etc.)",
+            "caffeine habits",
+            "meal timing preferences"
+          ],
+          "examples": [
+            "I don't like eggs",
+            "I love Cold Stone ice cream with Heath Bar crunch",
+            "I'm lactose intolerant",
+            "I prefer coffee in the morning",
+            "I usually have 2 cups of coffee",
+            "No caffeine after 2pm"
+          ]
+        },
+        "resource_user_health.json": {
+          "description": "Health conditions, accommodations, physical needs",
+          "topics": [
+            "chronic conditions (back pain, finger pain, eye strain, etc.)",
+            "health accommodations",
+            "stretch and break needs",
+            "sleep requirements",
+            "exercise preferences",
+            "physical limitations"
+          ],
+          "examples": [
+            "I have chronic back pain",
+            "I need standing breaks every 45 minutes",
+            "I need finger stretches because of typing strain",
+            "I need 7-8 hours of sleep",
+            "I prefer morning walks"
+          ]
+        },
+        "resource_user_routine.json": {
+          "description": "Daily routines, schedules, work habits",
+          "topics": [
+            "morning routine",
+            "wake up time",
+            "work schedule and hours",
+            "meeting preferences",
+            "focus time preferences",
+            "evening routine",
+            "bedtime",
+            "productivity habits"
+          ],
+          "examples": [
+            "I wake up at 7am",
+            "I prefer meetings in the afternoon",
+            "I do deep work in the morning",
+            "I go to bed at 10pm",
+            "I need coffee right after waking up"
+          ]
+        },
+        "resource_user_general_prefs.json": {
+          "description": "Miscellaneous preferences, communication style, notifications",
+          "topics": [
+            "communication style",
+            "notification preferences",
+            "language preferences",
+            "general likes and dislikes",
+            "miscellaneous"
+          ],
+          "examples": [
+            "Speak to me in Spanish for a week",
+            "Don't disturb me during focus time",
+            "I prefer concise responses",
+            "Keep messages brief"
+          ]
+        }
+      }
+    },
+    "agent_user_prefs": {
+      "description": "User overrides for specific agent behavior",
+      "files": {
+        "resource_orchestrator_user_prefs.md": {
+          "description": "User preferences for proactive suggestions (reminders, wellness prompts)",
+          "topics": [
+            "reminder frequency overrides",
+            "hydration reminder timing",
+            "stretch reminder timing",
+            "coffee limits",
+            "quiet times (no suggestions)",
+            "suggestion style"
+          ],
+          "examples": [
+            "Don't remind me to stretch before 10am",
+            "Only 2 coffees per day",
+            "No suggestions after 10pm",
+            "Remind me to stretch every 30 minutes",
+            "Keep suggestion messages very brief"
+          ]
+        },
+        "resource_email_user_prefs.md": {
+          "description": "User preferences for email handling and importance scoring",
+          "topics": [
+            "email importance rules",
+            "senders to ignore",
+            "senders to prioritize (VIPs)",
+            "email types to filter",
+            "newsletter preferences"
+          ],
+          "examples": [
+            "Never show me LinkedIn job alerts",
+            "Phil is a VIP - always important",
+            "Filter out chess.com notifications",
+            "Elevate school emails"
+          ]
+        }
+      }
+    }
+  }
+}

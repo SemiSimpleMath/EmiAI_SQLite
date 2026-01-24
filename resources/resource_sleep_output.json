@@ -1,0 +1,42 @@
+{
+  "timezone": "America/Los_Angeles",
+  "date": "2026-01-24",
+  "total_sleep_minutes": 448.0,
+  "last_night_sleep_minutes": 448.0,
+  "main_sleep_minutes": 448.0,
+  "sleep_quality": "good",
+  "fragmented": false,
+  "segment_count": 1,
+  "total_wake_minutes": 0.0,
+  "time_in_bed_minutes": 448.0,
+  "sleep_periods": [
+    {
+      "start": "2026-01-24T07:54:25.604498",
+      "end": "2026-01-24T15:22:25.063552",
+      "duration_minutes": 447.991,
+      "type": "main_sleep",
+      "source": "inferred_sleep",
+      "start_local": "2026-01-23 11:54 PM PST",
+      "end_local": "2026-01-24 07:22 AM PST"
+    }
+  ],
+  "wake_time": "07:22",
+  "wake_time_today": "2026-01-24 07:22",
+  "wake_time_today_local": "2026-01-24 07:22 AM PST",
+  "bedtime_previous": "2026-01-23 23:54",
+  "bedtime_previous_local": "2026-01-23 11:54 PM PST",
+  "night_start_time": "2026-01-23 23:54",
+  "night_start_time_local": "2026-01-23 11:54 PM PST",
+  "night_start_time_utc": "2026-01-24T07:54:25.604498+00:00",
+  "last_updated": "2026-01-24T16:29:36.431906+00:00",
+  "source_breakdown_minutes": {
+    "user_sleep": 0,
+    "inferred_sleep": 448.0
+  },
+  "wake_time_activity": "2026-01-24 07:22",
+  "wake_time_activity_local": "2026-01-24 07:22 AM PST",
+  "user_is_up": true,
+  "day_started": true,
+  "day_start_time": "2026-01-24 07:22 AM PST",
+  "day_start_time_utc": "2026-01-24T15:22:25.063552+00:00"
+}

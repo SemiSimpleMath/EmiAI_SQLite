@@ -1,0 +1,42 @@
+{
+  "_metadata": {
+    "resource_id": "resource_user_health",
+    "version": "2.0",
+    "last_updated": "2025-12-28",
+    "tags": ["health", "wellness", "pain"],
+    "description": "User's health conditions, accommodations, and wellness preferences"
+  },
+  "chronic_conditions": [
+    {
+      "condition": "finger_pain",
+      "display": "Finger Pain",
+      "severity": "Moderate, chronic",
+      "accommodation": "Frequent finger stretch breaks when typing",
+      "suggested_interval_minutes": 25,
+      "added": "2025-12-28",
+      "expiry": null
+    },
+    {
+      "condition": "back_pain",
+      "display": "Back Pain",
+      "severity": "Moderate, chronic",
+      "accommodation": "Standing breaks and back stretches",
+      "suggested_interval_minutes": 50,
+      "added": "2025-12-28",
+      "expiry": null
+    }
+  ],
+  "sleep": {
+    "target_bedtime": "10:30-11:00 PM",
+    "ideal_hours": "7-8 hours",
+    "caffeine_cutoff": "2:00 PM",
+    "caffeine_reason": "Affects sleep quality"
+  },
+  "exercise": {
+    "preferences": [
+      "Prefers nighttime walks"
+    ]
+  }
+}
+
+

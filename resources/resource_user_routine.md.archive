@@ -1,0 +1,52 @@
+---
+resource_id: resource_user_routine
+- tag: routine
+- tag: schedule
+- tag: timing
+---
+
+# User Daily Routine
+
+## Morning Routine
+
+### Wake Up
+- Usually wakes around 7am
+- Needs coffee immediately after waking
+- Not a morning person - slow start
+
+### Pre-Work
+- Take dogs out around 8am
+- Light breakfast or skip entirely
+- Prefers no meetings before 10am
+
+---
+
+## Work Routine
+
+### Focus Time
+- Deep focus work best in morning (10am-12pm)
+- Context-switch sensitive - prefers batching similar tasks
+- Likes Pomodoro technique for long tasks
+
+### Meetings
+- Prefers afternoon meetings when possible
+- Needs 5-10 min buffer between meetings
+- Video calls drain energy faster
+
+### Breaks
+- Short walk helps reset focus
+- Standing desk breaks for back pain
+
+---
+
+## Evening Routine
+
+### After Work
+- Family time starts around 6pm
+- Dinner with family is important
+
+### Wind Down
+- Walk dogs around 9pm
+- Needs 30min wind-down before sleep
+- No screens after 10pm (goal)
+

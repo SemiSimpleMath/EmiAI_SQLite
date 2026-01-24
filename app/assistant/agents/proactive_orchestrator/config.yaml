@@ -8,7 +8,7 @@ llm_params:
 
 system_context_items:
 - resource_user_data
-- resource_tracked_activities
+- resource_tracked_activities_output
 
 user_context_items:
 - date_time
@@ -23,7 +23,7 @@ user_context_items:
 - active_tickets
 - recent_accepted_tickets
 - recent_tickets
-- resource_tracked_activities
+- resource_tracked_activities_output
 - resource_user_routine
 - resource_user_health
 - resource_daily_context_generator_output

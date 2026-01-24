@@ -26,16 +26,14 @@
 ---
 {% endif %}
 
-**Recent Chat:**
 {% if recent_chat_messages %}
+**Recent Chat:**
 {% for msg in recent_chat_messages %}
 [{{ msg.time_local }}] {{ msg.sender }}: {{ msg.content }}
 {% endfor %}
-{% else %}
-No recent chat.
-{% endif %}
 
 ---
+{% endif %}
 
 ## 1. The Law (User Preferences & Rules)
 *Use these resource files as your decision logic. They contain the user's specific rules for timing, limits, and health.*
@@ -89,7 +87,17 @@ No recent chat.
 - Directive: Do NOT suggest movement or stretches while user is away.
 {% else %}
 [STATUS: USER IS ACTIVE]
-- Idle Time: {{ resource_afk_statistics_output.idle_minutes | default(0) | round(1) }} minutes.
+- Active Session: {{ resource_afk_statistics_output.active_work_session_minutes | default(0) | round(1) }} minutes.
+{% endif %}
+{% if resource_afk_statistics_output %}
+- Total Active Since Wake: {{ resource_afk_statistics_output.total_active_time_since_wake | default("unknown") }} minutes.
+- Total AFK Since Wake: {{ resource_afk_statistics_output.total_afk_time_since_wake | default("unknown") }} minutes.
+{% endif %}
+
+**Sleep Status:**
+{% if resource_sleep_output %}
+- User is up: {{ resource_sleep_output.user_is_up }}
+- Day start: {{ resource_sleep_output.day_start_time_local | default("unknown") }}
 {% endif %}
 
 **Consumption Log (Today):**
@@ -108,11 +116,11 @@ No recent chat.
 
 | Activity | Time Since Last | Threshold | Minutes Until Threshold |
 | :--- | :--- | :--- | :--- |
-{% for key, activity in resource_tracked_activities.activities.items() %}
-{% set field = "minutes_since_" ~ activity.field_name %}
+{% for key, activity in resource_tracked_activities_output.activities.items() %}
+{% set field = "minutes_since_" ~ key %}
 {% set mins = time_since[field] %}
-{% set threshold_mins = activity.threshold.minutes if activity.threshold and activity.threshold.minutes is not none else none %}
-{% set threshold_label = threshold_mins if threshold_mins is not none else (activity.threshold.label if activity.threshold else activity.guidance) %}
+{% set threshold_mins = activity.threshold_minutes if activity.threshold_minutes is not none else none %}
+{% set threshold_label = threshold_mins if threshold_mins is not none else activity.guidance %}
 {% if mins is not none and threshold_mins is not none %}
 {% set delta = threshold_mins - mins %}
 {% set mins_until = (delta ~ " min") if delta > 0 else ("0 min (over by " ~ (-delta) ~ " min)") %}
@@ -137,34 +145,29 @@ No recent chat.
 [CALENDAR CLEAR] No immediate meetings.
 {% endif %}
 
-**Active Tickets (DUPLICATE CHECK):**
-*Do NOT suggest these types again:*
 {% if active_tickets %}
+**Pending Reminders (DUPLICATE CHECK):**
+*Do NOT suggest these types again:*
 {% for ticket in active_tickets %}
 - [ACTIVE] {{ ticket.suggestion_type }}: "{{ ticket.title }}"{% if ticket.message %} — "{{ ticket.message[:220] }}"{% endif %}
 {% endfor %}
-{% else %}
-- None.
 {% endif %}
 
+{% if recent_accepted_tickets %}
 **Recently Completed (ALREADY DONE CHECK):**
 *User completed these. Note how long it has been since user accepted. Sometimes it maybe appropriate to nudge again.  Especially if you are reminding about something.  Other activities you do not need to
 notify until the threshold is met.  Use common sense.
-{% if recent_accepted_tickets %}
 {% for ticket in recent_accepted_tickets %}
 - [COMPLETED] {{ ticket.suggestion_type }}: "{{ ticket.title }}" ({{ ticket.responded_at_local }}){% if ticket.message %} — "{{ ticket.message[:220] }}"{% endif %}{% if ticket.user_response_raw or ticket.user_text %} — user said: "{{ (ticket.user_response_raw or ticket.user_text)[:180] }}"{% endif %}
 {% endfor %}
-{% else %}
-- None.
 {% endif %}
 
+{% set dismissed_tickets = (recent_tickets | selectattr('state', 'equalto', 'dismissed') | list) if recent_tickets else [] %}
+{% if dismissed_tickets %}
 **Recently Dismissed (NAG CHECK):**
 *User said NO to these recently. Do not suggest:*
-{% if recent_tickets %}
-{% for ticket in recent_tickets %}
-{% if ticket.state == 'dismissed' %}
+{% for ticket in dismissed_tickets %}
 - [DISMISSED] {{ ticket.suggestion_type }} ({{ ticket.created_at_local }}){% if ticket.title %}: "{{ ticket.title }}"{% endif %}{% if ticket.message %} — "{{ ticket.message[:220] }}"{% endif %}{% if ticket.user_response_raw or ticket.user_text %} — user said: "{{ (ticket.user_response_raw or ticket.user_text)[:180] }}"{% endif %}
-{% endif %}
 {% endfor %}
 {% endif %}
 
@@ -172,6 +175,10 @@ notify until the threshold is met.  Use common sense.
 
 ## Your Task
 Synthesize the **Rules** (Section 1) with the **Data** (Section 2) to generate a prioritized list of suggestions.
+
+**Output constraints:**
+- Do NOT mention "pending reminders" unless you actually output suggestions OR there are active tickets.
+- If `resource_sleep_output.user_is_up` is false, do not describe the user as active.
 
 **Logic Checklist:**
 2. **Check Rules:** Does `resource_routine_preferences` allow this? (e.g., Check "Coffee Cutoff Time" vs Current Time).

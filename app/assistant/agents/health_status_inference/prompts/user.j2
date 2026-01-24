@@ -60,10 +60,10 @@ Sleep: Target bedtime {{ resource_user_health.sleep.target_bedtime }}, Caffeine 
 {% if time_since %}
 | Activity | Time Ago | Threshold | Status |
 | :--- | :--- | :--- | :--- |
-{% for key, activity in resource_tracked_activities.activities.items() %}
-{% set field = "minutes_since_" ~ activity.field_name %}
+{% for key, activity in resource_tracked_activities_output.activities.items() %}
+{% set field = "minutes_since_" ~ key %}
 {% set mins = time_since[field] %}
-{% set threshold = activity.threshold.minutes if activity.threshold else none %}
+{% set threshold = activity.threshold_minutes if activity.threshold_minutes is not none else none %}
 | {{ activity.display_name }} | {{ mins if mins is not none else "Unknown" }} min | {{ threshold if threshold else "-" }} | {% if threshold and mins and mins > threshold %} OVERDUE {% else %}OK{% endif %} |
 {% endfor %}
 | Coffees today | {{ time_since.coffees_today }} | - | - |

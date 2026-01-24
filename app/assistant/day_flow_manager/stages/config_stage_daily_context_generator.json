@@ -1,0 +1,20 @@
+{
+  "stage_id": "daily_context_generator",
+  "description": "Generates daily context summary - schedule, milestones, day themes",
+  
+  "lookback_hours": {
+    "calendar_upcoming": 12,
+    "calendar_completed": 4,
+    "chat_excerpts": 4,
+    "accepted_tickets": 4,
+    "afk_intervals": 8
+  },
+  
+  "daily_reset": {
+    "description": "Clear daily context at 5AM boundary for fresh day",
+    "output_resource_defaults": {
+      "day_description": "Day summary not run yet. Will be generated after first pipeline run.",
+      "milestones": []
+    }
+  }
+}

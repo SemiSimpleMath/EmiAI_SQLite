@@ -1,0 +1,37 @@
+{
+  "_metadata": {
+    "resource_id": "resource_user_general_prefs",
+    "version": "2.0",
+    "last_updated": "2025-12-28",
+    "tags": ["communication", "entertainment", "hobbies", "general"],
+    "description": "User's general preferences for communication, entertainment, and miscellaneous topics"
+  },
+  "communication": {
+    "style": [
+      "Prefers direct, concise responses",
+      "Casual tone is fine",
+      "No excessive emojis"
+    ],
+    "notifications": [
+      "Don't disturb during deep focus time",
+      "Urgent items can interrupt"
+    ]
+  },
+  "language": {
+    "primary": "English"
+  },
+  "entertainment": {
+    "interests": [
+      {
+        "item": "pluribus_hive_mind",
+        "display": "The hive mind in Pluribus",
+        "note": "Finds it interesting and somewhat wholesome",
+        "added": "2025-12-28",
+        "expiry": null
+      }
+    ]
+  },
+  "other": []
+}
+
+

@@ -1,0 +1,66 @@
+{
+  "description": "Index of user-editable memory/preference files. Used for human auditability and (legacy) planner context. JSON resources subscribe to tags via _metadata.tags.",
+  "categories": {
+    "shared_memory": {
+      "description": "Core user knowledge - shared across multiple agents",
+      "files": {
+        "resource_user_food_prefs.json": {
+          "description": "Food and drink preferences, dietary restrictions, favorite places",
+          "topics": [
+            "food likes and dislikes",
+            "favorite foods",
+            "favorite restaurants",
+            "favorite brands (ice cream, coffee, etc.)",
+            "food allergies and dietary restrictions",
+            "drink preferences (coffee, tea, water, etc.)",
+            "caffeine habits",
+            "meal timing preferences"
+          ]
+        },
+        "resource_user_health.json": {
+          "description": "Health conditions, accommodations, physical needs",
+          "topics": [
+            "chronic conditions (back pain, finger pain, eye strain, etc.)",
+            "health accommodations",
+            "stretch and break needs",
+            "sleep requirements",
+            "exercise preferences",
+            "physical limitations"
+          ]
+        },
+        "resource_user_routine.json": {
+          "description": "Daily routines, schedules, work habits",
+          "topics": [
+            "morning routine",
+            "wake up time",
+            "work schedule and hours",
+            "meeting preferences",
+            "focus time preferences",
+            "evening routine",
+            "bedtime",
+            "productivity habits"
+          ]
+        },
+        "resource_user_general_prefs.json": {
+          "description": "Miscellaneous preferences, communication style, notifications",
+          "topics": [
+            "communication style",
+            "notification preferences",
+            "language preferences",
+            "general likes and dislikes",
+            "miscellaneous"
+          ]
+        }
+      }
+    },
+    "agent_user_prefs": {
+      "description": "User overrides for specific agent behavior",
+      "files": {
+        "resource_orchestrator_user_prefs.md": {
+          "description": "User preferences for proactive suggestions (reminders, wellness prompts)"
+        }
+      }
+    }
+  }
+}
+

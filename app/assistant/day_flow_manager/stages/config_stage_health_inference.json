@@ -1,0 +1,39 @@
+{
+  "stage_id": "health_inference",
+  "description": "Infers user's energy, cognitive load, and physical state from available data",
+  
+  "lookback_hours": {
+    "calendar_events": 8,
+    "recent_tickets": 4,
+    "chat_history": 2
+  },
+  
+  "daily_reset": {
+    "description": "Set reasonable health defaults after good night sleep",
+    "output_resource_defaults": {
+      "mental": {
+        "mood": "neutral",
+        "stress_load": "neutral",
+        "anxiety": "neutral",
+        "mental_energy": "normal",
+        "social_capacity": "normal"
+      },
+      "cognitive": {
+        "load": "Low",
+        "interruption_tolerance": "High",
+        "focus_depth": "Normal"
+      },
+      "physical": {
+        "energy_level": "Normal",
+        "pain_level": "none"
+      },
+      "physiology": {
+        "hunger_probability": "Low",
+        "hydration_need": "Low",
+        "caffeine_state": "Optimal"
+      },
+      "health_concerns_today": [],
+      "general_health_assessment": "Initial state - health status not yet assessed"
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "mental": {
+    "mood": "neutral",
+    "stress_load": "neutral",
+    "anxiety": "low",
+    "mental_energy": "normal",
+    "social_capacity": "normal"
+  },
+  "cognitive": {
+    "load": "Low",
+    "interruption_tolerance": "High",
+    "focus_depth": "Normal"
+  },
+  "physical": {
+    "energy_level": "Normal",
+    "pain_level": "none"
+  },
+  "physiology": {
+    "hunger_probability": "Low",
+    "hydration_need": "Low",
+    "caffeine_state": "Over-caffeinated"
+  },
+  "health_concerns_today": [],
+  "general_health_assessment": "User is in the morning rise phase following good quality sleep. Energy levels are building toward peak focus, though caffeine intake is significantly high for this early in the day.",
+  "last_updated": "2026-01-24 08:29 AM"
+}

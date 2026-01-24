@@ -2,7 +2,7 @@
     "schema_version": 1,
     "enabled": true,
 
-    "state_resource_file": "resource_user_physical_status_state.json",
+    "state_resource_file": "resource_wellness_pipeline_status.json",
 
     "daily_reset": {
         "boundary_hour_local": 5
@@ -32,6 +32,12 @@
                 "min_new_messages": 1,
                 "max_messages": 40
             }
+        },
+        {
+            "id": "activity_timers",
+            "enabled": true,
+            "stage_class": "app.assistant.physical_status_manager.stages.activity_timers_stage:ActivityTimersStage",
+            "run_policy": { "type": "always", "min_interval_seconds": 60 }
         },
         {
             "id": "daily_context_generator",
