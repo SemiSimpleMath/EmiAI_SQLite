@@ -124,10 +124,12 @@ class EntityCardInjector:
             
             # Check for entity card injection messages using sub_data_type and metadata
             for msg in messages:
-                if (msg.sub_data_type == "entity_card_injection" and 
-                    hasattr(msg, 'metadata') and msg.metadata and 
-                    'entity_name' in msg.metadata and 
-                    msg.metadata['entity_name'] == entity_name):
+                if (
+                    "entity_card_injection" in (getattr(msg, "sub_data_type", []) or [])
+                    and hasattr(msg, 'metadata') and msg.metadata
+                    and 'entity_name' in msg.metadata
+                    and msg.metadata['entity_name'] == entity_name
+                ):
                     return True
                 
                 # Fallback: check content for entity context format

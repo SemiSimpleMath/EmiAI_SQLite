@@ -59,8 +59,8 @@ class KnowledgeGraphUtils:
         if self._owns_session and self.session:
             try:
                 self.session.close()
-            except Exception:
-                pass  # Session might already be closed
+            except Exception as e:
+                logger.debug(f"KnowledgeGraphUtils: session.close() failed: {e}", exc_info=True)
             self.session = None
     
     def get_fresh_session(self) -> Session:

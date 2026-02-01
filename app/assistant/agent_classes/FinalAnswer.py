@@ -108,9 +108,11 @@ class FinalAnswer(Agent):
                 history_str = self.build_recent_history(agent_messages)
                 
                 # Append any agent/planner result messages (final conclusions before exit)
-                # Filter by sub_data_type="result" which marks final decisions
-                result_messages = [msg for msg in agent_messages 
-                                  if getattr(msg, "sub_data_type", None) == "result"]
+                # Filter by tag "result" which marks final decisions
+                result_messages = [
+                    msg for msg in agent_messages
+                    if "result" in (getattr(msg, "sub_data_type", []) or [])
+                ]
                 
                 if result_messages:
                     # Include all result messages (could be multiple agents)

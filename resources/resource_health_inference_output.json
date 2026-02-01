@@ -7,8 +7,8 @@
     "social_capacity": "normal"
   },
   "cognitive": {
-    "load": "Low",
-    "interruption_tolerance": "High",
+    "load": "Medium",
+    "interruption_tolerance": "Medium",
     "focus_depth": "Normal"
   },
   "physical": {
@@ -17,10 +17,14 @@
   },
   "physiology": {
     "hunger_probability": "Low",
-    "hydration_need": "Low",
-    "caffeine_state": "Over-caffeinated"
+    "hydration_need": "Medium",
+    "caffeine_state": "Under-caffeinated"
   },
-  "health_concerns_today": [],
-  "general_health_assessment": "User is in the morning rise phase following good quality sleep. Energy levels are building toward peak focus, though caffeine intake is significantly high for this early in the day.",
-  "last_updated": "2026-01-24 08:29 AM"
+  "health_concerns_today": [
+    "Chronic finger pain",
+    "Chronic back pain"
+  ],
+  "general_health_assessment": "User is successfully managing chronic finger and back pain through high compliance with stretch breaks. Energy is entering the post-lunch dip but remains stable after 6.2 hours of quality sleep.",
+  "last_updated": "2026-02-01 01:04 PM",
+  "last_updated_utc": "2026-02-01T21:04:17.045794+00:00"
 }

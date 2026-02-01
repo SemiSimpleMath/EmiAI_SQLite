@@ -193,8 +193,9 @@ def write_afk_statistics(realtime_snapshot: Optional[Dict[str, Any]] = None) -> 
         afk_start_local = _to_local_str(afk_start_utc_parsed) if afk_start_utc_parsed else None
     
     data: Dict[str, Any] = {
-        # Real-time status
-        "is_afk": not is_currently_active,
+        # Real-time status (new terminology)
+        "at_keyboard": is_currently_active,
+        "is_afk": not is_currently_active,  # Legacy
         "idle_minutes": realtime.get("idle_minutes", 0),
         "active_start": realtime.get("active_start"),  # Already local from monitor
         "afk_start": afk_start_local,
@@ -209,8 +210,9 @@ def write_afk_statistics(realtime_snapshot: Optional[Dict[str, Any]] = None) -> 
         "total_active_time_since_wake": round(total_active_since_wake, 1) if total_active_since_wake is not None else None,
         "total_afk_time_since_wake": round(total_afk_since_wake, 1) if total_afk_since_wake is not None else None,
         
-        # Current session info
-        "active_work_session_minutes": round(active_work_session_minutes, 1),
+        # Current session info (new + legacy keys)
+        "current_session_minutes": round(active_work_session_minutes, 1),
+        "active_work_session_minutes": round(active_work_session_minutes, 1),  # Legacy
         "current_afk_minutes": round(current_afk_minutes, 1),
         
         # Metadata (LOCAL time for agent/user display)
@@ -287,8 +289,9 @@ def reset_afk_statistics(
         
         # Reset counters, preserve actual AFK status from monitor
         data: Dict[str, Any] = {
-            "is_afk": is_afk,  # Actual status from monitor
-            "idle_minutes": idle_minutes,  # Actual idle from monitor
+            "at_keyboard": not is_afk,
+            "is_afk": is_afk,  # Legacy
+            "idle_minutes": idle_minutes,
             "active_start": active_start if not is_afk else None,
             "afk_start": boundary_local_str if is_afk else None,
             "total_active_time_today": 0,
@@ -296,7 +299,8 @@ def reset_afk_statistics(
             "afk_count_today": 1,
             "total_active_time_since_wake": None,
             "total_afk_time_since_wake": None,
-            "active_work_session_minutes": 0,
+            "current_session_minutes": 0,
+            "active_work_session_minutes": 0,  # Legacy
             "current_afk_minutes": afk_minutes_elapsed if is_afk else 0,
             "last_completed_afk_duration": 0,
             "boundary_time": boundary_local_str,
@@ -314,8 +318,9 @@ def reset_afk_statistics(
     else:
         # On-time reset (at 5 AM): preserve actual AFK status from monitor
         data = {
-            "is_afk": is_afk,  # Actual status from monitor
-            "idle_minutes": idle_minutes,  # Actual idle from monitor
+            "at_keyboard": not is_afk,
+            "is_afk": is_afk,  # Legacy
+            "idle_minutes": idle_minutes,
             "active_start": active_start if not is_afk else None,
             "afk_start": boundary_local_str if is_afk else None,
             "total_active_time_today": 0,
@@ -323,7 +328,8 @@ def reset_afk_statistics(
             "afk_count_today": 0,
             "total_active_time_since_wake": None,
             "total_afk_time_since_wake": None,
-            "active_work_session_minutes": 0,
+            "current_session_minutes": 0,
+            "active_work_session_minutes": 0,  # Legacy
             "current_afk_minutes": 0,
             "last_completed_afk_duration": 0,
             "boundary_time": boundary_local_str,

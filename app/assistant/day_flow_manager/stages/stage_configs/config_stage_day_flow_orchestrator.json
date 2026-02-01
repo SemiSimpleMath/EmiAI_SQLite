@@ -1,12 +1,20 @@
 {
-  "stage_id": "physical_orchestrator",
+  "stage_id": "day_flow_orchestrator",
   "description": "Decides proactive wellness suggestions based on all available context",
+  
+  "run_policy": {
+    "type": "always",
+    "min_interval_seconds": 300
+  },
+  "afk_guard": {
+    "skip_when_afk": true,
+    "skip_when_potentially_afk": true
+  },
   
   "lookback_hours": {
     "calendar_events": 4,
     "chat_messages": 2,
-    "recent_tickets": 5,
-    "accepted_tickets": 2
+    "recent_tickets": 2
   },
   
   "suggestion_limits": {

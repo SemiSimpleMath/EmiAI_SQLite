@@ -44,11 +44,13 @@ def get_tickets():
     """Get all proactive tickets."""
     try:
         from app.assistant.ticket_manager import get_ticket_manager, TicketState
+        from datetime import timedelta
 
         manager = get_ticket_manager()
-        pending = [t.to_dict() for t in manager.get_tickets_by_state(TicketState.PENDING, limit=10)]
-        proposed = [t.to_dict() for t in manager.get_tickets_by_state(TicketState.PROPOSED, limit=20)]
-        recent_list = [t.to_dict() for t in manager.get_recent_tickets(hours=24, limit=20)]
+        pending = [t.to_dict() for t in manager.get_tickets(state=TicketState.PENDING, limit=10)]
+        proposed = [t.to_dict() for t in manager.get_tickets(state=TicketState.PROPOSED, limit=20)]
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+        recent_list = [t.to_dict() for t in manager.get_tickets(since_utc=cutoff, limit=20)]
         
         return jsonify({
             "pending": pending,

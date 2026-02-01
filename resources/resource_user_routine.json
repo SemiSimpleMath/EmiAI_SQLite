@@ -10,17 +10,16 @@
     "wake_up": {
       "usual_time": "7:00 AM",
       "notes": [
-        "Needs coffee immediately after waking",
-        "Not a morning person - slow start"
+        "Coffee soon after waking preferred"
       ]
     },
     "pre_work": [
       {
-        "time": "8:00 AM",
-        "activity": "Take dogs out"
+        "time": "8:00 AM - 9:00AM",
+        "activity": "Take dogs out occasionally, often Katy will take dogs.  Sometimes catchup on reddit or news or watch tv with Katy."
       },
       {
-        "activity": "Light breakfast or skip entirely"
+        "activity": "Intermittent fasting, skip breakfast"
       }
     ]
   },
@@ -28,20 +27,20 @@
     "focus_time": {
       "best_hours": "9:00 AM - 12:00 PM",
       "notes": [
-        "Morning hours before lunch are typically best for deep work"
+        "During work days M-F: Morning hours before lunch are typically best for deep work."
       ]
     },
     "breaks": [
-      "Short walk helps reset focus",
       "Standing desk breaks for back pain"
     ]
   },
   "evening": {
     "after_work": {
+      "before_family_time": "Between work and family time I like to unwind by reading reddit, playing chess or other games.  Sometimes code Emi.",
       "family_time_start": "6:00 PM",
       "notes": [
         "Family time starts around 6pm, this is very flexible, however.  Usually family time is over before 8pm",
-        "Dinner with family is important"
+        "Dinner is always had with family at family time."
       ]
     },
     "wind_down": [

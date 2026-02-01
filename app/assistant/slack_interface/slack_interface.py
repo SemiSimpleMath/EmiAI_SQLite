@@ -82,8 +82,8 @@ class SlackInterface:
         # Sort messages by timestamp to ensure correct order
         try:
             messages = sorted(messages, key=lambda x: float(x.get("ts", 0)) if isinstance(x, dict) else 0)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"[SlackInterface] Failed to sort messages by ts: {e}", exc_info=True)
 
         # Step 2: If no new messages, exit
         if not messages:
@@ -108,7 +108,7 @@ class SlackInterface:
                 receiver=None,
                 content=m.get("text", "").strip(),
                 data_type="message",
-                sub_data_type="slack_message",
+                sub_data_type=["slack_message"],
                 timestamp=ts,
                 is_chat=True,
             )
@@ -172,12 +172,56 @@ class SlackInterface:
             - task = last 10 messages total
         """
 
+        def _ts_sort_key(m) -> float:
+            """
+            Robust timestamp sort key.
+
+            Supports:
+            - datetime timestamps
+            - numeric timestamps (float/int)
+            - Slack-style string timestamps (e.g. "1700000000.1234")
+            - ISO strings (best-effort)
+            """
+            ts = getattr(m, "timestamp", None)
+            if ts is None:
+                return 0.0
+            try:
+                from datetime import datetime, timezone
+
+                if isinstance(ts, datetime):
+                    if ts.tzinfo is None:
+                        ts = ts.replace(tzinfo=timezone.utc)
+                    return float(ts.timestamp())
+            except Exception:
+                # If datetime parsing fails, fall through to other parsing
+                pass
+
+            if isinstance(ts, (int, float)):
+                return float(ts)
+
+            # Strings: try float first (Slack ts), then ISO datetime
+            try:
+                return float(str(ts))
+            except Exception:
+                pass
+            try:
+                from datetime import datetime
+
+                iso = str(ts).replace("Z", "+00:00")
+                dt = datetime.fromisoformat(iso)
+                if dt.tzinfo is not None:
+                    return float(dt.timestamp())
+            except Exception:
+                return 0.0
+
+            return 0.0
+
         def format_msgs(msgs):
             # Sort by timestamp then enumerate for clarity
             try:
-                msgs = sorted(msgs, key=lambda m: float(m.timestamp or 0))
-            except Exception:
-                pass
+                msgs = sorted(msgs, key=_ts_sort_key)
+            except Exception as e:
+                logger.debug(f"[SlackInterface] Failed to sort blackboard messages: {e}", exc_info=True)
             lines = []
             for idx, m in enumerate(msgs, start=1):
                 ts = m.timestamp or ""
@@ -187,9 +231,9 @@ class SlackInterface:
         all_msgs = self.blackboard.get_messages(20)
         # Ensure ordering in case blackboard returns unsorted
         try:
-            all_msgs = sorted(all_msgs, key=lambda m: float(m.timestamp or 0))
-        except Exception:
-            pass
+            all_msgs = sorted(all_msgs, key=_ts_sort_key)
+        except Exception as e:
+            logger.debug(f"[SlackInterface] Failed to sort all_msgs: {e}", exc_info=True)
 
         last_emi_index = None
         for i in range(len(all_msgs) - 1, -1, -1):
@@ -213,7 +257,7 @@ class SlackInterface:
             sender="slack_interface",
             receiver=None,
             data_type="message",
-            sub_data_type="task",
+            sub_data_type=["task"],
             task=task_text,
             information=info_text
         ), latest_ts

@@ -261,6 +261,11 @@ def get_afk_statistics(
             "total_active_time_minutes": round(total_active, 1),
             "total_afk_time_minutes": round(total_afk, 1),
 
+            # New terminology: at_keyboard / current_session
+            "at_keyboard": is_currently_active,
+            "current_session_minutes": round(active_work_session_minutes, 1),
+            
+            # Legacy keys (for backward compatibility)
             "active_work_session_minutes": round(active_work_session_minutes, 1),
             "current_afk_minutes": round(current_afk_minutes, 1),
             "is_currently_afk": not is_currently_active,

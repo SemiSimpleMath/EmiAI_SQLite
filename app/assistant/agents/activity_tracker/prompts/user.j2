@@ -33,16 +33,4 @@ No recently completed calendar events.
 {% endif %}
 
 Recently accepted tickets:
-{% if recent_accepted_tickets %}
-{% for ticket in recent_accepted_tickets %}
-- "{{ ticket.title }}"
-  - Message: {{ ticket.message }}
-  - Type: {{ ticket.suggestion_type }}
-  - Accepted at: {{ ticket.accepted_at_local }}
-  - User action: {{ ticket.user_action }}
-{% if ticket.user_text %}  - User wrote: "{{ ticket.user_text }}"
-{% endif %}
-{% endfor %}
-{% else %}
-No recently accepted tickets.
-{% endif %}
+Not used here (ticket processing handled elsewhere).

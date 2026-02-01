@@ -77,14 +77,18 @@ def initialize_services(app):
 
     print("✅ EventHandlerHub started in the background.")
 
-    # Initialize ticket manager (for suggestions and tool approvals)
-    from app.assistant.ticket_manager import get_ticket_manager
+    # Initialize tickets table and manager
+    from app.assistant.ticket_manager import get_ticket_manager, initialize_tickets_db
+    initialize_tickets_db()
     ticket_manager = get_ticket_manager()
     ServiceLocator.register('ticket_manager', ticket_manager)
-    logger.info("✅ Ticket manager initialized")
+    logger.info("✅ Tickets table and manager initialized")
     
     # Clear stale tool approval tickets from previous session
-    cleared = ticket_manager.clear_tool_approval_tickets()
+    cleared = ticket_manager.clear_tickets(
+        ticket_type='tool_approval',
+        states=['pending', 'proposed']
+    )
     if cleared > 0:
         logger.info(f"🧹 Cleared {cleared} stale tool approval tickets")
 
@@ -94,5 +98,12 @@ def initialize_services(app):
     background_manager = start_background_tasks()
     ServiceLocator.register('background_task_manager', background_manager)
     logger.info("✅ Background task manager started (physical_status, proactive, location)")
+
+    # Initialize DJ Manager (music automation)
+    # Note: Does not auto-start; user enables via UI or command
+    from app.assistant.dj_manager import get_dj_manager
+    dj_manager = get_dj_manager()
+    ServiceLocator.register('dj_manager', dj_manager)
+    logger.info("✅ DJ Manager initialized (enable via /music or command)")
 
     return DI

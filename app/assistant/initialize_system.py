@@ -43,6 +43,10 @@ def initialize_system():
     socket_manager = SocketManager()
     ServiceLocator.register('socket_manager', socket_manager)
 
+    # Relay AFK state changes to the music client (frontend decides whether to pause/resume).
+    from app.assistant.afk_manager.music_afk_relay import MusicAfkRelay
+    ServiceLocator.register("music_afk_relay", MusicAfkRelay())
+
     event_relay = EmiEventRelay()
     ServiceLocator.register('event_relay', event_relay)
     ui_tool_caller = UIToolCaller()

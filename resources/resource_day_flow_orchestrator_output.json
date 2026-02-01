@@ -1,7 +1,6 @@
 {
-  "error": true,
-  "message": "Gemini error: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'The model is overloaded. Please try again later.', 'status': 'UNAVAILABLE'}}",
-  "model": "gemini-3-flash-preview",
-  "last_updated": "2026-01-24 08:29 AM",
+  "suggestions": [],
+  "assessment": "Jukka has recently returned to his keyboard following lunch and a movement break; all wellness timers are currently within their thresholds, and a coffee reminder is already active.",
+  "last_updated": "2026-02-01 01:04 PM",
   "tickets_created": 0
 }

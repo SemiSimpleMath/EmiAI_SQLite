@@ -51,7 +51,27 @@ class MaintenanceManager:
         self.processing_lock = threading.RLock()
 
     def should_summarize(self, messages) -> bool:
-        return len(messages) > 50 or self.estimate_token_count(messages) > 2048
+        """
+        Only summarize when the *chat history* is actually bloated.
+
+        Notes:
+        - We avoid summarizing based on total message count because the global blackboard
+          may contain many non-chat/system messages.
+        - `is_chat` is the indicator used by EmiAgent's `history` injection.
+        """
+        try:
+            chat_messages = [
+                m for m in (messages or [])
+                if getattr(m, "is_chat", False)
+                and not set(getattr(m, "sub_data_type", []) or []).intersection(
+                    {"history_summary", "entity_card_injection", "agent_notification"}
+                )
+            ]
+        except Exception:
+            chat_messages = messages or []
+
+        # Conservative thresholds: only summarize when truly large.
+        return len(chat_messages) > 250 or self.estimate_token_count(chat_messages) > 12000
 
     def estimate_token_count(self, messages) -> int:
         # Rough token estimate: 1 token ≈ 4 characters in English text
@@ -278,7 +298,9 @@ class MaintenanceManager:
             chat_messages = [
                 msg for msg in global_black_board_messages
                 if msg.is_chat
-                   and msg.sub_data_type not in ["history_summary", "entity_card_injection", "agent_notification"]
+                   and not set(getattr(msg, "sub_data_type", []) or []).intersection(
+                        {"history_summary", "entity_card_injection", "agent_notification"}
+                   )
                    and msg.content
                    and not getattr(msg, 'test_mode', False)  # Skip messages with test_mode flag
             ]

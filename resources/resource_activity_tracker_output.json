@@ -1,58 +1,18 @@
 {
   "activity_counts": {
-    "coffee": 8,
-    "finger_stretch": 8,
-    "hydration": 8,
-    "meal": 8,
-    "snack": 0,
-    "standing_break": 8
+    "coffee": 1,
+    "finger_stretch": 0,
+    "hydration": 0,
+    "meal": 0,
+    "snack": 1,
+    "standing_break": 0
   },
   "activities_reset": [
-    "standing_break",
     "meal",
-    "finger_stretch",
-    "coffee",
-    "hydration"
+    "standing_break"
   ],
-  "activity_resets": {
-    "coffee": {
-      "last_reset_utc": "2026-01-24T13:03:06.173062+00:00",
-      "minutes_since_reset": 182.3,
-      "last_reset_reason": "daily_boundary"
-    },
-    "finger_stretch": {
-      "last_reset_utc": "2026-01-24T13:03:06.173062+00:00",
-      "minutes_since_reset": 182.3,
-      "last_reset_reason": "daily_boundary"
-    },
-    "hydration": {
-      "last_reset_utc": "2026-01-24T13:03:06.173062+00:00",
-      "minutes_since_reset": 182.3,
-      "last_reset_reason": "daily_boundary"
-    },
-    "meal": {
-      "last_reset_utc": "2026-01-24T13:03:06.173062+00:00",
-      "minutes_since_reset": 182.3,
-      "last_reset_reason": "daily_boundary"
-    },
-    "snack": {
-      "last_reset_utc": "2026-01-24T13:03:06.173062+00:00",
-      "minutes_since_reset": 182.3,
-      "last_reset_reason": "daily_boundary"
-    },
-    "standing_break": {
-      "last_reset_utc": "2026-01-24T13:03:06.173062+00:00",
-      "minutes_since_reset": 182.3,
-      "last_reset_reason": "daily_boundary"
-    }
-  },
-  "sleep_events": [
-    {
-      "start_time": "23:41",
-      "end_time": null,
-      "raw_mention": "Going to bed."
-    }
-  ],
+  "activity_resets": {},
+  "sleep_events": [],
   "wake_segments": [],
-  "last_updated": "2026-01-24 08:05 AM"
+  "last_updated": "2026-01-25 10:22 AM"
 }

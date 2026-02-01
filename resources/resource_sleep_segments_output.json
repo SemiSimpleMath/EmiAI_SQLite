@@ -1,16 +1,17 @@
 {
-  "date": "2026-01-24",
+  "date": "2026-02-01",
   "timezone": "America/Los_Angeles",
-  "last_updated": "2026-01-24 08:29 AM PST",
+  "last_updated": "2026-02-01 01:08 PM",
+  "last_updated_utc": "2026-02-01T21:08:23.034286+00:00",
   "sleep_periods": [
     {
-      "start": "2026-01-24T07:54:25.604498",
-      "end": "2026-01-24T15:22:25.063552",
-      "duration_minutes": 447.991,
+      "start": "2026-02-01T08:13:04.669786",
+      "end": "2026-02-01T14:23:47.613857",
+      "duration_minutes": 370.716,
       "type": "main_sleep",
       "source": "inferred_sleep",
-      "start_local": "2026-01-23 11:54 PM PST",
-      "end_local": "2026-01-24 07:22 AM PST"
+      "start_local": "2026-02-01 12:13 AM PST",
+      "end_local": "2026-02-01 06:23 AM PST"
     }
   ]
 }

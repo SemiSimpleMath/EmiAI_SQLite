@@ -1,64 +1,173 @@
+# Note for Coding agents: Do not change this file without permission from the user.
+
 """
 TicketManager
 ==============
+Generic CRUD and state transition system for tickets.
 
-Manages CRUD operations and state transitions for tickets (suggestions, approvals, etc.).
+This is a type-agnostic ticket system. The ticket flow is:
+    pending -> proposed -> accepted/dismissed/snoozed/expired
 
-This is a generic ticket system that any agent can use to create tickets.
-The ticket flow is: pending -> proposed -> accepted/dismissed/snoozed/expired
+Callers are responsible for:
+- Providing explicit ticket_type when creating tickets
+- Emitting to UI if needed (not handled here)
+- Processing side effects when tickets are accepted
+- Policy decisions (e.g., what to do with expired snoozed tickets)
+
+NOTE: DB table must be initialized at app startup via initialize_tickets_db().
+      TicketManager assumes the table already exists.
 """
 
 import uuid
-from collections import deque
 from contextlib import contextmanager
-import threading
 from datetime import datetime, timezone, timedelta
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union, FrozenSet
 
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import func, text, and_, or_
 
 from app.models.base import get_session
-from app.assistant.ticket_manager.proactive_ticket import (
-    ProactiveTicket, 
-    TicketState,
-    initialize_proactive_tickets_db
-)
+from app.assistant.ticket_manager.ticket import Ticket, TicketState
 from app.assistant.utils.logging_config import get_logger
-from app.assistant.utils.error_logging import log_critical_error, log_warning_banner
 
 logger = get_logger(__name__)
 
 
+# =============================================================================
+# Configuration
+# =============================================================================
+
+# Fields that can be updated via update_ticket()
+# Excludes: state, state_history, timestamps (use transition_state for those)
+_UPDATABLE_FIELDS: FrozenSet[str] = frozenset({
+    "title",
+    "message",
+    "action_type",
+    "action_params",
+    "trigger_reason",
+    "valid_until",
+    "status_effect",
+})
+
+# Valid order_by fields for get_tickets()
+_ORDERABLE_FIELDS: FrozenSet[str] = frozenset({
+    "created_at",
+    "responded_at",
+    "proposed_at",
+    "updated_at",
+    "valid_until",
+})
+
+# Terminal states, tickets cannot transition out of these states
+_TERMINAL_STATES: FrozenSet[str] = frozenset({
+    TicketState.COMPLETED.value,
+    TicketState.DISMISSED.value,
+    TicketState.EXPIRED.value,
+    TicketState.FAILED.value,
+})
+
+# States that can be bulk-expired (display states, not in-progress states)
+_EXPIRABLE_STATES: FrozenSet[str] = frozenset({
+    TicketState.PENDING.value,
+    TicketState.PROPOSED.value,
+    TicketState.SNOOZED.value,
+})
+
+# Fields allowed as kwargs in transition_state()
+# Restricts what callers can modify through state transitions
+_TRANSITION_ALLOWED_KWARGS: FrozenSet[str] = frozenset({
+    "snooze_until",
+    "snooze_count",
+    "user_action",
+    "user_text",
+    "user_response_parsed",
+    "execution_result",
+    "related_action_id",
+    "ask_user_id",
+    "auto_resolved_at",
+    "resolution_reason",
+    "assumed_status_effect",
+})
+
+# Valid state transitions: from_state -> allowed to_states
+# Terminal states have empty sets.
+_ALLOWED_TRANSITIONS: Dict[str, FrozenSet[str]] = {
+    TicketState.PENDING.value: frozenset({
+        TicketState.PROPOSED.value,
+        TicketState.EXPIRED.value,
+    }),
+    TicketState.PROPOSED.value: frozenset({
+        TicketState.ACCEPTED.value,
+        TicketState.SNOOZED.value,
+        TicketState.DISMISSED.value,
+        TicketState.EXPIRED.value,
+    }),
+    TicketState.SNOOZED.value: frozenset({
+        TicketState.PROPOSED.value,
+        TicketState.EXPIRED.value,
+    }),
+    TicketState.ACCEPTED.value: frozenset({
+        TicketState.EXECUTING.value,
+        TicketState.COMPLETED.value,
+        TicketState.FAILED.value,
+    }),
+    TicketState.EXECUTING.value: frozenset({
+        TicketState.COMPLETED.value,
+        TicketState.FAILED.value,
+    }),
+    TicketState.COMPLETED.value: frozenset(),
+    TicketState.DISMISSED.value: frozenset(),
+    TicketState.EXPIRED.value: frozenset(),
+    TicketState.FAILED.value: frozenset(),
+}
+
+
+# =============================================================================
+# TicketManager
+# =============================================================================
+
 class TicketManager:
     """
     Manages ticket lifecycle.
-    
+
     Responsibilities:
     - Create new tickets
     - Query tickets by state
-    - Transition ticket states
-    - Handle snooze expiration
-    - Handle ticket expiration
+    - Transition ticket states (with invariant enforcement)
+    - Bulk operations (clear, count, expire)
+
+    NOT responsible for:
+    - Policy decisions (what to do with stale/snoozed tickets)
+    - UI emission
+    - Side effects on accept
+
+    State machine invariants:
+    - Tickets in terminal states cannot transition out
+    - Only display states (pending, proposed, snoozed) can be bulk-expired
+    - Valid transitions are enforced by _ALLOWED_TRANSITIONS
+
+    NOTE: Assumes tickets table exists. Call initialize_tickets_db() at app startup.
     """
-    
-    def __init__(self):
-        # Ensure table exists
-        try:
-            initialize_proactive_tickets_db()
-        except Exception as e:
-            logger.warning(f"Could not initialize proactive_tickets table: {e}")
-        
-        # Clear all tickets on app startup (disabled)
-        # self._clear_all_tickets_on_startup()
-        self._ticket_queue = deque()
-        self._ticket_queue_lock = threading.Lock()
-        self._ticket_processing_lock = threading.Lock()
+
+    def __init__(self) -> None:
+        pass
 
     @contextmanager
-    def _session_scope(self):
+    def _session_scope(self, immediate: bool = False):
+        """
+        Session context manager.
+
+        Args:
+            immediate: If True, starts with BEGIN IMMEDIATE for SQLite write lock.
+                      IMPORTANT: Do not perform any DB work before calling with
+                      immediate=True, or you may get "cannot start a transaction
+                      within a transaction" errors.
+        """
         session = get_session()
         session.expire_on_commit = False
         try:
+            if immediate:
+                # SQLite only. If you run this on Postgres, it will error.
+                session.execute(text("BEGIN IMMEDIATE"))
             yield session
             session.commit()
         except Exception:
@@ -67,166 +176,144 @@ class TicketManager:
         finally:
             session.close()
 
-    def _enqueue_ticket_ids(self, ticket_ids: List[int]) -> None:
-        if not ticket_ids:
-            return
-        with self._ticket_queue_lock:
-            existing = set(self._ticket_queue)
-            for ticket_id in ticket_ids:
-                if ticket_id not in existing:
-                    self._ticket_queue.append(ticket_id)
-                    existing.add(ticket_id)
+    @staticmethod
+    def _now_utc() -> datetime:
+        return datetime.now(timezone.utc)
 
-    def _pop_ticket_id(self) -> Optional[int]:
-        with self._ticket_queue_lock:
-            if not self._ticket_queue:
-                return None
-            return self._ticket_queue.popleft()
+    # =========================================================================
+    # Claim Operations (for processing accepted tickets)
+    # =========================================================================
 
-    def claim_accepted_tickets(self, ticket_type: Optional[str] = None) -> List[ProactiveTicket]:
+    def claim_accepted_tickets(
+            self,
+            ticket_type: Optional[str] = None,
+            batch_size: int = 10,
+    ) -> List[Ticket]:
         """
-        Claim accepted, unprocessed tickets via a serialized in-process queue.
-        Returns claimed ticket objects with effects_processed=2.
-        """
-        claimed: List[ProactiveTicket] = []
-        if not self._ticket_processing_lock.acquire(blocking=False):
-            return claimed
+        Atomically claim accepted, unprocessed tickets for processing.
 
-        try:
-            with self._session_scope() as session:
-                query = session.query(ProactiveTicket.id).filter(
-                    ProactiveTicket.state == TicketState.ACCEPTED.value,
-                    ProactiveTicket.effects_processed == 0,
+        Uses a claim_token to ensure atomic cross-process claiming.
+
+        Returns:
+            List of claimed Ticket objects
+        """
+        claim_token = uuid.uuid4().hex
+        now = self._now_utc()
+
+        with self._session_scope(immediate=True) as session:
+            subq = session.query(Ticket.id).filter(
+                Ticket.state == TicketState.ACCEPTED.value,
+                Ticket.effects_processed == 0,
+                Ticket.claim_token.is_(None),
                 )
-                if ticket_type:
-                    query = query.filter(ProactiveTicket.ticket_type == ticket_type)
-                ticket_ids = [row[0] for row in query.all()]
+            if ticket_type:
+                subq = subq.filter(Ticket.ticket_type == ticket_type)
 
-            self._enqueue_ticket_ids(ticket_ids)
+            # Deterministic ordering: oldest responded first, then oldest created.
+            # SQLite NULL ordering is tricky, the boolean trick makes it stable.
+            subq = subq.order_by(
+                Ticket.responded_at.is_(None).asc(),
+                Ticket.responded_at.asc(),
+                Ticket.created_at.asc(),
+            ).limit(batch_size).subquery()
 
-            while True:
-                ticket_id = self._pop_ticket_id()
-                if ticket_id is None:
-                    break
+            claimed_count = session.query(Ticket).filter(
+                Ticket.id.in_(session.query(subq.c.id)),
+                Ticket.state == TicketState.ACCEPTED.value,
+                Ticket.effects_processed == 0,
+                Ticket.claim_token.is_(None),
+                ).update(
+                {
+                    Ticket.effects_processed: 2,
+                    Ticket.claim_token: claim_token,
+                    Ticket.claimed_at: now,
+                },
+                synchronize_session=False,
+            )
 
-                with self._session_scope() as session:
-                    claim = (
-                        session.query(ProactiveTicket)
-                        .filter(
-                            ProactiveTicket.id == ticket_id,
-                            ProactiveTicket.effects_processed == 0,
-                        )
-                        .update({ProactiveTicket.effects_processed: 2}, synchronize_session=False)
-                    )
-                if claim != 1:
-                    continue
+            if claimed_count == 0:
+                return []
 
-                with self._session_scope() as session:
-                    ticket = session.query(ProactiveTicket).filter(ProactiveTicket.id == ticket_id).first()
-                    if ticket:
-                        claimed.append(ticket)
+            claimed = session.query(Ticket).filter(
+                Ticket.claim_token == claim_token,
+                Ticket.effects_processed == 2,
+                Ticket.state == TicketState.ACCEPTED.value,
+                ).all()
 
+            logger.debug(f"Claimed {len(claimed)} tickets with token {claim_token[:8]}...")
             return claimed
-        finally:
-            self._ticket_processing_lock.release()
 
-    def set_ticket_processed_state(self, ticket_id: int, state: int) -> None:
-        """Set effects_processed for a ticket id."""
+    def mark_ticket_processed(self, ticket_id: int, clear_claim: bool = True) -> None:
+        """
+        Mark a claimed ticket as fully processed.
+
+        Args:
+            ticket_id: The ticket's primary key (id, not ticket_id string)
+            clear_claim: If True, also clears claim_token and claimed_at
+        """
         with self._session_scope() as session:
-            session.query(ProactiveTicket).filter(
-                ProactiveTicket.id == ticket_id
-            ).update({ProactiveTicket.effects_processed: state}, synchronize_session=False)
-    
-    def _emit_suggestion_to_ui(self, ticket_dict: Dict[str, Any]):
-        """Emit a proactive suggestion to the frontend via WebSocket with TTS."""
-        try:
-            from app.assistant.ServiceLocator.service_locator import DI
-            from app.assistant.utils.pydantic_classes import Message, UserMessage, UserMessageData
-            from datetime import datetime, timezone
-            
-            # Emit the suggestion data for the popup
-            message = Message(
-                event_topic='proactive_suggestion',
-                data=ticket_dict
+            updates: Dict[Any, Any] = {Ticket.effects_processed: 1, Ticket.updated_at: self._now_utc()}
+            if clear_claim:
+                updates[Ticket.claim_token] = None
+                updates[Ticket.claimed_at] = None
+            session.query(Ticket).filter(Ticket.id == ticket_id).update(updates, synchronize_session=False)
+
+    def release_claim(self, ticket_id: int) -> None:
+        """
+        Release a claim without marking processed (e.g., on error).
+
+        Args:
+            ticket_id: The ticket's primary key
+        """
+        with self._session_scope() as session:
+            session.query(Ticket).filter(Ticket.id == ticket_id).update(
+                {
+                    Ticket.effects_processed: 0,
+                    Ticket.claim_token: None,
+                    Ticket.claimed_at: None,
+                    Ticket.updated_at: self._now_utc(),
+                },
+                synchronize_session=False,
             )
-            DI.event_hub.publish(message)
-            logger.info(f"Emitted proactive suggestion to UI: {ticket_dict.get('ticket_id')}")
-            
-            # Also emit TTS message so Emi speaks the suggestion
-            tts_text = ticket_dict.get('message') or ticket_dict.get('title', 'I have a suggestion for you.')
-            tts_message = UserMessage(
-                data_type='user_msg',
-                sender='proactive_orchestrator',
-                receiver=None,
-                timestamp=datetime.now(timezone.utc),
-                role='assistant',
-                user_message_data=UserMessageData(
-                    feed=None,  # No visual feed, just TTS
-                    tts=True,
-                    tts_text=tts_text
-                )
-            )
-            tts_message.event_topic = 'socket_emit'
-            DI.event_hub.publish(tts_message)
-            logger.info(f"Emitted TTS for proactive suggestion")
-            
-        except Exception as e:
-            logger.warning(f"Could not emit suggestion to UI: {e}")
-    
+
     # =========================================================================
     # Create Operations
     # =========================================================================
-    
+
     def create_ticket(
-        self,
-        suggestion_type: str,
-        title: str,
-        message: str,
-        action_type: str = "none",
-        action_params: Dict = None,
-        trigger_context: Dict = None,
-        trigger_reason: str = None,
-        valid_hours: int = 4,
-        status_effect: Dict = None,
-        ticket_type: Optional[str] = None
-    ) -> Optional[Dict[str, Any]]:
+            self,
+            ticket_type: str,
+            suggestion_type: str,
+            title: str,
+            message: str,
+            action_type: str = "none",
+            action_params: Optional[Dict] = None,
+            trigger_context: Optional[Dict] = None,
+            trigger_reason: Optional[str] = None,
+            valid_hours: int = 4,
+            status_effect: Optional[List[str]] = None,
+    ) -> Optional[Ticket]:
         """
-        Create a new proactive ticket.
-        
-        Args:
-            suggestion_type: Category (nutrition, rest, task, movement, reminder)
-            title: Short description
-            message: What Emi says to user
-            action_type: What to do if accepted (calendar_block, reminder, notify, none)
-            action_params: Parameters for the action
-            trigger_context: Snapshot of context that triggered this
-            trigger_reason: Why this was suggested
-            valid_hours: How long this suggestion is valid (default 4 hours)
-            status_effect: Dict of field -> value to record when accepted (e.g., {"finger_stretch": "completed"})
-            ticket_type: Explicit ticket type (e.g., "wellness", "tool_approval", "general")
-            
-        Returns:
-            Created ticket as dict or None if error
+        Create a new ticket in PENDING state.
+
+        NOTE: This only creates the ticket. Caller is responsible for:
+        - Calling mark_proposed() if ticket should be shown to user
+        - Emitting to UI if needed
         """
+        now = self._now_utc()
+        ticket_id = f"{ticket_type}_{suggestion_type}_{now.strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}"
+
         with self._session_scope() as session:
-            now = datetime.now(timezone.utc)
-            ticket_id = f"proactive_{suggestion_type}_{now.strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}"
-            
-            # Determine ticket_type based on action_type or explicit override
-            if not ticket_type:
-                if action_type and action_type.startswith("tool_"):
-                    ticket_type = "tool_approval"
-                else:
-                    ticket_type = "general"
-            
-            ticket = ProactiveTicket(
+            ticket = Ticket(
                 ticket_id=ticket_id,
+                ticket_type=ticket_type,
                 suggestion_type=suggestion_type,
                 state=TicketState.PENDING.value,
                 state_history=[{
-                    "state": TicketState.PENDING.value,
+                    "from_state": None,
+                    "to_state": TicketState.PENDING.value,
                     "timestamp": now.isoformat(),
-                    "reason": "Created"
+                    "reason": "Created",
                 }],
                 title=title,
                 message=message,
@@ -234,560 +321,471 @@ class TicketManager:
                 action_params=action_params or {},
                 trigger_context=trigger_context or {},
                 trigger_reason=trigger_reason,
-                status_effect=status_effect or {},
-                ticket_type=ticket_type,
+                status_effect=status_effect or [],
                 effects_processed=0,
                 valid_from=now,
-                valid_until=now + timedelta(hours=valid_hours)
+                valid_until=now + timedelta(hours=valid_hours),
             )
-            
             session.add(ticket)
-            
-            # Convert to dict before closing session
-            ticket_dict = ticket.to_dict()
-            logger.info(f"📋 Created ticket: {ticket_id} ({suggestion_type})")
-            
-            # Mark as proposed (ready to show user)
-            self.mark_proposed(ticket_id)
-            
-            # Emit to frontend via WebSocket
-            self._emit_suggestion_to_ui(ticket_dict)
-            
-            return ticket_dict
-        
-        # _session_scope handles rollback/close
-        
-    
+            logger.info(f"📋 Created ticket: {ticket_id} (type={ticket_type})")
+            return ticket
+
     # =========================================================================
     # Query Operations
     # =========================================================================
-    
-    def get_ticket_by_id(self, ticket_id: str) -> Optional[ProactiveTicket]:
-        """Get a ticket by its ticket_id."""
+
+    def get_tickets(
+            self,
+            *,
+            since_utc: Optional[datetime] = None,
+            until_utc: Optional[datetime] = None,
+            since_responded_utc: Optional[datetime] = None,
+            state: Optional[Union[TicketState, str]] = None,
+            states: Optional[List[Union[TicketState, str]]] = None,
+            exclude_terminal: bool = False,
+            ticket_type: Optional[str] = None,
+            suggestion_type: Optional[str] = None,
+            effects_processed: Optional[int] = None,
+            limit: int = 100,
+            order_by: str = "created_at",
+            order_desc: bool = True,
+    ) -> List[Ticket]:
+        """
+        Unified ticket query with flexible filtering.
+        """
+        if order_by not in _ORDERABLE_FIELDS:
+            raise ValueError(
+                f"Invalid order_by field '{order_by}'. "
+                f"Valid fields: {', '.join(sorted(_ORDERABLE_FIELDS))}"
+            )
+
         with self._session_scope() as session:
-            return session.query(ProactiveTicket).filter(
-                ProactiveTicket.ticket_id == ticket_id
-            ).first()
-    
+            query = session.query(Ticket)
+
+            if since_utc:
+                query = query.filter(Ticket.created_at >= since_utc)
+            if until_utc:
+                query = query.filter(Ticket.created_at <= until_utc)
+
+            if since_responded_utc:
+                query = query.filter(
+                    Ticket.responded_at.isnot(None),
+                    Ticket.responded_at > since_responded_utc,
+                    )
+
+            if state:
+                state_val = state.value if isinstance(state, TicketState) else state
+                query = query.filter(Ticket.state == state_val)
+            elif states:
+                state_vals = [s.value if isinstance(s, TicketState) else s for s in states]
+                query = query.filter(Ticket.state.in_(state_vals))
+            elif exclude_terminal:
+                query = query.filter(~Ticket.state.in_(_TERMINAL_STATES))
+
+            if ticket_type:
+                query = query.filter(Ticket.ticket_type == ticket_type)
+            if suggestion_type:
+                query = query.filter(Ticket.suggestion_type == suggestion_type)
+
+            if effects_processed is not None:
+                query = query.filter(Ticket.effects_processed == effects_processed)
+
+            order_field = getattr(Ticket, order_by)
+            query = query.order_by(order_field.desc() if order_desc else order_field.asc())
+
+            return query.limit(limit).all()
+
+    def get_ticket_by_id(self, ticket_id: str) -> Optional[Ticket]:
+        """Get a ticket by its ticket_id string."""
+        with self._session_scope() as session:
+            return session.query(Ticket).filter(Ticket.ticket_id == ticket_id).first()
+
     def update_ticket(self, ticket_id: str, **kwargs) -> bool:
         """
-        Update a ticket's fields.
-        
-        Args:
-            ticket_id: The ticket_id to update
-            **kwargs: Fields to update (title, message, suggestion_type, action_type, etc.)
-            
-        Returns:
-            True if updated successfully, False otherwise
+        Update allowed fields on a ticket.
+
+        State changes must go through transition_state().
         """
+        restricted = set(kwargs.keys()) - _UPDATABLE_FIELDS
+        if restricted:
+            raise ValueError(
+                f"Cannot update restricted fields via update_ticket(): {restricted}. "
+                f"Use transition_state() for state changes."
+            )
+
         with self._session_scope() as session:
-            ticket = session.query(ProactiveTicket).filter(
-                ProactiveTicket.ticket_id == ticket_id
-            ).first()
-            
+            ticket = session.query(Ticket).filter(Ticket.ticket_id == ticket_id).first()
             if not ticket:
                 logger.warning(f"Ticket not found for update: {ticket_id}")
                 return False
-            
-            # Update allowed fields
-            allowed_fields = [
-                'title', 'message', 'suggestion_type', 'action_type', 
-                'action_params', 'trigger_reason', 'valid_until'
-            ]
-            
+
             for field, value in kwargs.items():
-                if field in allowed_fields and hasattr(ticket, field):
-                    setattr(ticket, field, value)
-            logger.info(f"Updated ticket {ticket_id}: {list(kwargs.keys())}")
+                setattr(ticket, field, value)
+
+            ticket.updated_at = self._now_utc()
+            logger.debug(f"Updated ticket {ticket_id}: {list(kwargs.keys())}")
             return True
-    
-    def save_ticket(self, ticket: ProactiveTicket) -> bool:
-        """Save/update a ticket's changes to the database.
-        
-        Args:
-            ticket: The ProactiveTicket instance to save
-            
-        Returns:
-            True if save was successful, False otherwise
-        """
+
+    def save_ticket(self, ticket: Ticket) -> bool:
+        """Save/update a ticket's changes to the database."""
         with self._session_scope() as session:
-            # Merge the ticket into this session
             session.merge(ticket)
             return True
-    
-    def get_tickets_by_state(self, state: TicketState, limit: int = 50) -> List[ProactiveTicket]:
-        """Get tickets in a specific state."""
+
+    def count_tickets(
+            self,
+            *,
+            state: Optional[Union[TicketState, str]] = None,
+            states: Optional[List[Union[TicketState, str]]] = None,
+            exclude_terminal: bool = False,
+            ticket_type: Optional[str] = None,
+            suggestion_type: Optional[str] = None,
+    ) -> int:
+        """Count tickets matching filters (efficient DB COUNT)."""
         with self._session_scope() as session:
-            return session.query(ProactiveTicket).filter(
-                ProactiveTicket.state == state.value
-            ).order_by(ProactiveTicket.created_at.desc()).limit(limit).all()
-    
-    def get_pending_tickets(self, limit: int = 10) -> List[ProactiveTicket]:
-        """Get tickets ready to be proposed (PENDING state, not expired, not too old)."""
-        with self._session_scope() as session:
-            now = datetime.now(timezone.utc)
-            max_age = timedelta(hours=2)  # Safety net (matches expire_old_tickets)
-            
-            # Fetch candidates
-            candidates = session.query(ProactiveTicket).filter(
-                ProactiveTicket.state == TicketState.PENDING.value
-            ).order_by(ProactiveTicket.created_at.asc()).all()
-            
-            # Filter in Python for timezone safety
-            result = []
-            for ticket in candidates:
-                # Check age (safety net - nothing older than 24h)
-                created_at = ticket.created_at
-                if created_at:
-                    if created_at.tzinfo is None:
-                        created_at = created_at.replace(tzinfo=timezone.utc)
-                    if (now - created_at) > max_age:
-                        continue  # Too old
-                
-                # Check valid_until
-                valid_until = ticket.valid_until
-                if valid_until and valid_until.tzinfo is None:
-                    valid_until = valid_until.replace(tzinfo=timezone.utc)
-                if valid_until and valid_until <= now:
-                    continue  # Expired
-                
-                result.append(ticket)
-                if len(result) >= limit:
-                    break
-            return result
-    
-    def get_snoozed_tickets_ready(self) -> List[ProactiveTicket]:
+            query = session.query(func.count(Ticket.id))
+
+            if state:
+                state_val = state.value if isinstance(state, TicketState) else state
+                query = query.filter(Ticket.state == state_val)
+            elif states:
+                state_vals = [s.value if isinstance(s, TicketState) else s for s in states]
+                query = query.filter(Ticket.state.in_(state_vals))
+            elif exclude_terminal:
+                query = query.filter(~Ticket.state.in_(_TERMINAL_STATES))
+
+            if ticket_type:
+                query = query.filter(Ticket.ticket_type == ticket_type)
+            if suggestion_type:
+                query = query.filter(Ticket.suggestion_type == suggestion_type)
+
+            return query.scalar() or 0
+
+    def has_similar_active_ticket(self, suggestion_type: str, ticket_type: Optional[str] = None) -> bool:
+        """
+        Check if there's already an active (non-terminal) ticket with same suggestion_type.
+        """
+        return self.count_tickets(
+            suggestion_type=suggestion_type,
+            ticket_type=ticket_type,
+            exclude_terminal=True,
+        ) > 0
+
+    def get_snoozed_tickets_ready(self) -> List[Ticket]:
         """Get snoozed tickets whose snooze time has passed."""
+        now = self._now_utc()
         with self._session_scope() as session:
-            now = datetime.now(timezone.utc)
-            # Fetch snoozed tickets with snooze_until set
-            candidates = session.query(ProactiveTicket).filter(
-                ProactiveTicket.state == TicketState.SNOOZED.value,
-                ProactiveTicket.snooze_until != None
-            ).all()
-            
-            # Filter in Python for timezone safety
-            ready = []
-            for ticket in candidates:
-                snooze_until = ticket.snooze_until
-                if snooze_until and snooze_until.tzinfo is None:
-                    snooze_until = snooze_until.replace(tzinfo=timezone.utc)
-                if snooze_until and snooze_until <= now:
-                    ready.append(ticket)
-            return ready
-    
-    def get_proposed_tickets_waiting(self) -> List[Dict[str, Any]]:
+            return session.query(Ticket).filter(
+                Ticket.state == TicketState.SNOOZED.value,
+                Ticket.snooze_until.isnot(None),
+                Ticket.snooze_until <= now,
+                ).all()
+
+    def get_tickets_pending_or_proposed(
+            self,
+            *,
+            exclude_snoozed: bool = True,
+            max_age_hours: Optional[float] = None,
+    ) -> List[Ticket]:
         """
-        Get tickets ready to show to the user.
-        Returns tickets in PENDING or PROPOSED state that are:
-        - Not expired (valid_until is null or in the future)
-        - Not snoozed (snooze_until is null or in the past)
-        - Not too old (safety net: max 2 hours)
+        Get tickets in PENDING or PROPOSED state for display.
+
+        Important: this is driven by valid_until. The optional max_age_hours is
+        only a debug or safety lever, and defaults to None to avoid silently
+        hiding still-valid tickets.
         """
+        now = self._now_utc()
+
         with self._session_scope() as session:
-            now = datetime.now(timezone.utc)
-            max_age = timedelta(hours=2)  # Safety net (matches expire_old_tickets)
-            
-            # Fetch candidates
-            candidates = session.query(ProactiveTicket).filter(
-                ProactiveTicket.state.in_([
-                    TicketState.PENDING.value,
-                    TicketState.PROPOSED.value
-                ])
-            ).order_by(ProactiveTicket.created_at.asc()).all()
-            
-            # Filter in Python for timezone safety
-            result = []
-            for ticket in candidates:
-                # Check age (safety net - nothing older than 24h)
-                created_at = ticket.created_at
-                if created_at:
-                    if created_at.tzinfo is None:
-                        created_at = created_at.replace(tzinfo=timezone.utc)
-                    if (now - created_at) > max_age:
-                        continue  # Too old
-                
-                # Check valid_until (null = valid, future = valid)
-                valid_until = ticket.valid_until
-                if valid_until and valid_until.tzinfo is None:
-                    valid_until = valid_until.replace(tzinfo=timezone.utc)
-                if valid_until and valid_until <= now:
-                    continue  # Expired
-                
-                # Check snooze_until (null = not snoozed, past = ready)
-                snooze_until = ticket.snooze_until
-                if snooze_until and snooze_until.tzinfo is None:
-                    snooze_until = snooze_until.replace(tzinfo=timezone.utc)
-                if snooze_until and snooze_until > now:
-                    continue  # Still snoozed
-                
-                result.append(ticket.to_dict())
-            
-            return result
-    
-    def get_active_ticket_count(self) -> int:
-        """Count tickets that are active (not completed/dismissed/expired/failed)."""
-        with self._session_scope() as session:
-            terminal_states = [
-                TicketState.COMPLETED.value,
-                TicketState.DISMISSED.value,
-                TicketState.EXPIRED.value,
-                TicketState.FAILED.value
-            ]
-            return session.query(ProactiveTicket).filter(
-                ~ProactiveTicket.state.in_(terminal_states)
-            ).count()
-    
-    def has_similar_active_ticket(self, suggestion_type: str, title_contains: str = None) -> bool:
-        """
-        Check if there's already an active ticket of similar type.
-        Used to prevent duplicate suggestions.
-        """
-        with self._session_scope() as session:
-            terminal_states = [
-                TicketState.COMPLETED.value,
-                TicketState.DISMISSED.value,
-                TicketState.EXPIRED.value,
-                TicketState.FAILED.value
-            ]
-            query = session.query(ProactiveTicket).filter(
-                ProactiveTicket.suggestion_type == suggestion_type,
-                ~ProactiveTicket.state.in_(terminal_states)
+            query = session.query(Ticket).filter(
+                Ticket.state.in_([TicketState.PENDING.value, TicketState.PROPOSED.value]),
+                or_(Ticket.valid_until.is_(None), Ticket.valid_until > now),
             )
-            
-            if title_contains:
-                query = query.filter(ProactiveTicket.title.ilike(f"%{title_contains}%"))
-            
-            return query.count() > 0
-    
-    def get_recent_tickets(self, hours: int = 24, limit: int = 50) -> List[ProactiveTicket]:
-        """Get tickets from the last N hours (by created_at)."""
-        with self._session_scope() as session:
-            cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
-            return session.query(ProactiveTicket).filter(
-                ProactiveTicket.created_at >= cutoff
-            ).order_by(ProactiveTicket.created_at.desc()).limit(limit).all()
-    
-    def get_recently_accepted_tickets(self, hours: int = 2, limit: int = 50) -> List[ProactiveTicket]:
-        """Get tickets accepted in the last N hours (by responded_at)."""
-        with self._session_scope() as session:
-            cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
-            return session.query(ProactiveTicket).filter(
-                ProactiveTicket.state == TicketState.ACCEPTED.value,
-                ProactiveTicket.responded_at >= cutoff
-            ).order_by(ProactiveTicket.responded_at.desc()).limit(limit).all()
-    
+
+            if exclude_snoozed:
+                query = query.filter(or_(Ticket.snooze_until.is_(None), Ticket.snooze_until <= now))
+
+            if max_age_hours is not None:
+                min_created = now - timedelta(hours=max_age_hours)
+                query = query.filter(Ticket.created_at >= min_created)
+
+            return query.order_by(Ticket.created_at.asc()).all()
+
     # =========================================================================
     # State Transition Operations
     # =========================================================================
-    
+
+    def _transition_state_in_session(
+            self,
+            session,
+            ticket: Ticket,
+            new_state: TicketState,
+            reason: Optional[str],
+            now: datetime,
+            transition_kwargs: Dict[str, Any],
+    ) -> bool:
+        old_state = ticket.state
+
+        if old_state == new_state.value:
+            return True
+
+        allowed = _ALLOWED_TRANSITIONS.get(old_state, frozenset())
+        if new_state.value not in allowed:
+            logger.warning(
+                f"Invalid transition for ticket {ticket.ticket_id}: "
+                f"'{old_state}' -> '{new_state.value}' not allowed. "
+                f"Valid targets: {sorted(allowed) if allowed else 'none (terminal state)'}"
+            )
+            return False
+
+        ticket.state = new_state.value
+
+        history = list(ticket.state_history or [])
+        history.append({
+            "from_state": old_state,
+            "to_state": new_state.value,
+            "timestamp": now.isoformat(),
+            "reason": reason or f"Transitioned to {new_state.value}",
+        })
+        ticket.state_history = history
+
+        ticket.updated_at = now
+
+        if new_state == TicketState.PROPOSED:
+            ticket.proposed_at = now
+        elif new_state in (TicketState.ACCEPTED, TicketState.SNOOZED, TicketState.DISMISSED):
+            ticket.responded_at = now
+        elif new_state in (TicketState.COMPLETED, TicketState.FAILED):
+            # If your Ticket model later gains failed_at, prefer that for FAILED.
+            ticket.completed_at = now
+
+        for key, value in transition_kwargs.items():
+            if not hasattr(ticket, key):
+                raise ValueError(
+                    f"Kwarg '{key}' is in _TRANSITION_ALLOWED_KWARGS but not on Ticket model. "
+                    f"This is a configuration bug."
+                )
+            setattr(ticket, key, value)
+
+        if new_state == TicketState.ACCEPTED:
+            logger.info(
+                "✅ Ticket accepted",
+                extra={
+                    "ticket_id": ticket.ticket_id,
+                    "suggestion_type": ticket.suggestion_type,
+                    "ticket_type": ticket.ticket_type,
+                },
+            )
+
+        logger.info(f"📋 Ticket {ticket.ticket_id}: {old_state} -> {new_state.value}")
+        return True
+
     def transition_state(
-        self,
-        ticket_id: str,
-        new_state: TicketState,
-        reason: str = None,
-        **kwargs
+            self,
+            ticket_id: str,
+            new_state: TicketState,
+            reason: Optional[str] = None,
+            **kwargs,
     ) -> bool:
         """
         Transition a ticket to a new state.
-        
-        Args:
-            ticket_id: The ticket to update
-            new_state: Target state
-            reason: Why the transition
-            **kwargs: Additional fields to update (snooze_until, user_response_raw, etc.)
-            
-        Returns:
-            True if successful
+
+        Enforces state machine invariants via _ALLOWED_TRANSITIONS.
+        Only kwargs in _TRANSITION_ALLOWED_KWARGS are accepted, and they must exist
+        as attributes on the Ticket model.
         """
+        invalid_kwargs = set(kwargs.keys()) - _TRANSITION_ALLOWED_KWARGS
+        if invalid_kwargs:
+            raise ValueError(
+                f"Invalid kwargs for transition_state(): {invalid_kwargs}. "
+                f"Allowed: {sorted(_TRANSITION_ALLOWED_KWARGS)}"
+            )
+
+        now = self._now_utc()
         with self._session_scope() as session:
-            ticket = session.query(ProactiveTicket).filter(
-                ProactiveTicket.ticket_id == ticket_id
-            ).first()
-            
+            ticket = session.query(Ticket).filter(Ticket.ticket_id == ticket_id).first()
             if not ticket:
                 logger.warning(f"Ticket not found: {ticket_id}")
                 return False
-            
-            old_state = ticket.state
-            now = datetime.now(timezone.utc)
-            
-            # Update state
-            ticket.state = new_state.value
-            
-            # Add to history
-            history = ticket.state_history or []
-            history.append({
-                "from_state": old_state,
-                "to_state": new_state.value,
-                "timestamp": now.isoformat(),
-                "reason": reason or f"Transitioned to {new_state.value}"
-            })
-            ticket.state_history = history
-            
-            # Update timestamps based on state
-            if new_state == TicketState.PROPOSED:
-                ticket.proposed_at = now
-            elif new_state in [TicketState.ACCEPTED, TicketState.SNOOZED, TicketState.DISMISSED]:
-                ticket.responded_at = now
-            elif new_state == TicketState.COMPLETED:
-                ticket.completed_at = now
-            
-            # Update additional fields from kwargs
-            for key, value in kwargs.items():
-                if hasattr(ticket, key):
-                    setattr(ticket, key, value)
-            if new_state == TicketState.ACCEPTED:
-                logger.info(
-                    "✅ Ticket accepted",
-                    extra={
-                        "ticket_id": ticket.ticket_id,
-                        "suggestion_type": ticket.suggestion_type,
-                        "ticket_type": ticket.ticket_type,
-                        "effects_processed": ticket.effects_processed,
-                        "status_effect": ticket.status_effect,
-                        "responded_at": ticket.responded_at.isoformat() if ticket.responded_at else None,
-                    },
-                )
-            logger.info(f"📋 Ticket {ticket_id}: {old_state} → {new_state.value}")
-            return True
-    
-    def mark_proposed(self, ticket_id: str, ask_user_id: str = None) -> bool:
-        """Mark ticket as proposed to user."""
+
+            return self._transition_state_in_session(
+                session=session,
+                ticket=ticket,
+                new_state=new_state,
+                reason=reason,
+                now=now,
+                transition_kwargs=kwargs,
+            )
+
+    def mark_proposed(self, ticket_id: str, ask_user_id: Optional[str] = None) -> bool:
         return self.transition_state(
-            ticket_id, 
-            TicketState.PROPOSED, 
+            ticket_id,
+            TicketState.PROPOSED,
             reason="Proposed to user",
-            ask_user_id=ask_user_id
+            ask_user_id=ask_user_id,
         )
-    
-    def mark_accepted(self, ticket_id: str, user_response_raw: str = None) -> bool:
-        """Mark ticket as accepted by user."""
+
+    def mark_accepted(self, ticket_id: str, user_text: Optional[str] = None) -> bool:
         return self.transition_state(
             ticket_id,
             TicketState.ACCEPTED,
             reason="User accepted",
-            user_response_raw=user_response_raw,
-            user_response_parsed={"decision": "accept"}
+            user_text=user_text,
+            user_response_parsed={"decision": "accept"},
         )
-    
-    def mark_snoozed(self, ticket_id: str, snooze_minutes: int = 30, user_response_raw: str = None) -> bool:
-        """Mark ticket as snoozed by user."""
-        snooze_until = datetime.now(timezone.utc) + timedelta(minutes=snooze_minutes)
-        
-        # Get current snooze count
+
+    def mark_snoozed(
+            self,
+            ticket_id: str,
+            snooze_minutes: int = 30,
+            user_text: Optional[str] = None,
+    ) -> bool:
+        """
+        Mark ticket as snoozed by user.
+
+        This is done in a single transaction so snooze_count is not lost to a race.
+        """
+        now = self._now_utc()
+        snooze_until = now + timedelta(minutes=snooze_minutes)
+
+        invalid_kwargs = {"snooze_until", "snooze_count", "user_text", "user_response_parsed"} - _TRANSITION_ALLOWED_KWARGS
+        if invalid_kwargs:
+            raise ValueError("Transition allowlist is missing required snooze fields.")
+
         with self._session_scope() as session:
-            ticket = session.query(ProactiveTicket).filter(
-                ProactiveTicket.ticket_id == ticket_id
-            ).first()
-            snooze_count = (ticket.snooze_count or 0) + 1 if ticket else 1
-        
-        return self.transition_state(
-            ticket_id,
-            TicketState.SNOOZED,
-            reason=f"User snoozed for {snooze_minutes} minutes",
-            snooze_until=snooze_until,
-            snooze_count=snooze_count,
-            user_response_raw=user_response_raw,
-            user_response_parsed={"decision": "snooze", "snooze_minutes": snooze_minutes}
-        )
-    
-    def mark_dismissed(self, ticket_id: str, user_response_raw: str = None) -> bool:
-        """Mark ticket as dismissed by user."""
+            ticket = session.query(Ticket).filter(Ticket.ticket_id == ticket_id).first()
+            if not ticket:
+                logger.warning(f"Ticket not found: {ticket_id}")
+                return False
+
+            snooze_count = (ticket.snooze_count or 0) + 1
+
+            return self._transition_state_in_session(
+                session=session,
+                ticket=ticket,
+                new_state=TicketState.SNOOZED,
+                reason=f"User snoozed for {snooze_minutes} minutes",
+                now=now,
+                transition_kwargs={
+                    "snooze_until": snooze_until,
+                    "snooze_count": snooze_count,
+                    "user_text": user_text,
+                    "user_response_parsed": {"decision": "snooze", "snooze_minutes": snooze_minutes},
+                },
+            )
+
+    def mark_dismissed(self, ticket_id: str, user_text: Optional[str] = None) -> bool:
         return self.transition_state(
             ticket_id,
             TicketState.DISMISSED,
             reason="User dismissed",
-            user_response_raw=user_response_raw,
-            user_response_parsed={"decision": "dismiss"}
+            user_text=user_text,
+            user_response_parsed={"decision": "dismiss"},
         )
-    
-    def mark_acknowledged(self, ticket_id: str, user_response_raw: str = None) -> bool:
-        """Mark ticket as acknowledged by user (seen but not completed)."""
-        return self.transition_state(
-            ticket_id,
-            TicketState.ACKNOWLEDGED,
-            reason="User acknowledged",
-            user_response_raw=user_response_raw,
-            user_response_parsed={"decision": "acknowledge"}
-        )
-    
+
     def mark_executing(self, ticket_id: str) -> bool:
-        """Mark ticket as executing action."""
-        return self.transition_state(
-            ticket_id,
-            TicketState.EXECUTING,
-            reason="Executing action"
-        )
-    
-    def mark_completed(self, ticket_id: str, execution_result: str = None, related_action_id: str = None) -> bool:
-        """Mark ticket as completed successfully."""
+        return self.transition_state(ticket_id, TicketState.EXECUTING, reason="Executing action")
+
+    def mark_completed(
+            self,
+            ticket_id: str,
+            execution_result: Optional[str] = None,
+            related_action_id: Optional[str] = None,
+    ) -> bool:
         return self.transition_state(
             ticket_id,
             TicketState.COMPLETED,
             reason="Action completed",
             execution_result=execution_result,
-            related_action_id=related_action_id
+            related_action_id=related_action_id,
         )
-    
-    def mark_failed(self, ticket_id: str, execution_result: str = None) -> bool:
-        """Mark ticket as failed."""
+
+    def mark_failed(self, ticket_id: str, execution_result: Optional[str] = None) -> bool:
         return self.transition_state(
             ticket_id,
             TicketState.FAILED,
             reason="Action failed",
-            execution_result=execution_result
+            execution_result=execution_result,
         )
-    
+
     def mark_expired(self, ticket_id: str, reason: str = "Time window passed") -> bool:
-        """Mark ticket as expired."""
-        return self.transition_state(
-            ticket_id,
-            TicketState.EXPIRED,
-            reason=reason
-        )
-    
+        return self.transition_state(ticket_id, TicketState.EXPIRED, reason=reason)
+
     # =========================================================================
-    # Maintenance Operations
+    # Bulk Operations
     # =========================================================================
-    
-    def wake_snoozed_tickets(self) -> int:
+
+    def expire_old_tickets(self, *, max_age_hours: Optional[float] = None) -> int:
         """
-        Handle snoozed tickets whose snooze time has passed.
-        
-        Instead of re-proposing the old ticket (which has stale message like
-        "It's 5pm..." when it's now 7pm), we EXPIRE it and let the orchestrator
-        create a fresh ticket with current context if the need still exists.
-        
-        Returns:
-            Number of tickets processed
+        Bulk expire display-state tickets that have passed valid_until.
+
+        Optional max_age_hours is a safety lever. It is off by default to avoid
+        expiring still-valid tickets.
         """
-        tickets = self.get_snoozed_tickets_ready()
-        count = 0
-        
-        for ticket in tickets:
-            # Expire the snoozed ticket - orchestrator will create fresh one if needed
-            self.mark_expired(
-                ticket.ticket_id, 
-                reason=f"Snooze expired after {ticket.snooze_count} snooze(s) - orchestrator will re-evaluate"
-            )
-            count += 1
-            logger.info(f"Expired snoozed ticket '{ticket.title}' - orchestrator will create fresh if needed")
-        
-        if count > 0:
-            logger.info(f"📋 Expired {count} snoozed tickets (orchestrator will re-evaluate)")
-        
-        return count
-    
-    def expire_old_tickets(self) -> int:
-        """
-        Expire tickets that have passed their valid_until time.
-        Also expires any ticket older than 2 hours as a safety net.
-        
-        Returns:
-            Number of tickets expired
-        """
+        now = self._now_utc()
+
         with self._session_scope() as session:
-            now = datetime.now(timezone.utc)
-            max_age = timedelta(hours=2)  # Safety net: tickets older than 2h are stale
-            
-            # Find tickets that are not in terminal state
-            terminal_states = [
-                TicketState.COMPLETED.value,
-                TicketState.DISMISSED.value,
-                TicketState.EXPIRED.value,
-                TicketState.FAILED.value
+            conditions = [
+                Ticket.state.in_(_EXPIRABLE_STATES),
+                ~Ticket.state.in_(_TERMINAL_STATES),
+                and_(
+                    Ticket.valid_until.isnot(None),
+                    Ticket.valid_until < now,
+                    ),
             ]
-            
-            # Fetch ALL non-terminal candidates
-            candidates = session.query(ProactiveTicket).filter(
-                ~ProactiveTicket.state.in_(terminal_states)
-            ).all()
-            
-            count = 0
-            for ticket in candidates:
-                should_expire = False
-                
-                # Check valid_until
-                valid_until = ticket.valid_until
-                if valid_until:
-                    if valid_until.tzinfo is None:
-                        valid_until = valid_until.replace(tzinfo=timezone.utc)
-                    if valid_until < now:
-                        should_expire = True
-                
-                # Safety net: expire anything older than 2 hours
-                created_at = ticket.created_at
-                if created_at:
-                    if created_at.tzinfo is None:
-                        created_at = created_at.replace(tzinfo=timezone.utc)
-                    if (now - created_at) > max_age:
-                        should_expire = True
-                        logger.info(f"Safety net: expiring ticket {ticket.ticket_id} (age > 2h)")
-                
-                if should_expire:
-                    self.mark_expired(ticket.ticket_id)
-                    count += 1
-            
+
+            if max_age_hours is not None:
+                max_age_cutoff = now - timedelta(hours=max_age_hours)
+                conditions.append(Ticket.created_at < max_age_cutoff)
+
+            count = session.query(Ticket).filter(*conditions).update(
+                {
+                    Ticket.state: TicketState.EXPIRED.value,
+                    Ticket.updated_at: now,
+                },
+                synchronize_session=False,
+            )
+
             if count > 0:
-                logger.info(f"Expired {count} old tickets")
-            
+                logger.info(f"Bulk expired {count} old tickets")
             return count
-    
+
     def get_stats(self) -> Dict[str, Any]:
-        """Get statistics about tickets."""
         with self._session_scope() as session:
-            total = session.query(ProactiveTicket).count()
-            
-            stats = {"total": total}
+            total = session.query(func.count(Ticket.id)).scalar() or 0
+            stats: Dict[str, Any] = {"total": total}
             for state in TicketState:
-                count = session.query(ProactiveTicket).filter(
-                    ProactiveTicket.state == state.value
-                ).count()
-                stats[state.value] = count
-            
+                stats[state.value] = session.query(func.count(Ticket.id)).filter(
+                    Ticket.state == state.value
+                ).scalar() or 0
             return stats
-    
-    def clear_tool_approval_tickets(self) -> int:
-        """
-        Clear all tool approval tickets at startup.
-        These are stale if the app restarted.
-        
-        Returns:
-            Number of tickets deleted
-        """
+
+    def clear_tickets(
+            self,
+            ticket_type: Optional[str] = None,
+            states: Optional[List[Union[TicketState, str]]] = None,
+    ) -> int:
         with self._session_scope() as session:
-            deleted = session.query(ProactiveTicket).filter(
-                ProactiveTicket.suggestion_type == 'tool_approval',
-                ProactiveTicket.state.in_(['pending', 'proposed'])
-            ).delete(synchronize_session='fetch')
+            query = session.query(Ticket)
+            if ticket_type:
+                query = query.filter(Ticket.ticket_type == ticket_type)
+            if states:
+                state_vals = [s.value if isinstance(s, TicketState) else s for s in states]
+                query = query.filter(Ticket.state.in_(state_vals))
+
+            deleted = query.delete(synchronize_session="fetch")
+            if deleted > 0:
+                logger.info(f"🧹 Cleared {deleted} tickets (type={ticket_type}, states={states})")
             return deleted
 
     def clear_all_tickets(self) -> int:
-        """Delete all tickets."""
-        with self._session_scope() as session:
-            return session.query(ProactiveTicket).delete(synchronize_session='fetch')
-    
-    def _clear_all_tickets_on_startup(self):
-        """
-        Clear ALL proactive tickets at app startup (fresh slate).
-        
-        This ensures no stale tickets persist across restarts, which was causing
-        the 'already have active X ticket' blocking issue.
-        """
-        with self._session_scope() as session:
-            # Count before deletion
-            count = session.query(ProactiveTicket).count()
-            
-            if count > 0:
-                # Delete all tickets
-                session.query(ProactiveTicket).delete(synchronize_session='fetch')
-                logger.info(f"🧹 Cleared {count} stale proactive tickets at app startup")
-            else:
-                logger.info("No proactive tickets to clear at startup")
+        return self.clear_tickets()
 
 
-# Singleton instance
+# =============================================================================
+# Singleton
+# =============================================================================
+
 _ticket_manager: Optional[TicketManager] = None
 
 
@@ -797,4 +795,3 @@ def get_ticket_manager() -> TicketManager:
     if _ticket_manager is None:
         _ticket_manager = TicketManager()
     return _ticket_manager
-

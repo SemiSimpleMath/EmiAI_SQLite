@@ -7,7 +7,7 @@ Runs periodic tasks independently of the browser/UI.
 These tasks do not require user interaction and should run even when no browser tab is open.
 
 Tasks managed (current defaults):
-- Wellness cycle (3 min): physical status refresh + proactive orchestrator
+- Day flow cycle (3 min): day flow pipeline refresh
 - Save chat (30s): persist in-memory global blackboard to unified_log
 - Switchboard runner (60s): extract preferences from unified_log windows
 - Memory runner (5 min): process extracted facts and update resource files
@@ -182,10 +182,10 @@ class BackgroundTaskManager:
         self._register_default_tasks()
 
     def _register_default_tasks(self) -> None:
-        # 1. Wellness cycle (3 minutes)
+        # 1. Day flow cycle (3 minutes)
         self.register_task(
-            name="wellness_cycle",
-            func=self._run_wellness_cycle,
+            name="day_flow_cycle",
+            func=self._run_day_flow_cycle,
             interval_seconds=3 * 60,
             run_immediately=False,
         )
@@ -316,40 +316,21 @@ class BackgroundTaskManager:
     # Task Implementations
     # =========================================================================
 
-    def _run_wellness_cycle(self) -> None:
+    def _run_day_flow_cycle(self) -> None:
         """
-        Coordinated wellness cycle sequence:
-        1) Physical pipeline manager refresh (runs configured stages)
-        2) Proactive orchestrator (DISABLED - pending pipeline completion)
+        Trigger the day flow pipeline refresh.
         """
         try:
-            logger.info("Wellness cycle starting")
-
             from app.assistant.day_flow_manager import get_physical_pipeline_manager
             manager = get_physical_pipeline_manager()
             manager.refresh()
-            summary = manager.get_status_summary()
-            logger.info("Physical status refreshed: %s", summary)
-
-            # DISABLED: Proactive orchestrator - re-enable after pipeline stages are built
-            # from app.assistant.proactive_orchestrator import get_orchestrator_manager
-            # orchestrator = get_orchestrator_manager()
-            # result = orchestrator.run()
-            #
-            # count = result.get("suggestions_created", 0)
-            # reason = result.get("reason", "No suggestions")
-            # if count > 0:
-            #     logger.info("Proactive orchestrator created %s suggestion(s)", count)
-            # else:
-            #     logger.debug("Proactive orchestrator: %s", reason)
-
-            logger.info("Wellness cycle complete")
+            logger.debug("Day flow cycle complete")
 
         except Exception as e:
             log_critical_error(
-                message="Coordinated wellness cycle failed",
+                message="Day flow cycle failed",
                 exception=e,
-                context="BackgroundTaskManager._run_wellness_cycle",
+                context="BackgroundTaskManager._run_day_flow_cycle",
                 include_traceback=True,
             )
 
@@ -526,10 +507,16 @@ class BackgroundTaskManager:
             if expired > 0:
                 logger.info(f"Ticket maintenance: expired {expired} old tickets")
             
-            # Wake snoozed tickets
-            woken = ticket_manager.wake_snoozed_tickets()
-            if woken > 0:
-                logger.info(f"Ticket maintenance: woke {woken} snoozed tickets")
+            # Handle snoozed tickets whose snooze time has passed
+            # Policy: expire them so orchestrator can create fresh tickets with current context
+            snoozed_ready = ticket_manager.get_snoozed_tickets_ready()
+            for ticket in snoozed_ready:
+                ticket_manager.mark_expired(
+                    ticket.ticket_id,
+                    reason=f"Snooze expired after {ticket.snooze_count} snooze(s) - orchestrator will re-evaluate"
+                )
+            if snoozed_ready:
+                logger.info(f"Ticket maintenance: expired {len(snoozed_ready)} snoozed tickets")
 
         except Exception as e:
             log_critical_error(

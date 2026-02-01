@@ -181,6 +181,46 @@ class SleepConfig:
         return self.quality_thresholds().fair_minutes
 
     # ------------------------------------------------------------------
+    # Sleep segment adjustment parameters
+    # ------------------------------------------------------------------
+
+    @property
+    def min_segment_hours_for_trim(self) -> float:
+        """Minimum segment duration (hours) before trim adjustments apply."""
+        v = self.get("sleep_segment_adjustments", "min_segment_hours_for_trim", default=2.0)
+        try:
+            return max(0.0, float(v))
+        except Exception:
+            return 2.0
+
+    @property
+    def start_trim_minutes(self) -> float:
+        """Minutes to trim from start of sleep segment (fall-asleep buffer)."""
+        v = self.get("sleep_segment_adjustments", "start_trim_minutes", default=20)
+        try:
+            return max(0.0, float(v))
+        except Exception:
+            return 20.0
+
+    @property
+    def end_trim_minutes(self) -> float:
+        """Minutes to trim from end of sleep segment (wake-up buffer)."""
+        v = self.get("sleep_segment_adjustments", "end_trim_minutes", default=15)
+        try:
+            return max(0.0, float(v))
+        except Exception:
+            return 15.0
+
+    @property
+    def max_trim_percent(self) -> float:
+        """Maximum percentage of segment duration that can be trimmed."""
+        v = self.get("sleep_segment_adjustments", "max_trim_percent", default=25)
+        try:
+            return max(0.0, min(100.0, float(v)))
+        except Exception:
+            return 25.0
+
+    # ------------------------------------------------------------------
     # Tiny time helpers
     # ------------------------------------------------------------------
 

@@ -73,7 +73,7 @@ class ToolResultHandler(ControlNode):
         # scope_id will be auto-tagged with current scope by add_msg
         message = Message(
             data_type="tool_result",
-            sub_data_type=tool_result.result_type,
+            sub_data_type=[tool_result.result_type] if getattr(tool_result, "result_type", None) else [],
             sender="tool",  # Generic sender for tools
             receiver=calling_agent,
             content=content_str,

@@ -41,6 +41,44 @@ def initialize_core_tables():
     logger.info("✅ Core tables initialized (9 tables)")
 
 
+def initialize_music_tables():
+    """
+    Create music/DJ tables (core feature)
+    Always runs on startup
+    
+    Tables (6):
+    - played_songs
+    - music_tracks_spotify
+    - music_genre_stats
+    - music_genre_weights
+    - music_artist_weights
+    - music_track_weights
+    """
+    logger.info("Initializing music tables...")
+    
+    # NOTE: These models use Flask-SQLAlchemy's metadata (db.Model), not Base.metadata.
+    # Create them explicitly to avoid relying on incidental imports.
+    from app.assistant.database.db_instance import db
+    from app.models.played_songs import PlayedSong
+    from app.models.music_tracks_spotify import SpotifyMusicTrack
+    from app.models.music_genre_stats import MusicGenreStats
+    from app.models.music_weights import MusicGenreWeight, MusicArtistWeight, MusicTrackWeight
+
+    db.Model.metadata.create_all(
+        db.engine,
+        tables=[
+            PlayedSong.__table__,
+            SpotifyMusicTrack.__table__,
+            MusicGenreStats.__table__,
+            MusicGenreWeight.__table__,
+            MusicArtistWeight.__table__,
+            MusicTrackWeight.__table__,
+        ],
+        checkfirst=True,
+    )
+    logger.info("✅ Music tables initialized (6 tables)")
+
+
 def initialize_entity_card_tables():
     """
     Create entity card tables (core feature)
@@ -158,18 +196,20 @@ def initialize_always_on_tables():
     """
     Initialize tables that are always created on startup
     
-    Total: 19 tables
+    Total: 20 tables
     - Core: 9 tables
     - Entity Cards: 5 tables
     - News: 5 tables
+    - Music: 1 table
     """
     logger.info("🚀 Initializing always-on database tables...")
     
     initialize_core_tables()
     initialize_entity_card_tables()
     initialize_news_tables()
+    initialize_music_tables()
     
-    logger.info("✅ Always-on tables ready (19 tables)")
+    logger.info("✅ Always-on tables ready (20 tables)")
 
 
 def initialize_optional_tables():

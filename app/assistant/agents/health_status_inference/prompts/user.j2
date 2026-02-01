@@ -66,19 +66,48 @@ Sleep: Target bedtime {{ resource_user_health.sleep.target_bedtime }}, Caffeine 
 {% set threshold = activity.threshold_minutes if activity.threshold_minutes is not none else none %}
 | {{ activity.display_name }} | {{ mins if mins is not none else "Unknown" }} min | {{ threshold if threshold else "-" }} | {% if threshold and mins and mins > threshold %} OVERDUE {% else %}OK{% endif %} |
 {% endfor %}
-| Coffees today | {{ time_since.coffees_today }} | - | - |
+| Coffees today | {{ time_since.coffee_count_today | default(0) }} | - | - |
 {% else %}
 [No time tracking data available]
 {% endif %}
 
-**Recent Ticket Interaction (Last 4 Hours):**
-*Did the user Accept (compliance) or Dismiss (frustration) recent suggestions?*
-{% if recent_tickets %}
-{% for ticket in recent_tickets %}
-- [{{ ticket.state | upper }}] {{ ticket.suggestion_type }}: "{{ ticket.title }}" ({{ ticket.updated_at_local }})
+**Recent Ticket Responses:**
+*User responses indicate compliance, engagement, or possible frustration.*
+
+{% if recent_responded_tickets %}
+{% if recent_responded_tickets.accepted %}
+### ACCEPTED (User is doing this now - high compliance)
+{% for t in recent_responded_tickets.accepted %}
+- {{ t.message or t.title }} [{{ t.responded_at_local }}]
 {% endfor %}
+{% endif %}
+
+{% if recent_responded_tickets.acknowledged %}
+### ACKNOWLEDGED (User received message, may or may not act)
+{% for t in recent_responded_tickets.acknowledged %}
+- {{ t.message or t.title }} [{{ t.responded_at_local }}]
+{% if t.user_comment %}  Comment: {{ t.user_comment }}{% endif %}
+{% endfor %}
+{% endif %}
+
+{% if recent_responded_tickets.declined %}
+### DECLINED (User not interested - possible frustration or valid reason)
+{% for t in recent_responded_tickets.declined %}
+- {{ t.message or t.title }} [{{ t.responded_at_local }}]
+{% if t.user_comment %}  Reason: {{ t.user_comment }}{% endif %}
+{% endfor %}
+{% endif %}
+
+{% if recent_responded_tickets.snoozed %}
+### SNOOZED (User delayed - busy but engaged)
+{% for t in recent_responded_tickets.snoozed %}
+- {{ t.message or t.title }} [{{ t.responded_at_local }}{% if t.snooze_until_local %}, until {{ t.snooze_until_local }}{% endif %}]
+{% if t.user_comment %}  Comment: {{ t.user_comment }}{% endif %}
+{% endfor %}
+{% endif %}
+
 {% else %}
-[No recent ticket interactions]
+[No recent ticket responses]
 {% endif %}
 
 **Schedule Load:**

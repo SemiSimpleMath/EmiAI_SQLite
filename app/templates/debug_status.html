@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Orchestrator Pipeline Debug</title>
+    <title>Day Flow Pipeline Debug</title>
     <style>
         :root {
             --bg: #1a1a2e;
@@ -129,7 +129,7 @@
     </style>
 </head>
 <body>
-    <h1>🎯 Orchestrator Pipeline Debug</h1>
+    <h1>🎯 Day Flow Pipeline Debug</h1>
     
     <div class="controls">
         <button id="refresh-btn" onclick="refreshData()">🔄 Refresh Data</button>
@@ -179,7 +179,7 @@
             const activityTrackerOutput = pipelineOutputs.activity_tracker || {};
             const dailyContextOutput = pipelineOutputs.daily_context_generator || {};
             const healthInferenceOutput = pipelineOutputs.health_inference || {};
-            const physicalOrchestratorOutput = pipelineOutputs.physical_orchestrator || {};
+            const physicalOrchestratorOutput = pipelineOutputs.day_flow_orchestrator || {};
             
             // External resources (from tools/managers)
             const externalResources = data.external_resources_raw || {};
@@ -190,7 +190,7 @@
             
             // Database logs
             const sleepLog = data.sleep_log || [];
-            const afkLog = data.afk_log || [];
+            const activeLog = data.active_log || [];
             const wakeLog = data.wake_log || [];
             const agentOutputs = data.agent_outputs || {};
             
@@ -224,9 +224,9 @@
             html += `<pre class="raw-json" style="max-height: 300px;">${syntaxHighlight(afkStatsOutput)}</pre>`;
             
             // 3. Activity Tracker Stage
-            html += '<h3 style="color: #7ee787; margin-top: 15px;">3. activity_tracker → resource_activity_tracker_output.json</h3>';
-            html += '<p style="font-size: 11px; color: #8b949e;">Detects activities from chat/calendar/tickets (LLM agent)</p>';
-            html += `<pre class="raw-json" style="max-height: 300px;">${syntaxHighlight(activityTrackerOutput)}</pre>`;
+            html += '<h3 style="color: #7ee787; margin-top: 15px;">3. activity_tracker → resource_tracked_activities_output.json</h3>';
+            html += '<p style="font-size: 11px; color: #8b949e;">Updates activity counts/timers from tickets and chat (may call LLM agent)</p>';
+            html += `<pre class="raw-json" style="max-height: 300px;">${syntaxHighlight(trackedActivitiesOutput)}</pre>`;
             
             // 4. Daily Context Generator Stage
             html += '<h3 style="color: #7ee787; margin-top: 15px;">4. daily_context_generator → resource_daily_context_generator_output.json</h3>';
@@ -238,8 +238,8 @@
             html += '<p style="font-size: 11px; color: #8b949e;">Infers energy/cognitive state (LLM agent)</p>';
             html += `<pre class="raw-json" style="max-height: 300px;">${syntaxHighlight(healthInferenceOutput)}</pre>`;
             
-            // 6. Physical Orchestrator Stage
-            html += '<h3 style="color: #7ee787; margin-top: 15px;">6. physical_orchestrator → resource_physical_orchestrator_output.json</h3>';
+            // 6. Day Flow Orchestrator Stage
+            html += '<h3 style="color: #7ee787; margin-top: 15px;">6. day_flow_orchestrator → resource_day_flow_orchestrator_output.json</h3>';
             html += '<p style="font-size: 11px; color: #8b949e;">Decides proactive wellness suggestions (LLM agent)</p>';
             html += `<pre class="raw-json" style="max-height: 300px;">${syntaxHighlight(physicalOrchestratorOutput)}</pre>`;
             
@@ -313,13 +313,13 @@
             html += `<pre class="raw-json">${syntaxHighlight(sleepLog)}</pre>`;
             html += '</div>';
             
-            // AFK Segments Log (Database)
-            html += '<div class="card"><h2>⏸️ AFK Segments Log (Database)</h2>';
-            html += '<h3>AFK intervals derived from active segments</h3>';
+            // Active Segments Log (Database)
+            html += '<div class="card"><h2>🖥️ Active Segments Log (Database)</h2>';
+            html += '<h3>active_segments table (last 50)</h3>';
             html += '<p style="font-size: 12px; color: #79c0ff; margin-bottom: 10px;">';
-            html += '📊 Raw AFK telemetry from database';
+            html += '📊 Computer activity periods - AFK intervals are computed from gaps between these';
             html += '</p>';
-            html += `<pre class="raw-json">${syntaxHighlight(afkLog)}</pre>`;
+            html += `<pre class="raw-json">${syntaxHighlight(activeLog)}</pre>`;
             html += '</div>';
             
             // Wake Segments Log (Database)
@@ -360,7 +360,7 @@
                         '• Daily counters\n' +
                         '• Sleep segments\n' +
                         '• Day tracking\n' +
-                        '• Proactive tickets\n\n' +
+                        '• Tickets\n\n' +
                         'Are you sure you want to continue?')) {
                 return;
             }
@@ -397,7 +397,7 @@
                         '• activity_tracker\n' +
                         '• daily_context_generator\n' +
                         '• health_inference\n' +
-                        '• physical_orchestrator\n\n' +
+                        '• day_flow_orchestrator\n\n' +
                         'Continue?')) {
                 return;
             }

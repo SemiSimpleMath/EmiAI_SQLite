@@ -43,8 +43,8 @@ def shutdown_session(exception=None):
     for session in sessions:
         try:
             session.close()
-        except Exception:
-            pass  # Session might already be closed
+        except Exception as e:
+            print(f"DEBUG: Failed to close session during teardown: {e}")
 
 def get_tracked_session():
     """Get a session that will be automatically closed"""
@@ -179,8 +179,8 @@ class TaxonomyReviewManager:
                                         # Rollback and continue with next node
                                         try:
                                             self.session.rollback()
-                                        except:
-                                            pass
+                                        except Exception as e2:
+                                            print(f"DEBUG: Rollback failed after auto-classify error: {e2}")
                                         continue
                         
                         # Mark suggestion as approved and remove it
@@ -457,8 +457,8 @@ class TaxonomyReviewManager:
                             # Rollback and continue with next node
                             try:
                                 self.session.rollback()
-                            except:
-                                pass
+                            except Exception as e2:
+                                print(f"DEBUG: Rollback failed after classification error: {e2}")
                             continue
             
             print(f"DEBUG: Committing changes...")

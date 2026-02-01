@@ -15,7 +15,7 @@ from .google_oauth import google_oauth_bp
 from .health_check import health_check_bp
 from .debug_status import debug_status_bp
 from .debug_orchestrator import debug_orchestrator_bp
-from .proactive_api import proactive_api_bp
+from .ticket_api import ticket_api_bp
 
 # KG/Taxonomy/Graph Visualizer routes - only import if dependencies available (disabled in alpha)
 # These all require sentence-transformers/chromadb which are not in alpha

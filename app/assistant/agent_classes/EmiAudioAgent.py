@@ -127,7 +127,7 @@ class EmiAudioAgent(Agent):
             task_notification_msg = Message(
                 task=msg_for_agent,
                 data_type='agent_msg',
-                sub_data_type='agent_notification',
+                sub_data_type=['agent_notification'],
                 sender=self.name,
                 receiver=None,
                 content=f"Following message was sent to the team: [{msg_for_agent}] \nThis is now in progress and no further action is necessary until we hear from the team. REPEAT Do not take action again unless specifically told to do so!\n",
@@ -208,7 +208,7 @@ class EmiAudioAgent(Agent):
                     # Check which entities are already in history to avoid duplicates
                     existing_entities = set()
                     for msg in self.blackboard.get_messages():
-                        if msg.sub_data_type == "entity_card_injection":
+                        if "entity_card_injection" in (getattr(msg, "sub_data_type", []) or []):
                             # Get entity name from message metadata if available
                             if hasattr(msg, 'metadata') and msg.metadata and 'entity_name' in msg.metadata:
                                 existing_entities.add(msg.metadata['entity_name'])
@@ -234,7 +234,7 @@ class EmiAudioAgent(Agent):
                         if card_content:
                             injection_msg = Message(
                                 data_type="agent_msg",
-                                sub_data_type="entity_card_injection",
+                                sub_data_type=["entity_card_injection"],
                                 sender=self.name,
                                 receiver=None,
                                 content=f"[Entity Context - {entity_name}]:\n{card_content}",
@@ -275,10 +275,45 @@ class EmiAudioAgent(Agent):
             if key == "history":
                 history = self.blackboard.get_messages()
                 history_str = "Old messages (from oldest to newest):"
+
+                # Include the latest chat summary (if present), then include only
+                # messages that have NOT been marked as summarized.
+                latest_summary = None
+                for msg in reversed(history):
+                    try:
+                        if "history_summary" in (getattr(msg, "sub_data_type", []) or []) and getattr(msg, "content", None):
+                            latest_summary = msg.content
+                            break
+                    except Exception:
+                        continue
+
+                if latest_summary:
+                    history_str += f"\n[Chat Summary]: {latest_summary}\n"
+
                 for msg in history:
                     if not msg.is_chat:
                         print("skipping non chat message")
                         continue
+
+                    # Skip chat messages already summarized (but keep entity injections and the summary itself).
+                    try:
+                        sub = getattr(msg, "sub_data_type", None)
+                        sub_set = set(sub or [])
+                        if "history_summary" in sub_set:
+                            continue
+                        # Slash commands are handled out-of-band; keep them out of general chat history.
+                        if "slash_command" in sub_set:
+                            continue
+                        meta = getattr(msg, "metadata", None)
+                        if (
+                            "entity_card_injection" not in sub_set
+                            and isinstance(meta, dict)
+                            and bool(meta.get("summarized", False))
+                        ):
+                            continue
+                    except Exception as e:
+                        logger.warning(f"[{self.name}] Failed to apply history filters: {e}", exc_info=True)
+
                     # Include ALL messages in history for LLM context (including entity card injections)
                     role = "User" if msg.data_type == 'user_msg' else "Emi"
                     history_str += f" {role}: {msg.content}"

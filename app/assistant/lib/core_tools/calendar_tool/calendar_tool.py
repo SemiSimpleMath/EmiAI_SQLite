@@ -771,8 +771,8 @@ def normalize_start_end(event: dict, calendar_timezone: str = None) -> (str, str
         try:
             from zoneinfo import ZoneInfo
             tzinfo = ZoneInfo(calendar_timezone)
-        except Exception:
-            pass  # fallback to system local timezone if calendar_timezone is invalid
+        except Exception as e:
+            logger.debug(f"Invalid calendar_timezone='{calendar_timezone}', falling back to local timezone: {e}", exc_info=True)
 
     def convert(field_info):
         if 'dateTime' in field_info:

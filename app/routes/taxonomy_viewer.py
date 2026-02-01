@@ -7,12 +7,15 @@ from sqlalchemy import and_, or_
 from pathlib import Path
 
 from app.models.base import get_session
+from app.assistant.utils.logging_config import get_logger
 from app.assistant.kg_core.knowledge_graph_db_sqlite import Node
 from app.assistant.kg_core.taxonomy.models import (
     Taxonomy, NodeTaxonomyLink, TaxonomySuggestions,
     NodeTaxonomyReviewQueue
 )
 from app.assistant.kg_core.taxonomy.manager import TaxonomyManager
+
+logger = get_logger(__name__)
 
 # Create blueprint with custom template and static folders
 taxonomy_viewer_bp = Blueprint(
@@ -38,8 +41,8 @@ def teardown_request(exception=None):
     for session in sessions:
         try:
             session.close()
-        except Exception:
-            pass  # Session might already be closed
+        except Exception as e:
+            logger.debug(f"taxonomy_viewer: session.close() failed during teardown: {e}", exc_info=True)
 
 
 def get_tracked_session():

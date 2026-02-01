@@ -16,7 +16,7 @@ from app.assistant.kg_core.kg_pipeline_v2.pipeline_coordinator import PipelineCo
 from app.assistant.kg_core.kg_pipeline_v2.database_schema import (
     PipelineChunk, MergeResult, StageResult, StageCompletion
 )
-from app.assistant.kg_core.kg_pipeline_v2.utils import wait_for_stage_data
+# from app.assistant.kg_core.kg_pipeline_v2.utils import wait_for_stage_data  # currently unused
 
 # Import V1 helper functions for feature parity
 from app.assistant.kg_core.kg_pipeline import process_nodes, process_edges
@@ -84,7 +84,7 @@ class MergeProcessor:
         Returns:
             True if data became available, False if timeout
         """
-        logger.info(f"🔄 Merge waiting for metadata results...")
+        logger.info("Merge waiting for metadata results...")
         
         # Check if there are metadata results available
         metadata_results = self.session.query(StageResult).filter(
@@ -92,10 +92,10 @@ class MergeProcessor:
         ).all()
         
         if metadata_results:
-            logger.info(f"✅ Found {len(metadata_results)} metadata results")
+            logger.info(f"Found {len(metadata_results)} metadata results")
             return True
         else:
-            logger.warning("⚠️ No metadata results found")
+            logger.warning("No metadata results found")
             return False
     
     async def process(self, batch_size: int = 1) -> Dict[str, Any]:
@@ -114,7 +114,7 @@ class MergeProcessor:
         """
         try:
             # Read ONE unprocessed metadata result (one chunk) from the waiting area
-            logger.info(f"📖 Reading one chunk from metadata waiting area...")
+            logger.info("Reading one chunk from metadata waiting area...")
             
             # Get one metadata result that hasn't been processed by merge stage yet
             # Use StageCompletion to track which chunks have been processed
@@ -129,7 +129,7 @@ class MergeProcessor:
             ).first()
             
             if not metadata_result:
-                logger.warning("⚠️ No metadata chunks available in waiting area")
+                logger.warning("No metadata chunks available in waiting area")
                 return {"processed_count": 0, "message": "No chunks to process"}
             
             # Lazy import to avoid SQLAlchemy table redefinition when running as subprocess
@@ -141,15 +141,15 @@ class MergeProcessor:
             # Extract the chunk data
             result_data = metadata_result.result_data
             
-            logger.info(f"🔍 DEBUG: result_data keys: {list(result_data.keys())}")
+            logger.info(f"DEBUG: result_data keys: {list(result_data.keys())}")
             metadata_results_list = result_data.get('metadata_results', [])
-            logger.info(f"📊 Total metadata_results entries: {len(metadata_results_list)}")
+            logger.info(f"Total metadata_results entries: {len(metadata_results_list)}")
             
             if not metadata_results_list:
-                logger.warning("⚠️ Empty metadata results list in chunk")
+                logger.warning("Empty metadata results list in chunk")
                 return {"processed_count": 0, "message": "Empty chunk"}
             
-            logger.info(f"🔍 Processing chunk with {len(metadata_results_list)} metadata entries")
+            logger.info(f"Processing chunk with {len(metadata_results_list)} metadata entries")
             
             # Track totals
             total_nodes_processed = 0
@@ -170,7 +170,7 @@ class MergeProcessor:
                 logger.info(f"🔍 Processing entry {conv_idx+1}/{len(metadata_results_list)}: {len(nodes)} nodes, {len(edges)} edges")
                 
                 if not nodes:
-                    logger.warning(f"⚠️ Skipping entry {conv_idx+1} - no nodes")
+                    logger.warning(f"Skipping entry {conv_idx+1} - no nodes")
                     continue
                 
                 # Build enriched_metadata dict from nodes (V1 format: temp_id -> metadata)
@@ -191,7 +191,7 @@ class MergeProcessor:
                 sentence_window_text = " ".join(all_atomic_sentences)
                 
                 # V1 FUNCTION: Process nodes with full LLM merge logic
-                logger.info(f"🔍 Processing {len(nodes)} nodes using V1 process_nodes...")
+                logger.info(f"Processing {len(nodes)} nodes using V1 process_nodes...")
                 try:
                     nodes_result = process_nodes(
                         original_nodes=nodes,
@@ -212,14 +212,14 @@ class MergeProcessor:
                     passthrough_edges = nodes_result.get("edges", edges)
                     
                     total_nodes_processed += len(node_map)
-                    logger.info(f"✅ Processed {len(node_map)} nodes")
+                    logger.info(f"Processed {len(node_map)} nodes")
                     
                 except Exception as e:
-                    logger.error(f"❌ Failed to process nodes: {e}")
+                    logger.error(f"Failed to process nodes: {e}")
                     continue
                 
                 # V1 FUNCTION: Process edges with LLM merge and orphan detection
-                logger.info(f"🔍 Processing {len(passthrough_edges)} edges using V1 process_edges...")
+                logger.info(f"Processing {len(passthrough_edges)} edges using V1 process_edges...")
                 try:
                     edges_result = process_edges(
                         edges=passthrough_edges,
@@ -239,28 +239,28 @@ class MergeProcessor:
                     total_edges_merged += edges_result.get("edges_merged", 0)
                     total_edges_skipped += edges_result.get("edges_skipped_missing_nodes", 0)
                     
-                    logger.info(f"✅ Edge summary: {edges_result.get('edges_created', 0)} created, "
+                    logger.info(f"Edge summary: {edges_result.get('edges_created', 0)} created, "
                                f"{edges_result.get('edges_merged', 0)} merged")
                     
                 except RuntimeError as e:
                     # V1 FEATURE: Orphan node detection raises RuntimeError
-                    logger.error(f"❌ Data integrity error: {e}")
+                    logger.error(f"Data integrity error: {e}")
                     # Continue processing other entries
                     continue
                 except Exception as e:
-                    logger.error(f"❌ Failed to process edges: {e}")
+                    logger.error(f"Failed to process edges: {e}")
                     continue
             
-            logger.info(f"📊 Total: {total_nodes_processed} nodes, "
+            logger.info(f"Total: {total_nodes_processed} nodes, "
                        f"{total_edges_created} edges created, {total_edges_merged} edges merged")
             
             # Commit changes for this chunk
             try:
                 kg_utils.session.commit()
                 total_edges_processed = total_edges_created + total_edges_merged
-                logger.info(f"✅ Committed chunk: {total_nodes_processed} nodes, {total_edges_processed} edges")
+                logger.info(f"Committed chunk: {total_nodes_processed} nodes, {total_edges_processed} edges")
             except Exception as e:
-                logger.error(f"❌ Failed to commit chunk: {e}")
+                logger.error(f"Failed to commit chunk: {e}")
                 kg_utils.session.rollback()
                 kg_utils.close()
                 raise
@@ -281,7 +281,7 @@ class MergeProcessor:
             self.session.commit()
             
             total_edges_processed = total_edges_created + total_edges_merged
-            logger.info(f"✅ Chunk processing completed: {total_nodes_processed} nodes, {total_edges_processed} edges")
+            logger.info(f"Chunk processing completed: {total_nodes_processed} nodes, {total_edges_processed} edges")
             
             return {
                 "processed_count": total_nodes_processed + total_edges_processed,
@@ -294,7 +294,7 @@ class MergeProcessor:
             }
             
         except Exception as e:
-            logger.error(f"❌ Error in merge processing: {e}")
+            logger.error(f"Error in merge processing: {e}")
             raise
     
 
@@ -310,10 +310,10 @@ if __name__ == '__main__':
     from app.assistant.kg_core.kg_pipeline_v2.pipeline_coordinator import PipelineCoordinator
     
     async def run_merge_continuously():
-        print("🚀 Starting Merge Stage (Stage 4)")
+        print("Starting Merge Stage (Stage 4)")
         print("=" * 50)
-        print("📋 Mode: Continuous processing with wait state")
-        print("⏹️  Press Ctrl+C to stop")
+        print("Mode: Continuous processing with wait state")
+        print("Press Ctrl+C to stop")
         print("=" * 50)
         
         session = get_session()
@@ -328,19 +328,19 @@ if __name__ == '__main__':
         try:
             while True:
                 chunk_count += 1
-                print(f"\n🔄 Chunk {chunk_count}: Checking for enriched metadata...")
+                print(f"\nChunk {chunk_count}: Checking for enriched metadata...")
                 
                 # Check if data is available
                 data_available = processor.wait_for_data(batch_id=None, max_wait_time=5)
                 
                 if not data_available:
-                    print(f"⏸️  No data available. Waiting {wait_interval} seconds for metadata stage...")
-                    print(f"📊 Total processed so far: {total_nodes} nodes, {total_edges} edges")
+                    print(f"No data available. Waiting {wait_interval} seconds for metadata stage...")
+                    print(f"Total processed so far: {total_nodes} nodes, {total_edges} edges")
                     time.sleep(wait_interval)
                     continue
                 
                 # Process the chunk
-                print(f"📖 Processing chunk {chunk_count}...")
+                print(f"Processing chunk {chunk_count}...")
                 result = await processor.process(batch_size=10)
                 
                 nodes_processed = result.get('nodes_processed', 0)
@@ -349,21 +349,21 @@ if __name__ == '__main__':
                 total_edges += edges_processed
                 
                 if nodes_processed > 0 or edges_processed > 0:
-                    print(f"✅ Chunk {chunk_count} completed: {nodes_processed} nodes, {edges_processed} edges merged into KG")
-                    print(f"📊 Total so far: {total_nodes} nodes, {total_edges} edges")
+                    print(f"[OK] Chunk {chunk_count} completed: {nodes_processed} nodes, {edges_processed} edges merged into KG")
+                    print(f"Total so far: {total_nodes} nodes, {total_edges} edges")
                 else:
-                    print(f"⏸️  No data merged. Waiting {wait_interval} seconds...")
+                    print(f"No data merged. Waiting {wait_interval} seconds...")
                     time.sleep(wait_interval)
                     
         except KeyboardInterrupt:
-            print("\n\n⏹️  Stopped by user (Ctrl+C)")
-            print(f"📊 Processed {total_nodes} nodes and {total_edges} edges in {chunk_count} iterations before stopping")
+            print("\n\nStopped by user (Ctrl+C)")
+            print(f"Processed {total_nodes} nodes and {total_edges} edges in {chunk_count} iterations before stopping")
         except Exception as e:
-            print(f"\n❌ Error: {e}")
+            print(f"\n[ERR] Error: {e}")
             import traceback
             traceback.print_exc()
         finally:
             session.close()
-            print("\n✅ Session closed")
+            print("\n[OK] Session closed")
     
     asyncio.run(run_merge_continuously())

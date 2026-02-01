@@ -1,15 +1,36 @@
 {
-  "date": "2026-01-24",
-  "day_description": "Family time 06:00 PM - 08:00 PM. Today is a relaxed Saturday focused on evening family engagement.",
+  "date": "2026-02-01",
+  "expected_schedule": "Give Bonnie and Clyde flea medication with food 5:00 PM - 6:00 PM\nFamily time 6:00 PM - 8:00 PM\nWalk the dogs 9:00 PM - 9:30 PM",
+  "day_theme": "Today is a Sunday focused on pet care and family time. Jukka was practicing intermittent fasting until he broke his fast at 11:00 AM.",
   "milestones": [
     {
-      "time": "05:06 AM",
-      "description": "Woke up after overnight sleep. (Reported)"
+      "time": "7:01 AM",
+      "description": "Skipped breakfast; confirmed intermittent fasting.",
+      "evidence": "Reported"
     },
     {
-      "time": "07:38 AM",
-      "description": "Breakfast (Reported)"
+      "time": "8:02 AM",
+      "description": "Postponed morning dog walk.",
+      "evidence": "Reported"
+    },
+    {
+      "time": "9:30 AM - 9:40 AM",
+      "description": "Cooked breakfast for family; Katy took the dogs for a walk.",
+      "evidence": "Reported"
+    },
+    {
+      "time": "11:00 AM - 11:23 AM",
+      "description": "Broke fast and had lunch.",
+      "evidence": "Reported"
+    },
+    {
+      "time": "[Currently]",
+      "description": "At keyboard.",
+      "evidence": "Inferred",
+      "ongoing": true
     }
   ],
-  "last_updated": "2026-01-24 08:29 AM"
+  "current_status": "At keyboard",
+  "last_updated": "2026-02-01 01:04 PM",
+  "last_updated_utc": "2026-02-01T21:04:17.045794+00:00"
 }

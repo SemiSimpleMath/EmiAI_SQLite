@@ -1,0 +1,11 @@
+{
+  "stage_id": "activity_tracker",
+  "description": "Refresh tracked activity timers output",
+  "run_policy": {
+    "min_interval_seconds": 60
+  },
+  "afk_guard": {
+    "skip_when_afk": true,
+    "skip_when_potentially_afk": true
+  }
+}

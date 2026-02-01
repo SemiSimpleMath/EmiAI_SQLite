@@ -17,24 +17,24 @@ def check_database_results():
     """Check what data was written to the database"""
     session = get_session()
     try:
-        print("🔍 Checking Pipeline V2 Database Results")
+        print("Checking Pipeline V2 Database Results")
         print("=" * 50)
         
         # Check batches
         batches = session.query(PipelineBatch).all()
-        print(f'📦 Batches: {len(batches)}')
+        print(f'Batches: {len(batches)}')
         for batch in batches:
             print(f'   - ID: {batch.id}, Name: {batch.batch_name}, Status: {batch.status}')
         
         # Check chunks
         chunks = session.query(PipelineChunk).all()
-        print(f'🔗 Chunks: {len(chunks)}')
+        print(f'Chunks: {len(chunks)}')
         for chunk in chunks:
             print(f'   - ID: {chunk.id}, Label: {chunk.label}, Type: {chunk.node_type}')
         
         # Check stage results
         results = session.query(StageResult).all()
-        print(f'📊 Stage Results: {len(results)}')
+        print(f'Stage Results: {len(results)}')
         for result in results:
             print(f'   - Chunk ID: {result.chunk_id[:8]}..., Stage: {result.stage_name}')
             if result.stage_name == 'conversation_boundary':
@@ -46,7 +46,7 @@ def check_database_results():
                         print(f'     First chunk keys: {list(chunks[0].keys()) if chunks[0] else "None"}')
         
         # Check stage completions (summary)
-        print(f'\n📈 Stage Progress Summary:')
+        print(f'\nStage Progress Summary:')
         stages = ['conversation_boundary', 'parser', 'fact_extraction', 'metadata', 'merge']
         for stage in stages:
             result_count = session.query(StageResult).filter(StageResult.stage_name == stage).count()
@@ -59,12 +59,12 @@ def check_database_results():
         # Check remaining unprocessed
         from app.assistant.database.processed_entity_log import ProcessedEntityLog
         unprocessed = session.query(ProcessedEntityLog).filter(ProcessedEntityLog.processed == False).count()
-        print(f'\n📭 Remaining in processed_entity_log: {unprocessed} unprocessed')
+        print(f'\nRemaining in processed_entity_log: {unprocessed} unprocessed')
         
-        print("\n✅ Database check completed!")
+        print("\n[OK] Database check completed!")
         
     except Exception as e:
-        print(f"❌ Error checking database: {e}")
+        print(f"[ERR] Error checking database: {e}")
         import traceback
         traceback.print_exc()
     finally:

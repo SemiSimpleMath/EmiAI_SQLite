@@ -52,8 +52,9 @@ def _parse_iso_like(value: str) -> datetime:
             base_date = datetime.fromisoformat(date_part)
             next_day = base_date + timedelta(days=1)
             text = next_day.strftime("%Y-%m-%dT00:00:00")
-        except:
-            pass  # Fall through to normal parsing which will error
+        except Exception as e:
+            logger.debug(f"Failed to normalize 24:00 timestamp date_part='{date_part}': {e}", exc_info=True)
+            # Fall through to normal parsing which will error
     
     try:
         return datetime.fromisoformat(text)

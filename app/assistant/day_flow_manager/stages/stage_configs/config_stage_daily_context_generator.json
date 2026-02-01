@@ -1,15 +1,26 @@
 {
   "stage_id": "daily_context_generator",
   "description": "Generates daily context summary - schedule, milestones, day themes",
-  
+
+  "run_policy": {
+    "min_interval_seconds": 300,
+    "description": "Agent stage - 5 minute minimum between runs"
+  },
+
+  "afk_guard": {
+    "skip_when_afk": true,
+    "skip_when_potentially_afk": false,
+    "description": "Skip when user is AFK - no point generating context when away"
+  },
+
   "lookback_hours": {
     "calendar_upcoming": 12,
     "calendar_completed": 4,
     "chat_excerpts": 4,
-    "accepted_tickets": 4,
-    "afk_intervals": 8
+    "afk_intervals": 8,
+    "recent_tickets": 2
   },
-  
+
   "daily_reset": {
     "description": "Clear daily context at 5AM boundary for fresh day",
     "output_resource_defaults": {

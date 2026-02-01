@@ -47,8 +47,9 @@ def _debug_log(hypothesis_id: str, location: str, message: str, data: Dict[str, 
         }
         with open(_DEBUG_LOG_PATH, "a", encoding="utf-8") as f:
             f.write(json.dumps(payload) + "\n")
-    except Exception:
-        pass
+    except Exception as e:
+        # Don't swallow: this makes investigations impossible when the debug sink breaks.
+        logger.debug(f"afk_db debug log write failed: {e}", exc_info=True)
 # endregion
 
 

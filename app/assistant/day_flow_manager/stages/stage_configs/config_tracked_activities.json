@@ -1,12 +1,13 @@
 {
-  "version": 2,
+  "version": 3,
   "description": "Wellness activities tracked today. Use field_name values exactly in outputs.",
   "activities": {
     "coffee": {
       "display_name": "Coffee",
       "field_name": "coffee",
       "guidance": "Max 2 per day before 4pm",
-      "init_on_cold_start": false
+      "init_on_cold_start": false,
+      "show_daily_count": true
     },
     "finger_stretch": {
       "display_name": "Finger Stretch",
@@ -22,6 +23,7 @@
       "display_name": "Hydration",
       "field_name": "hydration",
       "init_on_cold_start": true,
+      "show_daily_count": true,
       "threshold": {
         "label": "Every 2 to 3 hours",
         "minutes": 120
@@ -38,6 +40,7 @@
       "field_name": "meal",
       "guidance": "Typical windows: 7 to 9am, 11am to 1pm, 5 to 7pm",
       "init_on_cold_start": false,
+      "show_daily_count": true,
       "reset_triggers": [
         "chat",
         "ticket",
@@ -49,6 +52,7 @@
       "field_name": "snack",
       "guidance": "As needed",
       "init_on_cold_start": false,
+      "show_daily_count": true,
       "reset_triggers": [
         "chat",
         "ticket"

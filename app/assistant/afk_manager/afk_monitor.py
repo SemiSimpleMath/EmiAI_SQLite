@@ -61,7 +61,7 @@ class AFKMonitor:
     Snapshot keys written to status_data["computer_activity"]:
     - idle_minutes: float
     - idle_seconds: int
-    - is_paused: bool (idle >= potential threshold)
+    - is_potentially_afk: bool (idle >= potential threshold, use for gating expensive ops)
     - is_afk: bool (idle >= confirmed threshold)
     - last_checked: ISO UTC
 
@@ -270,13 +270,13 @@ class AFKMonitor:
                 self._state = None
                 logger.info(f"[BOOTSTRAP] User state unknown at startup (idle={idle_minutes:.1f} min)")
             
-            is_paused = idle_minutes >= float(self.thresholds.potential_minutes)
+            is_potentially_afk = idle_minutes >= float(self.thresholds.potential_minutes)
             is_afk = self._state == "afk"
             snapshot = self._build_snapshot(
                 now_utc=now_utc,
                 idle_minutes=idle_minutes,
                 idle_seconds=idle_seconds,
-                is_paused=is_paused,
+                is_potentially_afk=is_potentially_afk,
                 is_afk=is_afk,
                 just_returned=False,
                 return_duration_minutes=None,
@@ -365,20 +365,45 @@ class AFKMonitor:
             self._maybe_update_segment(now_utc)
 
         # Publish snapshot
-        # is_paused = idle >= potential threshold (grace period)
+        # is_potentially_afk = idle >= potential threshold (use for gating expensive ops)
         # is_afk = confirmed AFK state
-        is_paused = idle_minutes >= float(self.thresholds.potential_minutes)
+        is_potentially_afk = idle_minutes >= float(self.thresholds.potential_minutes)
         is_afk = self._state == "afk"
         snapshot = self._build_snapshot(
             now_utc=now_utc,
             idle_minutes=idle_minutes,
             idle_seconds=idle_seconds,
-            is_paused=is_paused,
+            is_potentially_afk=is_potentially_afk,
             is_afk=is_afk,
             just_returned=just_returned,
             return_duration_minutes=return_duration_minutes,
         )
         self._publish_snapshot(snapshot)
+
+        # Publish event on AFK state transitions (event bus consumers should not poll).
+        if just_went_afk or just_returned:
+            try:
+                from app.assistant.ServiceLocator.service_locator import DI
+                from app.assistant.utils.pydantic_classes import Message
+
+                DI.event_hub.publish(
+                    Message(
+                        data_type="event",
+                        sender="afk_monitor",
+                        receiver=None,
+                        event_topic="afk_state_changed",
+                        content="afk" if is_afk else "active",
+                        data={
+                            "is_afk": bool(is_afk),
+                            "just_went_afk": bool(just_went_afk),
+                            "just_returned": bool(just_returned),
+                            "snapshot": snapshot,
+                        },
+                    )
+                )
+            except Exception as e:
+                # Never let event publishing break AFK monitoring.
+                logger.debug(f"AFKMonitor: failed to publish afk_state_changed event: {e}", exc_info=True)
 
         # Update AFK statistics resource file on every tick
         # (keeps active_work_session_minutes and last_updated current)
@@ -403,7 +428,7 @@ class AFKMonitor:
             now_utc: datetime,
             idle_minutes: float,
             idle_seconds: int,
-            is_paused: bool,
+            is_potentially_afk: bool,
             is_afk: bool,
             just_returned: bool,
             return_duration_minutes: Optional[float],
@@ -411,7 +436,7 @@ class AFKMonitor:
         snapshot: Dict[str, Any] = {
             "idle_minutes": round(idle_minutes, 2),
             "idle_seconds": int(idle_seconds),
-            "is_paused": bool(is_paused),
+            "is_potentially_afk": bool(is_potentially_afk),
             "is_afk": bool(is_afk),
             "last_checked": now_utc.isoformat(),
         }
@@ -461,7 +486,7 @@ class AFKMonitor:
 
     def is_user_at_computer(self) -> bool:
         activity = self.get_computer_activity()
-        return not activity.get("is_paused", False) and not activity.get("is_afk", False)
+        return not activity.get("is_potentially_afk", False) and not activity.get("is_afk", False)
 
     def is_running(self) -> bool:
         return bool(self._thread and self._thread.is_alive())

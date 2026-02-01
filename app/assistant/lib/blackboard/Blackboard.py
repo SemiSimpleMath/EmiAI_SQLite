@@ -117,11 +117,11 @@ class Blackboard:
 
     def remove_messages_before_last_plan(self):
         """
-        Removes all messages before the most recent 'plan_message'.
+        Removes all messages before the most recent 'plan' tag.
         """
         last_plan_index = None
         for i in range(len(self.messages) - 1, -1, -1):
-            if self.messages[i].sub_data_type == 'plan_message':
+            if "plan" in (getattr(self.messages[i], "sub_data_type", []) or []):
                 last_plan_index = i
                 break
 
@@ -146,11 +146,11 @@ class Blackboard:
 
     def get_messages_after_last_plan(self) -> List[Message]:
         """
-        Retrieve all messages after and including the most recent 'plan_message'.
+        Retrieve all messages after and including the most recent 'plan' tag.
         """
         last_plan_index = None
         for i in range(len(self.messages) - 1, -1, -1):
-            if self.messages[i].sub_data_type == 'plan_message':
+            if "plan" in (getattr(self.messages[i], "sub_data_type", []) or []):
                 last_plan_index = i
                 break
 
@@ -163,11 +163,11 @@ class Blackboard:
 
     def get_messages_before_last_plan(self) -> List[Message]:
         """
-        Retrieve all messages before the most recent 'plan_message'.
+        Retrieve all messages before the most recent 'plan' tag.
         """
         last_plan_index = None
         for i in range(len(self.messages) - 1, -1, -1):
-            if self.messages[i].sub_data_type == 'plan_message':
+            if "plan" in (getattr(self.messages[i], "sub_data_type", []) or []):
                 last_plan_index = i
                 break
 
@@ -220,7 +220,7 @@ class Blackboard:
     def time_to_summarize(self):
         plan_counter = 0
         for i in range(len(self.messages)):
-            if self.messages[i].sub_data_type == 'plan_message':
+            if "plan" in (getattr(self.messages[i], "sub_data_type", []) or []):
                 plan_counter += 1
         return plan_counter >= 2
 

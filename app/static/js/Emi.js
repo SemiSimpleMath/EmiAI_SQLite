@@ -1907,6 +1907,10 @@ function showNotifyUserModal(widgetItems) {
 function setupSocketListeners() {
     socket.on('connect', () => {
         console.log("Connected to the server via Socket.IO.");
+        
+        // Register this tab as the CHAT client
+        socket.emit('register_chat_client', {});
+        console.log("💬 Registered as chat client");
     });
 
     socket.on('disconnect', () => {

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Proactive Orchestrator Debug</title>
+    <title>Day Flow Debug</title>
     <style>
         :root {
             --bg-dark: #1a1a2e;
@@ -183,10 +183,10 @@
 </head>
 <body>
     <div class="container">
-        <h1>🎯 Proactive Orchestrator Debug</h1>
+        <h1>🎯 Day Flow Debug</h1>
         
         <div class="controls">
-            <button onclick="runOrchestrator()" id="runBtn">▶️ Run Orchestrator</button>
+            <button onclick="runOrchestrator()" id="runBtn">▶️ Run Day Flow</button>
             <button onclick="loadTickets()" class="secondary">🔄 Refresh Tickets</button>
         </div>
 
@@ -200,7 +200,7 @@
                 </div>
                 <div>
                     <a href="/debug/status" target="_blank" style="color: white; text-decoration: none;">
-                        <button class="secondary" type="button">🧾 Open Orchestrator Pipeline (JSON)</button>
+                        <button class="secondary" type="button">🧾 Open Day Flow Pipeline (JSON)</button>
                     </a>
                 </div>
             </div>
@@ -224,7 +224,7 @@
         </div>
         
         <h2>🔧 Last Run Result</h2>
-        <pre id="result">Click "Run Orchestrator" to see results</pre>
+        <pre id="result">Click "Run Day Flow" to see results</pre>
     </div>
     
     <script>
@@ -237,7 +237,7 @@
             btn.textContent = '⏳ Running...';
             status.style.display = 'block';
             status.className = 'status running';
-            status.textContent = 'Running orchestrator...';
+            status.textContent = 'Running day flow pipeline...';
             
             try {
                 const response = await fetch('/debug/orchestrator/run', { method: 'POST' });
@@ -249,7 +249,7 @@
                     result.textContent = data.traceback || data.error;
                 } else {
                     status.className = 'status success';
-                    status.textContent = '✅ Orchestrator completed';
+                    status.textContent = '✅ Day flow completed';
                     result.textContent = JSON.stringify(data.result, null, 2);
                     
                     // Reload tickets
@@ -262,7 +262,7 @@
             }
             
             btn.disabled = false;
-            btn.textContent = '▶️ Run Orchestrator';
+            btn.textContent = '▶️ Run Day Flow';
         }
         
         async function loadTickets() {

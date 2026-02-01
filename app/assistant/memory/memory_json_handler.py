@@ -247,8 +247,8 @@ class MemoryJsonHandler:
         if isinstance(new_value, str):
             try:
                 new_value = json.loads(new_value)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"MemoryJsonHandler: new_value not valid JSON (keeping raw string): {e}", exc_info=True)
         
         if target_index is not None:
             # Update list item
@@ -300,8 +300,8 @@ class MemoryJsonHandler:
         if isinstance(new_value, str):
             try:
                 new_value = json.loads(new_value)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"MemoryJsonHandler: new_value not valid JSON (keeping raw string): {e}", exc_info=True)
         
         if isinstance(parent_data, list):
             # Skip duplicates for lists of dicts that use a stable `item` key.

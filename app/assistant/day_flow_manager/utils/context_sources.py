@@ -166,54 +166,33 @@ def get_calendar_events_for_health_inference(hours: int = 8) -> List[Dict[str, A
     return result
 
 
-def get_recent_chat_excerpts(hours: int = 4, limit: int = 30, content_limit: int = 300) -> List[Dict[str, Any]]:
+#
+# NOTE:
+# We intentionally do NOT define "recent chat" wrapper functions here anymore.
+# Callers should compute cutoff_utc and call:
+#   DI.global_blackboard.get_recent_chat_since_utc(...)
+#
+# Post-processing (formatting excerpts/strings) should live in utilities that do
+# not fetch from the blackboard, keeping the fetch API uniform.
+
+
+def build_time_since() -> Dict[str, Any]:
+    """
+    Build time_since dict dynamically from config and output.
+    
+    Returns dict with:
+    - minutes_since_{field_name}: float or None for each tracked activity
+    - {field_name}_count_today: int for each tracked activity
+    
+    No hardcoded activity names - all derived from config.
+    """
     try:
-        from app.assistant.ServiceLocator.service_locator import DI
-
-        all_messages = DI.global_blackboard.get_all_messages()
-        now = datetime.now(timezone.utc)
-        cutoff = now - timedelta(hours=hours)
-
-        result = []
-        for msg in all_messages:
-            ts = getattr(msg, "timestamp", None)
-            if ts and ts > cutoff:
-                content = getattr(msg, "content", "")
-                sender = getattr(msg, "sender", "")
-                if content and sender in ("user", "assistant"):
-                    ts_local = utc_to_local(ts)
-                    result.append({
-                        "time_local": ts_local.strftime("%I:%M %p"),
-                        "sender": sender,
-                        "content": content[:content_limit],
-                    })
-
-        return result[-limit:]
-    except Exception as e:
-        logger.warning(f"Could not get chat excerpts: {e}")
-        return []
-
-
-def get_recent_chat_history(hours: int = 2, limit: int = 20, content_limit: int = 200) -> str:
-    excerpts = get_recent_chat_excerpts(hours=hours, limit=limit, content_limit=content_limit)
-    lines = [
-        f"[{msg['time_local']}] {msg['sender']}: {msg['content']}"
-        for msg in excerpts
-    ]
-    return "\n".join(lines)
-
-
-def build_time_since(include_water: bool = False) -> Dict[str, Any]:
-    try:
-        stages_dir = Path(__file__).resolve().parents[1] / "stages"
+        stages_dir = Path(__file__).resolve().parents[1] / "stages" / "stage_configs"
         tracked_config_path = stages_dir / "config_tracked_activities.json"
 
-        result: Dict[str, Any] = {
-            "coffees_today": 0,
-        }
-        if include_water:
-            result["water_count"] = 0
+        result: Dict[str, Any] = {}
 
+        # Seed all keys from config with defaults
         if tracked_config_path.exists():
             try:
                 tracked_config = json.loads(tracked_config_path.read_text(encoding="utf-8")) or {}
@@ -225,9 +204,11 @@ def build_time_since(include_water: bool = False) -> Dict[str, Any]:
                         field_name = activity_cfg.get("field_name")
                         if isinstance(field_name, str) and field_name:
                             result[f"minutes_since_{field_name}"] = None
+                            result[f"{field_name}_count_today"] = 0
             except Exception as e:
                 logger.warning(f"Could not read tracked activities config: {e}")
 
+        # Overlay actual values from output
         resources_dir = get_resources_dir()
         output_path = resources_dir / "resource_tracked_activities_output.json"
         output: Dict[str, Any] = {}
@@ -239,117 +220,12 @@ def build_time_since(include_water: bool = False) -> Dict[str, Any]:
             if not isinstance(data, dict):
                 continue
             result[f"minutes_since_{field_name}"] = data.get("minutes_since")
-
-            if field_name == "coffee":
-                result["coffees_today"] = data.get("count_today", 0)
-            if include_water and field_name == "hydration":
-                result["water_count"] = data.get("count_today", 0)
+            result[f"{field_name}_count_today"] = data.get("count_today", 0)
 
         return result
     except Exception as e:
         logger.warning(f"Could not build time_since: {e}")
-        base = {"coffees_today": 0}
-        if include_water:
-            base["water_count"] = 0
-        return base
-
-
-def _format_ticket(t: Any, include_message: bool = False, accepted_label: str = "accepted_at_local") -> Dict[str, Any]:
-    created_at = getattr(t, "created_at", None)
-    responded_at = getattr(t, "responded_at", None)
-    updated_at = getattr(t, "updated_at", None)
-
-    created_local = utc_to_local(created_at) if created_at else None
-    responded_local = utc_to_local(responded_at) if responded_at else None
-    updated_local = utc_to_local(updated_at) if updated_at else None
-
-    payload: Dict[str, Any] = {
-        "title": getattr(t, "title", "") or "",
-        "suggestion_type": getattr(t, "suggestion_type", "") or "",
-        "state": str(getattr(t, "state", "")).lower().replace("ticketstate.", ""),
-        "created_at_local": created_local.strftime("%I:%M %p") if created_local else "",
-        "updated_at_local": updated_local.strftime("%I:%M %p") if updated_local else "",
-        accepted_label: responded_local.strftime("%I:%M %p") if responded_local else "",
-        "user_response_raw": getattr(t, "user_response_raw", "") or "",
-        "user_text": getattr(t, "user_response_raw", "") or "",
-    }
-
-    if include_message:
-        payload["message"] = getattr(t, "message", "") or ""
-
-    return payload
-
-
-def get_active_tickets_for_orchestrator() -> List[Dict[str, Any]]:
-    try:
-        from app.assistant.ticket_manager import get_ticket_manager, TicketState
-
-        manager = get_ticket_manager()
-        active = (
-            manager.get_tickets_by_state(TicketState.PENDING) +
-            manager.get_tickets_by_state(TicketState.PROPOSED) +
-            manager.get_tickets_by_state(TicketState.SNOOZED)
-        )
-        return [_format_ticket(t, include_message=True) for t in active]
-    except Exception as e:
-        logger.warning(f"Could not get active tickets: {e}")
-        return []
-
-
-def get_recently_accepted_tickets_for_orchestrator(hours: int = 2, limit: int = 20) -> List[Dict[str, Any]]:
-    try:
-        from app.assistant.ticket_manager import get_ticket_manager
-
-        manager = get_ticket_manager()
-        tickets = manager.get_recently_accepted_tickets(hours=hours, limit=limit)
-        return [
-            _format_ticket(t, include_message=True, accepted_label="responded_at_local")
-            for t in tickets
-        ]
-    except Exception as e:
-        logger.warning(f"Could not get accepted tickets: {e}")
-        return []
-
-
-def get_recently_accepted_tickets(hours: int = 4, limit: int = 20) -> List[Dict[str, Any]]:
-    try:
-        from app.assistant.ticket_manager import get_ticket_manager
-
-        manager = get_ticket_manager()
-        tickets = manager.get_recently_accepted_tickets(hours=hours, limit=limit)
-        return [
-            {
-                "title": getattr(t, "title", "") or "",
-                "suggestion_type": getattr(t, "suggestion_type", "") or "",
-                "accepted_at_local": _format_ticket(t).get("accepted_at_local", ""),
-                "user_action": getattr(t, "user_response_raw", "") or "",
-                "user_text": getattr(t, "user_response_raw", "") or "",
-            }
-            for t in tickets
-        ]
-    except Exception as e:
-        logger.warning(f"Could not get accepted tickets: {e}")
-        return []
-
-
-def get_recent_tickets_for_health_inference(hours: int = 4, limit: int = 20) -> List[Dict[str, Any]]:
-    try:
-        from app.assistant.ticket_manager import get_ticket_manager
-
-        manager = get_ticket_manager()
-        tickets = manager.get_recent_tickets(hours=hours)
-        return [
-            {
-                "title": getattr(t, "title", "") or "",
-                "suggestion_type": getattr(t, "suggestion_type", "") or "",
-                "state": str(getattr(t, "state", "")).lower(),
-                "updated_at_local": _format_ticket(t).get("updated_at_local", ""),
-            }
-            for t in tickets[:limit]
-        ]
-    except Exception as e:
-        logger.warning(f"Could not get recent tickets: {e}")
-        return []
+        return {}
 
 
 def get_recent_afk_intervals(
@@ -444,3 +320,345 @@ def get_recent_afk_intervals(
     except Exception as e:
         logger.warning(f"Could not get AFK intervals: {e}")
         return []
+
+
+def get_current_presence_status() -> Dict[str, Any]:
+    """
+    Get current user presence status for daily_context_generator.
+    
+    Returns dict with:
+    - is_afk: bool
+    - status_label: "AT_KEYBOARD" or "AWAY"
+    - duration_minutes: float (current session or away duration)
+    - start_time_local: str (when current state started)
+    - most_recent_afk: dict or None (most recent completed AFK interval)
+    """
+    try:
+        from app.assistant.ServiceLocator.service_locator import DI
+        
+        now_utc = datetime.now(timezone.utc)
+        result: Dict[str, Any] = {
+            "is_afk": False,
+            "status_label": "AT_KEYBOARD",
+            "duration_minutes": 0.0,
+            "start_time_local": "",
+            "most_recent_afk": None,
+        }
+        
+        # Try to get live data from AFKMonitor
+        monitor = getattr(DI, "afk_monitor", None)
+        if monitor:
+            snapshot = monitor.get_computer_activity()
+            if isinstance(snapshot, dict):
+                is_afk = bool(snapshot.get("is_afk", False))
+                result["is_afk"] = is_afk
+                result["status_label"] = "AWAY" if is_afk else "AT_KEYBOARD"
+                
+                if is_afk:
+                    # AFK duration from idle_minutes
+                    idle_mins = snapshot.get("idle_minutes") or snapshot.get("current_afk_minutes") or 0
+                    result["duration_minutes"] = round(float(idle_mins), 1)
+                    if idle_mins > 0:
+                        start_utc = now_utc - timedelta(minutes=float(idle_mins))
+                        result["start_time_local"] = utc_to_local(start_utc).strftime("%I:%M %p")
+                else:
+                    # Active session duration - compute from active_start_utc
+                    active_start_iso = snapshot.get("active_start_utc")
+                    if active_start_iso:
+                        try:
+                            active_start = _parse_utc(active_start_iso)
+                            if active_start and active_start < now_utc:
+                                active_mins = (now_utc - active_start).total_seconds() / 60.0
+                                result["duration_minutes"] = round(active_mins, 1)
+                                result["start_time_local"] = utc_to_local(active_start).strftime("%I:%M %p")
+                        except Exception:
+                            logger.debug("Could not parse active_start_utc from AFK snapshot", exc_info=True)
+        
+        # Get most recent completed AFK interval (not ongoing)
+        try:
+            from app.assistant.afk_manager.afk_statistics import get_afk_intervals_overlapping_range
+            
+            # Look back 8 hours for recent AFK
+            start_window = now_utc - timedelta(hours=8)
+            afk_intervals = get_afk_intervals_overlapping_range(
+                start_utc=start_window,
+                end_utc=now_utc,
+                include_provisional=False,  # Only completed intervals
+            )
+            
+            if afk_intervals:
+                # Sort by end time, get most recent
+                sorted_intervals = sorted(
+                    afk_intervals,
+                    key=lambda x: x.get("end_utc", ""),
+                    reverse=True
+                )
+                for interval in sorted_intervals:
+                    start_utc = _parse_utc(interval.get("start_utc"))
+                    end_utc = _parse_utc(interval.get("end_utc"))
+                    if start_utc and end_utc and end_utc > start_utc:
+                        duration = (end_utc - start_utc).total_seconds() / 60.0
+                        if duration >= 5:  # At least 5 min to be meaningful
+                            result["most_recent_afk"] = {
+                                "start_local": utc_to_local(start_utc).strftime("%I:%M %p"),
+                                "end_local": utc_to_local(end_utc).strftime("%I:%M %p"),
+                                "duration_minutes": round(duration, 0),
+                            }
+                            break
+        except Exception as e:
+            logger.debug(f"Could not get recent AFK intervals: {e}")
+        
+        return result
+    except Exception as e:
+        logger.warning(f"Could not get presence status: {e}")
+        return {
+            "is_afk": False,
+            "status_label": "UNKNOWN",
+            "duration_minutes": 0.0,
+            "start_time_local": "",
+            "most_recent_afk": None,
+        }
+
+
+def get_significant_activity_segments(
+    since_utc: datetime,
+    noise_threshold_minutes: float = 5.0,
+    merge_gap_minutes: float = 10.0,
+) -> List[str]:
+    """
+    Get significant ACTIVE and AFK segments since a given time.
+    
+    Computes AFK from gaps between active segments to ensure consistency (no overlaps).
+    
+    Args:
+        since_utc: Start time (UTC)
+        noise_threshold_minutes: Filter out segments shorter than this (default 5 min)
+        merge_gap_minutes: Merge active segments if gap between them is < this (default 10 min)
+    
+    Returns:
+        List of formatted strings describing significant segments
+    """
+    from app.assistant.afk_manager.afk_db import get_active_segments_overlapping_range
+    
+    now_utc = datetime.now(timezone.utc)
+    since_utc = _parse_utc(since_utc.isoformat()) if isinstance(since_utc, datetime) else _parse_utc(since_utc)
+    
+    if not since_utc or since_utc >= now_utc:
+        return []
+    
+    try:
+        # Get active segments and sort by start time
+        active_segments = get_active_segments_overlapping_range(
+            start_utc=since_utc,
+            end_utc=now_utc,
+            include_provisional=True,
+        )
+        
+        # Parse and clip active segments to window, filter noise
+        parsed_active: List[Dict[str, Any]] = []
+        for seg in active_segments:
+            start = _parse_utc(seg.start_time.isoformat()) if seg.start_time else None
+            end = _parse_utc(seg.end_time.isoformat()) if seg.end_time else None
+            if start and end and end > start:
+                # Clip to window
+                start = max(start, since_utc)
+                end = min(end, now_utc)
+                duration = (end - start).total_seconds() / 60.0
+                # Filter out noise (very short segments)
+                if end > start and duration >= noise_threshold_minutes:
+                    parsed_active.append({"start": start, "end": end})
+        
+        # Sort by start time
+        parsed_active.sort(key=lambda x: x["start"])
+        
+        # Step 1: Merge active segments separated by small gaps (< merge_gap_minutes)
+        # This absorbs insignificant AFK into continuous active blocks
+        merged_active: List[Dict[str, Any]] = []
+        for seg in parsed_active:
+            if merged_active:
+                gap = (seg["start"] - merged_active[-1]["end"]).total_seconds() / 60.0
+                if gap < merge_gap_minutes:
+                    # Small gap - extend previous active block
+                    merged_active[-1]["end"] = max(merged_active[-1]["end"], seg["end"])
+                else:
+                    # Significant gap - this is a new active block
+                    merged_active.append(seg.copy())
+            else:
+                merged_active.append(seg.copy())
+        
+        # Step 2: Build timeline from merged active blocks
+        # AFK = gaps between active blocks (all gaps are now >= merge_gap_minutes)
+        merged: List[Dict[str, Any]] = []
+        cursor = since_utc
+        
+        for seg in merged_active:
+            # Gap before this active block = AFK (only if >= merge threshold)
+            if seg["start"] > cursor:
+                gap_duration = (seg["start"] - cursor).total_seconds() / 60.0
+                if gap_duration >= merge_gap_minutes:
+                    merged.append({
+                        "start_utc": cursor,
+                        "end_utc": seg["start"],
+                        "type": "AFK",
+                    })
+            
+            # This active block (already filtered for noise, just add it)
+            merged.append({
+                "start_utc": seg["start"],
+                "end_utc": seg["end"],
+                "type": "Active",
+            })
+            
+            cursor = max(cursor, seg["end"])
+        
+        # Gap after last active segment to now = AFK (if >= merge threshold)
+        if cursor < now_utc:
+            gap_duration = (now_utc - cursor).total_seconds() / 60.0
+            if gap_duration >= merge_gap_minutes:
+                merged.append({
+                    "start_utc": cursor,
+                    "end_utc": now_utc,
+                    "type": "AFK",
+                })
+        
+        # Add current state if not already covered (for < 20 min current state)
+        if merged:
+            last_end = merged[-1]["end_utc"]
+            seconds_since_last = (now_utc - last_end).total_seconds()
+        else:
+            seconds_since_last = (now_utc - since_utc).total_seconds()
+        
+        if seconds_since_last > 120:  # Gap of more than 2 min
+            # Get current state from AFKMonitor
+            try:
+                from app.assistant.ServiceLocator.service_locator import DI
+                monitor = getattr(DI, "afk_monitor", None)
+                if monitor:
+                    snapshot = monitor.get_computer_activity()
+                    if isinstance(snapshot, dict):
+                        is_afk = bool(snapshot.get("is_afk", False))
+                        current_type = "AFK" if is_afk else "Active"
+                        
+                        if is_afk:
+                            mins = float(snapshot.get("idle_minutes") or snapshot.get("current_afk_minutes") or 0)
+                        else:
+                            mins = float(snapshot.get("active_work_session_minutes") or 0)
+                        
+                        if mins > 0:
+                            current_start = now_utc - timedelta(minutes=mins)
+                            merged.append({
+                                "start_utc": current_start,
+                                "end_utc": now_utc,
+                                "type": current_type,
+                                "is_current": True,
+                            })
+            except Exception as e:
+                logger.debug(f"Could not append current AFKMonitor state to merged segments: {e}", exc_info=True)
+        
+        if not merged:
+            return []
+        
+        # Format as strings
+        result: List[str] = []
+        for i, seg in enumerate(merged):
+            start_local = utc_to_local(seg["start_utc"]).strftime("%I:%M %p").lstrip("0")
+            
+            is_last = (i == len(merged) - 1)
+            is_current = seg.get("is_current", False)
+            seconds_from_now = abs((now_utc - seg["end_utc"]).total_seconds())
+            is_ongoing = is_last and (is_current or seconds_from_now < 120)
+            
+            if is_ongoing:
+                duration_mins = int((now_utc - seg["start_utc"]).total_seconds() / 60)
+                result.append(f"{start_local} {seg['type']} ({duration_mins} min, ongoing)")
+            else:
+                end_local = utc_to_local(seg["end_utc"]).strftime("%I:%M %p").lstrip("0")
+                result.append(f"{start_local} - {end_local} {seg['type']}")
+        
+        return result
+        
+    except Exception as e:
+        logger.warning(f"Could not get significant activity segments: {e}")
+        return []
+
+
+# -----------------------------------------------------------------------------
+# Ticket context helpers
+# -----------------------------------------------------------------------------
+
+def _format_ticket_for_context(ticket) -> Dict[str, Any]:
+    """
+    Format a Ticket object into a dict for agent context.
+    
+    Includes: title, message, suggestion_type, responded_at_local, 
+    snooze_until_local, user_comment
+    """
+    responded_at = getattr(ticket, "responded_at", None)
+    snooze_until = getattr(ticket, "snooze_until", None)
+    
+    responded_local = utc_to_local(responded_at) if responded_at else None
+    snooze_until_local = utc_to_local(snooze_until) if snooze_until else None
+    
+    return {
+        "title": ticket.title or "",
+        "message": ticket.message or "",
+        "suggestion_type": ticket.suggestion_type or "",
+        "responded_at_local": responded_local.strftime("%I:%M %p") if responded_local else "",
+        "snooze_until_local": snooze_until_local.strftime("%I:%M %p") if snooze_until_local else "",
+        "user_comment": ticket.user_text or "",
+    }
+
+
+def get_responded_tickets_categorized(since_utc: datetime) -> Dict[str, List[Dict[str, Any]]]:
+    """
+    Get tickets user responded to since given time, categorized by response type.
+    
+    Categories (based on user_action):
+    - accepted: done/willdo - user is doing this now or shortly
+    - acknowledged: acknowledge - user received, may or may not act
+    - declined: skip/no - user not interested, don't resuggest unless urgent
+    - snoozed: later - user wants reminder later, wait until eligible time
+    
+    Returns dict with lists of formatted ticket dicts for each category.
+    Raises ValueError if unknown user_action encountered.
+    """
+    try:
+        from app.assistant.ticket_manager import get_ticket_manager, TicketState
+        
+        tickets = get_ticket_manager().get_tickets(
+            since_responded_utc=since_utc,
+            states=[TicketState.ACCEPTED, TicketState.DISMISSED, TicketState.SNOOZED],
+            order_by="responded_at",
+            limit=50,
+        )
+        
+        result: Dict[str, List[Dict[str, Any]]] = {
+            "accepted": [],      # done, willdo
+            "acknowledged": [],  # acknowledge
+            "declined": [],      # skip, no
+            "snoozed": [],       # later
+        }
+        
+        for t in tickets:
+            formatted = _format_ticket_for_context(t)
+            action = (t.user_action or "").lower()
+            
+            if action in ("done", "willdo"):
+                result["accepted"].append(formatted)
+            elif action == "acknowledge":
+                result["acknowledged"].append(formatted)
+            elif action in ("skip", "no"):
+                result["declined"].append(formatted)
+            elif action == "later":
+                result["snoozed"].append(formatted)
+            else:
+                raise ValueError(f"Unknown user_action '{action}' for ticket '{t.title}'")
+        
+        return result
+        
+    except ValueError:
+        # Re-raise ValueError (unknown user_action) - fail loudly
+        raise
+    except Exception as e:
+        logger.warning(f"Could not get responded tickets: {e}")
+        return {"accepted": [], "acknowledged": [], "declined": [], "snoozed": []}

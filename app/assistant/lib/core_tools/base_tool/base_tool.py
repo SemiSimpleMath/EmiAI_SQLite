@@ -88,7 +88,7 @@ class BaseTool(ABC):
             
             ticket_manager = DI.ticket_manager
             if not ticket_manager:
-                raise RuntimeError("ProactiveTicketManager not available")
+                raise RuntimeError("TicketManager not available")
             
             # Get customized title/message from the tool
             title, message = self.get_approval_message(tool_message)
@@ -99,6 +99,7 @@ class BaseTool(ABC):
             now = datetime.now(timezone.utc)
             
             ticket = ticket_manager.create_ticket(
+                ticket_type='tool_approval',
                 suggestion_type='tool_approval',
                 title=title,
                 message=message,
@@ -118,7 +119,10 @@ class BaseTool(ABC):
             if not ticket:
                 raise RuntimeError("Failed to create approval ticket")
             
-            ticket_id = ticket['ticket_id']  # create_ticket returns a dict
+            # Mark as proposed (ready for user)
+            ticket_manager.mark_proposed(ticket.ticket_id)
+            
+            ticket_id = ticket.ticket_id
             logger.info(f"[{self.name}] 🔐 Waiting for user approval - ticket {ticket_id}")
             
             # Poll for user response (blocking)

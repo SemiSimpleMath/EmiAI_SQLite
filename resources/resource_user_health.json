@@ -29,7 +29,7 @@
   "sleep": {
     "target_bedtime": "10:30-11:00 PM",
     "ideal_hours": "7-8 hours",
-    "caffeine_cutoff": "2:00 PM",
+    "caffeine_cutoff": "3:00 PM",
     "caffeine_reason": "Affects sleep quality"
   },
   "exercise": {

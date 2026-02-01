@@ -38,6 +38,69 @@ normal_sleep:
   end: "07:30"    # Typical wake time
   duration_hours: 8.5  # Default assumption for cold starts
 
+# Sleep Segment Adjustments
+# AFK doesn't perfectly reflect actual sleep:
+# - User doesn't fall asleep instantly when going AFK
+# - User doesn't race to computer immediately upon waking
+# These buffers trim inferred sleep segments to be more realistic.
+sleep_segment_adjustments:
+  # Only apply adjustments to segments longer than this (hours)
+  # Short AFK (e.g., lunch break) shouldn't be treated as sleep
+  min_segment_hours_for_trim: 2.0
+  
+  # Minutes to trim from start of sleep segment (fall-asleep buffer)
+  # Accounts for time between going AFK and actually falling asleep
+  start_trim_minutes: 20
+  
+  # Minutes to trim from end of sleep segment (wake-up buffer)  
+  # Accounts for time between waking and reaching the computer
+  end_trim_minutes: 15
+  
+  # Safety cap: never trim more than this percentage of a segment
+  # Prevents over-trimming short segments
+  max_trim_percent: 25
+
+# Sleep Quality Scoring
+# Point-based system for nuanced sleep quality assessment
+# Philosophy: Fragmented sleep is severely penalized. Duration matters linearly.
+sleep_quality_scoring:
+  # Ideal sleep duration (minutes) - gets full 100 points
+  ideal_min_minutes: 480   # 8 hours
+  ideal_max_minutes: 510   # 8.5 hours (slight buffer before oversleep penalty)
+  
+  # Duration scoring (linear)
+  # Single aggressive linear drop: 27.5 pts/hr under ideal
+  # Results: 8h=100(Excellent), 7h=72(Very good), 6h=45(OK), 5h=17(Bad), 4h=0(Terrible)
+  duration_scoring:
+    # Below ideal: aggressive linear penalty
+    points_per_hour_under: 27.5
+    # Above ideal: gentler penalty per hour over
+    points_per_hour_over: 8
+    # Minimum duration to get any points (minutes)
+    min_duration_for_points: 60
+  
+  # Fragmentation penalty
+  # First extra segment drops ~2 tiers (Excellent → Very good)
+  # Additional segments have incremental penalty
+  fragmentation_penalty:
+    # Penalty for going from 1 to 2 segments (2-tier drop)
+    first_segment_penalty: 25
+    # Penalty for each additional segment beyond 2
+    additional_segment_penalty: 10
+  
+  # Score to tier mapping (score >= threshold gets that tier)
+  tier_thresholds:
+    excellent: 90
+    great: 80
+    very_good: 70
+    good: 60
+    pretty_good: 50
+    ok: 40
+    mediocre: 30
+    poor: 20
+    bad: 10
+    # Below 10 = terrible
+
 # Greeting Messages
 greetings:
   # After confirmed awake

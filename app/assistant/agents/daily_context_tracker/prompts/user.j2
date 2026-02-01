@@ -29,9 +29,9 @@
 {% endif %}
 
 {% set mode = daily_context_mode or "incremental" %}
-{% set has_description = current_daily_context.day_description and current_daily_context.day_description | length > 0 %}
+{% set has_theme = current_daily_context.day_theme and current_daily_context.day_theme | length > 0 %}
 {% set has_milestones = current_daily_context.milestones and current_daily_context.milestones | length > 0 %}
-{% set context_is_empty = not has_description and not has_milestones %}
+{% set context_is_empty = not has_theme and not has_milestones %}
 
 ## Current Daily Context
 {% if mode == "rebuild" or context_is_empty %}
@@ -52,7 +52,6 @@
 
 {% if recent_chat_excerpts %}
 ## Recent Chat Messages
-*Only NEW chat messages since the last time you ran (or since start of day in rebuild mode).*
 {% for chat in recent_chat_excerpts %}
 - [{{ chat.time_local }}] {{ chat.sender }}: {{ chat.content }}
 {% endfor %}
@@ -60,32 +59,66 @@
 
 {% if calendar_events_completed %}
 ## Completed Calendar Events
-*Only NEW completed events since the last time you ran (or since start of day in rebuild mode).*
 {% for event in calendar_events_completed %}
 - **{{ event.event_name }}** (ended at {{ event.end_time }})
 {% endfor %}
 {% endif %}
 
-{% if recent_accepted_tickets %}
-## Recently Accepted Tickets
-*User explicitly responded to these wellness suggestions.*
-*Only NEW accepted tickets since the last time you ran (or since start of day in rebuild mode).*
-{% for ticket in recent_accepted_tickets %}
-- **"{{ ticket.title }}"** ({{ ticket.accepted_at_local }})
-  - Suggested type: {{ ticket.suggestion_type }}
-  - User action: **{{ ticket.user_action }}**
-  {% if ticket.user_text %}
-  - User said: "{{ ticket.user_text }}"
-  {% endif %}
+{% if recent_responded_tickets %}
+## Recent Ticket Responses
+
+{% if recent_responded_tickets.accepted %}
+### ACCEPTED (User is doing this now or shortly)
+{% for t in recent_responded_tickets.accepted %}
+- {{ t.message or t.title }} [Accepted at {{ t.responded_at_local }}]
+{% if t.user_comment %}  User comment: {{ t.user_comment }}{% endif %}
 {% endfor %}
 {% endif %}
 
-{% if recent_afk_intervals %}
-## Recent AFK (Away From Computer)
-*Only NEW AFK intervals since the last time you ran (or since start of day in rebuild mode).*
-*Treat long AFK blocks as meaningful sections of the day (e.g., out of the house, meals, errands, rest).*
-{% for i in recent_afk_intervals %}
-- {{ i.start_local }} -> {{ i.end_local }} ({{ i.duration_minutes | round(0) | int }} min)
+{% if recent_responded_tickets.acknowledged %}
+### ACKNOWLEDGED (User received message, may or may not act. Can nudge again after reasonable time.)
+{% for t in recent_responded_tickets.acknowledged %}
+- {{ t.message or t.title }} [Acknowledged at {{ t.responded_at_local }}]
+{% if t.user_comment %}  User comment: {{ t.user_comment }}{% endif %}
+{% endfor %}
+{% endif %}
+
+{% if recent_responded_tickets.declined %}
+### DECLINED (User not interested. Do not resuggest unless urgent.)
+{% for t in recent_responded_tickets.declined %}
+- {{ t.message or t.title }} [Declined at {{ t.responded_at_local }}]
+{% if t.user_comment %}  User comment: {{ t.user_comment }}{% endif %}
+{% endfor %}
+{% endif %}
+
+{% if recent_responded_tickets.snoozed %}
+### SNOOZED (User wants reminder later. Wait until eligible time.)
+{% for t in recent_responded_tickets.snoozed %}
+- {{ t.message or t.title }} [Snoozed at {{ t.responded_at_local }}{% if t.snooze_until_local %}, Eligible again at {{ t.snooze_until_local }}{% endif %}]
+{% if t.user_comment %}  User comment: {{ t.user_comment }}{% endif %}
+{% endfor %}
+{% endif %}
+
+{% endif %}
+
+{% if presence_status %}
+## Computer Presence
+{% if presence_status.is_afk %}
+[STATUS: AWAY FROM KEYBOARD]
+- Away Duration: {{ presence_status.duration_minutes }} minutes
+{% if presence_status.start_time_local %}- Away Since: {{ presence_status.start_time_local }}{% endif %}
+{% else %}
+[STATUS: AT KEYBOARD]
+- Current Session: {{ presence_status.duration_minutes }} minutes
+{% if presence_status.start_time_local %}- At Keyboard Since: {{ presence_status.start_time_local }}{% endif %}
+{% endif %}
+{% endif %}
+
+{% if activity_segments %}
+## Day's Activity Pattern (since wake)
+*Significant blocks of activity and AFK (20+ min each). Use this to understand the shape of the day.*
+{% for seg in activity_segments %}
+- {{ seg }}
 {% endfor %}
 {% endif %}
 

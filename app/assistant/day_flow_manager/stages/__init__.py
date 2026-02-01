@@ -1,30 +1,26 @@
 """
-Pipeline Stages
+Day Flow Pipeline Stages
 
-Each stage implements BaseStage from manager.py:
+Each stage implements BaseStage from day_flow_manager.py:
 - run(ctx) -> StageResult: Main stage logic
-- reset_daily(ctx) -> None: Daily 5AM reset behavior
+- reset_stage(ctx) -> None: Daily boundary reset behavior
+- should_run_stage(ctx) -> Tuple[bool, str]: Gate logic (optional)
 - get_stage_config(ctx) -> dict: Load stage's own config file
 
-Processor stages (run first):
-- WellnessTicketProcessorStage: Processes accepted wellness tickets
+Computation stages (no LLM cost):
+- SleepStage: Computes sleep data, determines day_start
+- AFKStatisticsStage: Computes AFK statistics
+- ActivityTrackerStage: Updates tracked activity timers
 
-Computation stages:
-- SleepStage: Computes sleep data from AFK events
-
-Agent stages:
-- ActivityTrackerStage: Detects activities from chat/calendar/tickets
+Agent stages (call LLM):
 - DailyContextGeneratorStage: Generates daily context summary
 - HealthInferenceStage: Infers health/energy state
 - DayFlowOrchestratorStage: Decides proactive suggestions
-
-Note: AFK statistics is NOT a stage - it's part of the AFK manager subsystem
-and updates its resource file directly when AFK state changes.
 """
 
 from app.assistant.day_flow_manager.stages.agent_stage import AgentStage
-from app.assistant.day_flow_manager.stages.wellness_ticket_processor_stage import WellnessTicketProcessorStage
 from app.assistant.day_flow_manager.stages.sleep_stage import SleepStage
+from app.assistant.day_flow_manager.stages.afk_statistics_stage import AFKStatisticsStage
 from app.assistant.day_flow_manager.stages.activity_tracker_stage import ActivityTrackerStage
 from app.assistant.day_flow_manager.stages.daily_context_generator_stage import DailyContextGeneratorStage
 from app.assistant.day_flow_manager.stages.health_inference_stage import HealthInferenceStage
@@ -32,8 +28,8 @@ from app.assistant.day_flow_manager.stages.day_flow_orchestrator_stage import Da
 
 __all__ = [
     'AgentStage',
-    'WellnessTicketProcessorStage',
     'SleepStage',
+    'AFKStatisticsStage',
     'ActivityTrackerStage',
     'DailyContextGeneratorStage',
     'HealthInferenceStage',

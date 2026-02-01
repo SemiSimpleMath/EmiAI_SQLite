@@ -886,7 +886,7 @@ class Agent:
 
         action = str(result_dict.get("action", "")).lower()
         is_exit_action = "exit" in action
-        sub_data_type = "result" if is_exit_action else None
+        sub_data_type = ["result"] if is_exit_action else []
 
         msg = Message(
             data_type="agent_response",

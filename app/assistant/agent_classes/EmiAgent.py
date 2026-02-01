@@ -18,7 +18,71 @@ class EmiAgent(Agent):
     def __init__(self, name, blackboard, agent_registry, tool_registry, llm_params=None, parent=None):
         super().__init__(name, blackboard, agent_registry, tool_registry, llm_params, parent)
 
+    def _parse_slash_command(self, text: str):
+        """
+        Parse a leading "/command ..." message.
+
+        Returns a dict {name, payload, raw} or None.
+        """
+        if not isinstance(text, str):
+            return None
+        raw = text
+        s = text.strip()
+        if not s.startswith("/"):
+            return None
+        body = s[1:]
+        if not body:
+            return None
+        parts = body.split(None, 1)
+        name = (parts[0] or "").strip().lower()
+        payload = (parts[1] if len(parts) > 1 else "").strip()
+        if not name:
+            return None
+        return {"name": name, "payload": payload, "raw": raw}
+
     def emi_chat_request_handler(self, message):
+        # Quick slash-command routing (temporary).
+        # Goal: let certain commands (e.g. /music) influence only the intended subsystem
+        # without triggering the full general-agent flow.
+        try:
+            cmd = self._parse_slash_command(message.agent_input) if message and message.agent_input else None
+        except Exception:
+            cmd = None
+
+        if cmd and cmd.get("name") == "music":
+            # Store as a flagged chat message so other agents/stages can ignore it.
+            user_chat_msg = Message(
+                data_type="user_msg",
+                sender="User",
+                content=cmd.get("payload") or "",
+                is_chat=True,
+                role="user",
+                sub_data_type=["slash_command", "music"],
+                metadata={
+                    "command_name": "music",
+                    "command_scope": "music",
+                    "command_payload": cmd.get("payload") or "",
+                    "raw_content": cmd.get("raw") or "",
+                },
+                test_mode=getattr(message, "test_mode", False),
+            )
+            self.blackboard.add_msg(user_chat_msg)
+
+            # Acknowledge without involving the full agent team.
+            ack = "Got it — I’ll treat that as a music-only instruction."
+            user_msg_data = UserMessageData(chat=ack)
+            user_msg_chat = UserMessage(
+                data_type="user_msg",
+                sender=get_assistant_name(),
+                receiver=None,
+                timestamp=datetime.now(timezone.utc),
+                id=str(uuid.uuid4()),
+                role="assistant",
+                user_message_data=user_msg_data,
+            )
+            self.publish_chat_to_user(user_msg_chat)
+            return
+
         # Check if test mode
         if getattr(message, 'test_mode', False):
             logger.info("🧪 Processing in TEST MODE - no database storage")
@@ -30,12 +94,35 @@ class EmiAgent(Agent):
 
 
     def _add_extra_msgs(self, message: Message):
+        # Default user chat message. If it's a slash command, store it flagged.
+        meta = None
+        sub_types = []
+        content = message.agent_input
+        try:
+            cmd = self._parse_slash_command(message.agent_input) if message and message.agent_input else None
+        except Exception:
+            cmd = None
+        if cmd and cmd.get("name"):
+            sub_types = ["slash_command", cmd.get("name")]
+            scope = cmd.get("name")
+            meta = {
+                "command_name": cmd.get("name"),
+                "command_scope": scope,
+                "command_payload": cmd.get("payload") or "",
+                "raw_content": cmd.get("raw") or "",
+            }
+            # Store payload as the content so downstream consumers can focus on intent.
+            content = cmd.get("payload") or ""
+
         user_chat_msg = Message(
-            data_type="user_msg", 
-            content=message.agent_input, 
+            data_type="user_msg",
+            sender="User",
+            content=content,
             is_chat=True,
             role='user',  # Set the role for user messages
-            test_mode = message.test_mode
+            sub_data_type=sub_types,
+            metadata=meta,
+            test_mode=message.test_mode,
         )
         # EmiAgent uses global blackboard natively, so only add once
         self.blackboard.add_msg(user_chat_msg)
@@ -123,7 +210,7 @@ class EmiAgent(Agent):
             task_notification_msg = Message(
                 task=msg_for_agent,
                 data_type='agent_msg',
-                sub_data_type='agent_notification',
+                sub_data_type=['agent_notification'],
                 sender=self.name,
                 receiver=None,
                 content=f"Following message was sent to the team: [{msg_for_agent}] \nThis is now in progress and no further action is necessary until we hear from the team. REPEAT Do not take action again unless specifically told to do so!\n",
@@ -198,7 +285,7 @@ class EmiAgent(Agent):
                     # Check which entities are already in history to avoid duplicates
                     existing_entities = set()
                     for msg in self.blackboard.get_messages():
-                        if msg.sub_data_type == "entity_card_injection":
+                        if "entity_card_injection" in (getattr(msg, "sub_data_type", []) or []):
                             # Get entity name from message metadata if available
                             if hasattr(msg, 'metadata') and msg.metadata and 'entity_name' in msg.metadata:
                                 existing_entities.add(msg.metadata['entity_name'])
@@ -224,7 +311,7 @@ class EmiAgent(Agent):
                         if card_content:
                             injection_msg = Message(
                                 data_type="agent_msg",
-                                sub_data_type="entity_card_injection",
+                                sub_data_type=["entity_card_injection"],
                                 sender=self.name,
                                 receiver=None,
                                 content=f"[Entity Context - {entity_name}]:\n{card_content}",
@@ -265,9 +352,44 @@ class EmiAgent(Agent):
             if key == "history":
                 history = self.blackboard.get_messages()
                 history_str = "Old messages (from oldest to newest):"
+
+                # Include the latest chat summary (if present), then include only
+                # messages that have NOT been marked as summarized.
+                latest_summary = None
+                for msg in reversed(history):
+                    try:
+                        if "history_summary" in (getattr(msg, "sub_data_type", []) or []) and getattr(msg, "content", None):
+                            latest_summary = msg.content
+                            break
+                    except Exception:
+                        continue
+
+                if latest_summary:
+                    history_str += f"\n[Chat Summary]: {latest_summary}\n"
+
                 for msg in history:
                     if not msg.is_chat:
                         continue
+
+                    # Skip chat messages already summarized (but keep entity injections and the summary itself).
+                    try:
+                        sub = getattr(msg, "sub_data_type", None)
+                        sub_set = set(sub or [])
+                        if "history_summary" in sub_set:
+                            continue
+                        # Slash commands are handled out-of-band; keep them out of general chat history.
+                        if "slash_command" in sub_set:
+                            continue
+                        meta = getattr(msg, "metadata", None)
+                        if (
+                            sub not in ("entity_card_injection",)
+                            and isinstance(meta, dict)
+                            and bool(meta.get("summarized", False))
+                        ):
+                            continue
+                    except Exception as e:
+                        logger.warning(f"[{self.name}] Failed to apply history filters: {e}", exc_info=True)
+
                     # Include ALL messages in history for LLM context (including entity card injections)
                     role = "User" if msg.data_type == 'user_msg' else "Emi"
                     history_str += f" {role}: {msg.content}"

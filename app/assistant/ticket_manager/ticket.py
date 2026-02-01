@@ -42,9 +42,7 @@ def _load_ticket_config() -> dict:
 
 
 class TicketState(str, Enum):
-    """
-    State machine for tickets.
-    """
+    """State machine for tickets."""
 
     PENDING = "pending"
     PROPOSED = "proposed"
@@ -57,55 +55,66 @@ class TicketState(str, Enum):
     EXPIRED = "expired"
 
 
-class ProactiveTicket(Base):
+class Ticket(Base):
     """
-    Persistent state tracking for tickets.
+    Generic ticket model for tracking suggestions, approvals, and actions.
     """
 
-    __tablename__ = "proactive_tickets"
+    __tablename__ = "tickets"
 
     id = Column(Integer, primary_key=True)
     ticket_id = Column(String(100), unique=True, nullable=False, index=True)
 
+    # Type identifiers
+    ticket_type = Column(String(50), nullable=False, index=True)
     suggestion_type = Column(String(50), nullable=False)
 
+    # State tracking
     state = Column(String(50), nullable=False, default=TicketState.PENDING.value, index=True)
     state_history = Column(JSON, nullable=False, default=list)
+    effects_processed = Column(Integer, default=0)
+    
+    # Claim tracking (for atomic cross-process claiming)
+    claim_token = Column(String(36), nullable=True, index=True)
+    claimed_at = Column(DateTime(timezone=True), nullable=True)
 
+    # Content
     title = Column(String(500))
     message = Column(Text)
     action_type = Column(String(100))
     action_params = Column(JSON)
-
     status_effect = Column(JSON, nullable=True)
 
-    ticket_type = Column(String(50), nullable=True)
-    effects_processed = Column(Integer, default=0)
-
+    # Trigger context
     trigger_context = Column(JSON)
     trigger_reason = Column(Text)
 
+    # User interaction
     ask_user_id = Column(String(100))
-    user_response_raw = Column(Text)
-    user_response_parsed = Column(JSON)
     user_action = Column(String(50), nullable=True)
     user_text = Column(Text, nullable=True)
+    user_response_parsed = Column(JSON)
 
+    # Timestamps
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), index=True)
     proposed_at = Column(DateTime(timezone=True))
     responded_at = Column(DateTime(timezone=True))
     completed_at = Column(DateTime(timezone=True))
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 
+    # Validity window
     valid_from = Column(DateTime(timezone=True))
     valid_until = Column(DateTime(timezone=True), index=True)
 
+    # Snooze handling
     snooze_until = Column(DateTime(timezone=True), nullable=True, index=True)
     snooze_count = Column(Integer, default=0)
 
+    # Execution tracking
     related_action_id = Column(String(100))
     execution_result = Column(Text)
 
+    # Auto-resolution
     stale_after_minutes = Column(Integer, nullable=True)
     resolution_strategy = Column(String(50), nullable=True)
     auto_resolved_at = Column(DateTime(timezone=True), nullable=True)
@@ -114,22 +123,20 @@ class ProactiveTicket(Base):
 
     __table_args__ = (
         Index("idx_ticket_state_created", "state", "created_at"),
-        Index("idx_ticket_type_state", "suggestion_type", "state"),
+        Index("idx_ticket_type_state", "ticket_type", "state"),
+        Index("idx_ticket_suggestion_state", "suggestion_type", "state"),
         Index("idx_ticket_snooze", "snooze_until"),
         Index("idx_ticket_valid_until", "valid_until"),
     )
 
     def __repr__(self):
         return (
-            "<ProactiveTicket("
-            f"id={self.id}, ticket_id='{self.ticket_id}', state='{self.state}', "
-            f"title='{self.title[:30] if self.title else 'N/A'}')>"
+            f"<Ticket(id={self.id}, ticket_id='{self.ticket_id}', "
+            f"type='{self.ticket_type}', state='{self.state}')>"
         )
 
     def get_stale_after_minutes(self) -> int:
-        """
-        Returns stale minutes or -1 if never stale.
-        """
+        """Returns stale minutes or -1 if never stale."""
         if self.stale_after_minutes is not None:
             return self.stale_after_minutes
         cfg = _load_ticket_config()
@@ -171,9 +178,13 @@ class ProactiveTicket(Base):
         return {
             "id": self.id,
             "ticket_id": self.ticket_id,
+            "ticket_type": self.ticket_type,
             "suggestion_type": self.suggestion_type,
             "state": self.state,
             "state_history": self.state_history,
+            "effects_processed": self.effects_processed,
+            "claim_token": self.claim_token,
+            "claimed_at": self.claimed_at.isoformat() if self.claimed_at else None,
             "title": self.title,
             "message": self.message,
             "action_type": self.action_type,
@@ -182,10 +193,9 @@ class ProactiveTicket(Base):
             "trigger_reason": self.trigger_reason,
             "status_effect": self.status_effect,
             "ask_user_id": self.ask_user_id,
-            "user_response_raw": self.user_response_raw,
-            "user_response_parsed": self.user_response_parsed,
             "user_action": self.user_action,
             "user_text": self.user_text,
+            "user_response_parsed": self.user_response_parsed,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "proposed_at": self.proposed_at.isoformat() if self.proposed_at else None,
             "responded_at": self.responded_at.isoformat() if self.responded_at else None,
@@ -205,24 +215,3 @@ class ProactiveTicket(Base):
         }
 
 
-def initialize_proactive_tickets_db():
-    from app.models.base import get_session
-
-    session = get_session()
-    engine = session.bind
-    Base.metadata.create_all(engine, tables=[ProactiveTicket.__table__], checkfirst=True)
-    session.close()
-
-
-def drop_proactive_tickets_db():
-    from app.models.base import get_session
-
-    session = get_session()
-    engine = session.bind
-    Base.metadata.drop_all(engine, tables=[ProactiveTicket.__table__], checkfirst=True)
-    session.close()
-
-
-def reset_proactive_tickets_db():
-    drop_proactive_tickets_db()
-    initialize_proactive_tickets_db()

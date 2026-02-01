@@ -19,10 +19,18 @@ def save_chat_messages(blackboard, db_session=None, force_test_db=False):
         own_session = True
 
     try:
+        # Persist "normal" chat, but exclude injected context, summaries, and slash commands.
+        # Slash commands are meant to be routed/handled explicitly and should not feed Switchboard.
+        excluded = {
+            "agent_notification",
+            "entity_card_injection",
+            "history_summary",
+            "slash_command",
+        }
         chat_messages = [
-            msg for msg in blackboard.get_messages() 
-            if msg.is_chat 
-            and msg.sub_data_type not in ["agent_notification", "entity_card_injection", "history_summary"]
+            msg for msg in blackboard.get_messages()
+            if msg.is_chat
+            and not set(getattr(msg, "sub_data_type", []) or []).intersection(excluded)
         ]
 
         if not chat_messages:

@@ -284,8 +284,8 @@ class KnowledgeGraphSearch(BaseTool):
                     sta = datetime.fromisoformat(start_time_after.replace("Z", "+00:00"))
                     q_in = q_in.filter(or_(Edge.updated_at >= sta, Edge.created_at >= sta))
                     q_out = q_out.filter(or_(Edge.updated_at >= sta, Edge.created_at >= sta))
-                except Exception:
-                    pass  # ignore bad dates quietly
+                except Exception as e:
+                    logger.debug(f"Ignoring invalid start_time_after='{start_time_after}': {e}", exc_info=True)
 
             q_in = q_in.order_by(desc(Edge.updated_at), desc(Edge.created_at)).limit(max(k * 6, 24))
             q_out = q_out.order_by(desc(Edge.updated_at), desc(Edge.created_at)).limit(max(k * 6, 24))

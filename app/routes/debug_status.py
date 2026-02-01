@@ -85,8 +85,8 @@ def _get_sleep_segments_log(limit=50):
         return [{"error": str(e)}]
 
 
-def _get_afk_events_log(limit=100):
-    """Get recent active segments from database (Active-First model)."""
+def _get_active_segments_log(limit=50):
+    """Get recent active segments from database (source of truth for AFK computation)."""
     try:
         from app.assistant.afk_manager.afk_db import get_recent_active_segments
 
@@ -164,6 +164,7 @@ def status_data():
             "assistant",
             "day_flow_manager",
             "stages",
+            "stage_configs",
         )
         
         def load_resource(filename):
@@ -198,7 +199,7 @@ def status_data():
         # Load NEW pipeline stage output files (resource_<stage_id>_output.json)
         sleep_output_raw = load_resource("resource_sleep_output.json")
         afk_statistics_output_raw = load_resource("resource_afk_statistics_output.json")
-        activity_tracker_output_raw = load_resource("resource_activity_tracker_output.json")
+        # Note: activity_tracker stage writes to resource_tracked_activities_output.json (loaded above as tracked_activities_raw)
         daily_context_output_raw = load_resource("resource_daily_context_generator_output.json")
         health_inference_output_raw = load_resource("resource_health_inference_output.json")
         day_flow_orchestrator_output_raw = load_resource("resource_day_flow_orchestrator_output.json")
@@ -211,7 +212,7 @@ def status_data():
         
         # Get database logs
         sleep_log = _get_sleep_segments_log(limit=50)
-        afk_log = _get_afk_events_log(limit=100)
+        active_log = _get_active_segments_log(limit=50)
         wake_log = _get_wake_segments_log(limit=20)
         
         # Get last agent outputs
@@ -235,7 +236,7 @@ def status_data():
             "pipeline_outputs_raw": {
                 "sleep": sleep_output_raw,
                 "afk_statistics": afk_statistics_output_raw,
-                "activity_tracker": activity_tracker_output_raw,
+                "activity_tracker": tracked_activities_raw,  # activity_tracker stage outputs to resource_tracked_activities_output.json
                 "daily_context_generator": daily_context_output_raw,
                 "health_inference": health_inference_output_raw,
                 "day_flow_orchestrator": day_flow_orchestrator_output_raw,
@@ -251,7 +252,7 @@ def status_data():
             
             # Database logs
             "sleep_log": sleep_log,
-            "afk_log": afk_log,
+            "active_log": active_log,
             "wake_log": wake_log,
             
             # Agent debug outputs
@@ -266,7 +267,7 @@ def status_data():
 def force_daily_reset():
     """Force a daily reset on all pipeline stages for debugging."""
     try:
-        from app.assistant.day_flow_manager.manager import PhysicalPipelineManager
+        from app.assistant.day_flow_manager.day_flow_manager import PhysicalPipelineManager
         
         results = {}
         

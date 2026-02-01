@@ -1,13 +1,24 @@
 {
   "stage_id": "health_inference",
   "description": "Infers user's energy, cognitive load, and physical state from available data",
-  
+
+  "run_policy": {
+    "min_interval_seconds": 300,
+    "description": "Agent stage - 5 minute minimum between runs"
+  },
+
+  "afk_guard": {
+    "skip_when_afk": true,
+    "skip_when_potentially_afk": false,
+    "description": "Skip when user is AFK - no point inferring health when away"
+  },
+
   "lookback_hours": {
     "calendar_events": 8,
     "recent_tickets": 4,
     "chat_history": 2
   },
-  
+
   "daily_reset": {
     "description": "Set reasonable health defaults after good night sleep",
     "output_resource_defaults": {

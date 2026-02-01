@@ -16,7 +16,7 @@ user_context_items:
 - time_since
 - resource_sleep_output
 - resource_tracked_activities_output
-- recent_tickets
+- recent_responded_tickets
 - recent_chat_history
 - resource_user_health
 - resource_user_routine

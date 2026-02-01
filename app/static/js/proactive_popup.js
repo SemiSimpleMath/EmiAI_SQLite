@@ -94,12 +94,12 @@ class ProactiveSuggestionPopup {
         }
         
         try {
-            const response = await fetch('/api/proactive/pending');
+            const response = await fetch('/api/tickets/pending');
             const data = await response.json();
             
             console.log('[ProactivePopup] Fetched pending suggestions:', data);
             
-            const serverIds = new Set((data.suggestions || []).map(s => s.ticket_id));
+            const serverIds = new Set((data.tickets || []).map(s => s.ticket_id));
             const existingIds = new Set(this.suggestions.map(s => s.ticket_id));
             
             // Remove suggestions that are no longer on server (expired, dismissed elsewhere, etc.)
@@ -110,7 +110,7 @@ class ProactiveSuggestionPopup {
             }
             
             // Add new suggestions from server
-            for (const suggestion of (data.suggestions || [])) {
+            for (const suggestion of (data.tickets || [])) {
                 if (!existingIds.has(suggestion.ticket_id)) {
                     this.suggestions.push(suggestion);
                     console.log('[ProactivePopup] Added suggestion:', suggestion.ticket_id);
@@ -153,27 +153,55 @@ class ProactiveSuggestionPopup {
             // Tool approvals don't get snooze option or text box - just Accept/Reject
             const isToolApproval = s.suggestion_type === 'tool_approval' || 
                                    (s.action_type && s.action_type.startsWith('tool_'));
+            // Advice layout: for suggestions not tied to tracked activities
+            const isAdvice = !isToolApproval && s.button_layout === 'advice';
             
-            const buttonHtml = isToolApproval ? `
-                <button class="proactive-btn-sm proactive-btn-accept" data-idx="${idx}">Allow</button>
-                <button class="proactive-btn-sm proactive-btn-dismiss" data-idx="${idx}">Deny</button>
-            ` : `
-                <div class="proactive-text-container">
-                    <input type="text" 
-                           class="proactive-user-text" 
-                           data-idx="${idx}"
-                           placeholder="Optional: Add details (e.g., 'Had 2 glasses')"
-                           maxlength="200">
-                </div>
-                <div class="proactive-actions-row">
-                    <button class="proactive-btn-sm proactive-btn-done" data-idx="${idx}">✓ Done</button>
-                    <button class="proactive-btn-sm proactive-btn-skip" data-idx="${idx}">✗ Skip</button>
-                    <select class="proactive-snooze-select" data-idx="${idx}">
-                        ${this.snoozeOptions.map(o => `<option value="${o.value}">${o.label}</option>`).join('')}
-                    </select>
-                    <button class="proactive-btn-sm proactive-btn-later" data-idx="${idx}">⏰ Later</button>
-                </div>
-            `;
+            let buttonHtml;
+            if (isToolApproval) {
+                buttonHtml = `
+                    <button class="proactive-btn-sm proactive-btn-accept" data-idx="${idx}">Allow</button>
+                    <button class="proactive-btn-sm proactive-btn-dismiss" data-idx="${idx}">Deny</button>
+                `;
+            } else if (isAdvice) {
+                // Advice layout: Acknowledge, Will Do, No, Later
+                buttonHtml = `
+                    <div class="proactive-text-container">
+                        <input type="text" 
+                               class="proactive-user-text" 
+                               data-idx="${idx}"
+                               placeholder="Optional: Add a note"
+                               maxlength="200">
+                    </div>
+                    <div class="proactive-actions-row">
+                        <button class="proactive-btn-sm proactive-btn-acknowledge" data-idx="${idx}" title="Got it, will consider">👍 Acknowledge</button>
+                        <button class="proactive-btn-sm proactive-btn-willdo" data-idx="${idx}" title="I'll do this now">✓ Will Do</button>
+                        <button class="proactive-btn-sm proactive-btn-no" data-idx="${idx}" title="Not applicable">✗ No</button>
+                        <select class="proactive-snooze-select" data-idx="${idx}">
+                            ${this.snoozeOptions.map(o => `<option value="${o.value}">${o.label}</option>`).join('')}
+                        </select>
+                        <button class="proactive-btn-sm proactive-btn-later" data-idx="${idx}">⏰ Later</button>
+                    </div>
+                `;
+            } else {
+                // Activity layout: Done, Skip, Later (original)
+                buttonHtml = `
+                    <div class="proactive-text-container">
+                        <input type="text" 
+                               class="proactive-user-text" 
+                               data-idx="${idx}"
+                               placeholder="Optional: Add details (e.g., 'Had 2 glasses')"
+                               maxlength="200">
+                    </div>
+                    <div class="proactive-actions-row">
+                        <button class="proactive-btn-sm proactive-btn-done" data-idx="${idx}">✓ Done</button>
+                        <button class="proactive-btn-sm proactive-btn-skip" data-idx="${idx}">✗ Skip</button>
+                        <select class="proactive-snooze-select" data-idx="${idx}">
+                            ${this.snoozeOptions.map(o => `<option value="${o.value}">${o.label}</option>`).join('')}
+                        </select>
+                        <button class="proactive-btn-sm proactive-btn-later" data-idx="${idx}">⏰ Later</button>
+                    </div>
+                `;
+            }
             
             return `
                 <div class="proactive-item ${isToolApproval ? 'tool-approval' : ''}" data-ticket-id="${s.ticket_id}">
@@ -213,6 +241,16 @@ class ProactiveSuggestionPopup {
         listContainer.querySelectorAll('.proactive-btn-dismiss').forEach(btn => {
             btn.addEventListener('click', () => this.respond(parseInt(btn.dataset.idx), 'dismiss'));
         });
+        // Advice layout buttons
+        listContainer.querySelectorAll('.proactive-btn-acknowledge').forEach(btn => {
+            btn.addEventListener('click', () => this.respond(parseInt(btn.dataset.idx), 'acknowledge'));
+        });
+        listContainer.querySelectorAll('.proactive-btn-willdo').forEach(btn => {
+            btn.addEventListener('click', () => this.respond(parseInt(btn.dataset.idx), 'willdo'));
+        });
+        listContainer.querySelectorAll('.proactive-btn-no').forEach(btn => {
+            btn.addEventListener('click', () => this.respond(parseInt(btn.dataset.idx), 'no'));
+        });
         
         popup.classList.remove('hidden');
     }
@@ -240,7 +278,7 @@ class ProactiveSuggestionPopup {
         this.render();
         
         try {
-            const response = await fetch('/api/proactive/respond', {
+            const response = await fetch('/api/tickets/respond', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -268,7 +306,7 @@ class ProactiveSuggestionPopup {
     async dismissAll() {
         for (const suggestion of [...this.suggestions]) {
             try {
-                await fetch('/api/proactive/respond', {
+                await fetch('/api/tickets/respond', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({

@@ -7,7 +7,10 @@ import uuid
 # Define the Message class using Pydantic
 class Message(BaseModel):
     data_type: Optional[str] = None  # e.g., 'init_agent', 'agent_msg', 'tool_result', 'agent_selection_request', 'agent_selection_response'
-    sub_data_type: Optional[str] = None  # Additional classification flexibility
+    # Additional classification flexibility:
+    # This is intentionally a LIST so a message can carry multiple tags for routing/scoping.
+    # Example: ["chat", "slash_command", "music"]
+    sub_data_type: List[str] = Field(default_factory=list)
     sender: Optional[str] = None  # Name of the agent or 'User'
     receiver: Optional[str] = None
     content: Optional[str] = None

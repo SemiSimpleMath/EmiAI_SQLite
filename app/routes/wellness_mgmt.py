@@ -22,13 +22,13 @@ def reset_wellness():
         manager = get_physical_pipeline_manager()
         results["pipeline_reset"] = manager.force_daily_reset()
         
-        # Clear proactive tickets
+        # Clear tickets
         try:
             ticket_manager = get_ticket_manager()
             deleted_count = ticket_manager.clear_all_tickets()
-            results["proactive_tickets_cleared"] = deleted_count
+            results["tickets_cleared"] = deleted_count
         except Exception as e:
-            results["proactive_tickets_error"] = str(e)
+            results["tickets_error"] = str(e)
         
         return jsonify({
             "success": True,

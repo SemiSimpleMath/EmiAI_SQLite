@@ -1,54 +1,57 @@
 {
   "schema_version": 2,
-  "last_updated_utc": "2026-01-24T17:39:38.749772+00:00",
-  "boundary_date_local": "2026-01-24",
-  "last_daily_reset_utc": "2026-01-24T13:03:06.154076+00:00",
-  "last_daily_reset_boundary": "2026-01-24",
+  "last_updated_utc": "2026-02-01T21:08:23.051285+00:00",
+  "boundary_date_local": "2026-02-01",
+  "last_daily_reset_utc": "2026-02-01T13:01:42.394839+00:00",
+  "last_daily_reset_boundary": "2026-02-01",
   "day_started": true,
-  "day_start_time_utc": "2026-01-24T15:22:25.063552+00:00",
-  "day_start_time": "2026-01-24 07:22 AM PST",
-  "wake_time_today": "2026-01-24 07:22",
+  "day_start_time_utc": "2026-02-01T14:38:47.613857+00:00",
+  "day_start_time": "2026-02-01 06:38 AM PST",
+  "wake_time_today": "2026-02-01 06:38",
   "user_is_up": true,
   "cursors": {
-    "chat_last_seen_utc": "2026-01-24T07:41:13.312396+00:00"
+    "chat_last_seen_utc": "2026-01-25T03:11:30.033555+00:00"
   },
   "stage_runs": {
     "sleep": {
-      "last_run_utc": "2026-01-24T16:29:36.431906+00:00",
-      "last_reason": "policy=always",
+      "last_run_utc": "2026-02-01T21:08:23.034286+00:00",
+      "last_reason": "ready",
       "last_debug": {
-        "total_sleep_minutes": 448.0,
+        "total_sleep_minutes": 370.7,
         "segment_count": 1,
-        "wake_time": "07:22",
+        "wake_time": "06:38",
         "user_is_up": true,
-        "day_start_time": "2026-01-24 07:22 AM PST"
+        "day_start_time": "2026-02-01 06:38 AM PST"
       }
     },
     "activity_tracker": {
-      "last_run_utc": "2026-01-24T16:05:25.190574+00:00",
-      "last_reason": "policy=on_new_chat (new=2)",
+      "last_run_utc": "2026-02-01T21:08:23.034286+00:00",
+      "last_reason": "ready",
       "last_debug": {
-        "chat_messages_processed": 2,
-        "calendar_events": 0,
-        "tickets_processed": 5
+        "last_run_utc": "2026-02-01T21:04:17.045794+00:00",
+        "tickets_found": 0,
+        "chat_messages": 0,
+        "agent_called": false,
+        "afk_reset_triggered": false
       }
     },
     "daily_context_generator": {
-      "last_run_utc": "2026-01-24T16:29:36.431906+00:00",
-      "last_reason": "policy=always",
+      "last_run_utc": "2026-02-01T21:04:17.045794+00:00",
+      "last_reason": "ready",
       "last_debug": {
         "mode": "incremental",
+        "milestone_count": 5,
         "output_keys": [
-          "day_description",
+          "expected_schedule",
+          "day_theme",
           "milestones",
-          "current_status",
-          "reasoning"
+          "current_status"
         ]
       }
     },
     "health_inference": {
-      "last_run_utc": "2026-01-24T16:29:36.431906+00:00",
-      "last_reason": "policy=always",
+      "last_run_utc": "2026-02-01T21:04:17.045794+00:00",
+      "last_reason": "ready",
       "last_debug": {
         "output_keys": [
           "mental",
@@ -60,32 +63,106 @@
         ]
       }
     },
-    "physical_orchestrator": {
-      "last_run_utc": "2026-01-24T16:29:36.431906+00:00",
-      "last_reason": "policy=always",
+    "day_flow_orchestrator": {
+      "last_run_utc": "2026-02-01T21:04:17.045794+00:00",
+      "last_reason": "ready",
       "last_debug": {
         "output_keys": [
-          "error",
-          "message",
-          "model"
+          "suggestions",
+          "assessment"
         ],
         "tickets_created": 0
       }
     },
     "wellness_ticket_processor": {
-      "last_run_utc": "2026-01-24T16:29:36.431906+00:00",
-      "last_reason": "policy=always",
+      "last_run_utc": "2026-01-25T19:54:05.851059+00:00",
+      "last_reason": "ready",
       "last_debug": {
         "tickets_processed": 0
       }
     },
     "activity_timers": {
-      "last_run_utc": "2026-01-24T16:29:36.431906+00:00",
-      "last_reason": "policy=always",
+      "last_run_utc": "2026-01-25T19:34:36.158331+00:00",
+      "last_reason": "ready",
       "last_debug": {
-        "refreshed": true
+        "last_run_utc": "2026-01-25T19:30:50.963422+00:00",
+        "tickets_found": 0,
+        "chat_messages": 0,
+        "agent_called": false,
+        "afk_reset_triggered": true
+      }
+    },
+    "afk_statistics": {
+      "last_run_utc": "2026-02-01T21:08:23.034286+00:00",
+      "last_reason": "ready",
+      "last_debug": {
+        "boundary_time_local_hm": "05:00",
+        "day_start_time_local_hm": "06:38",
+        "has_realtime": true,
+        "is_currently_active": true
+      }
+    },
+    "daily_flow_ticket_processor": {
+      "last_run_utc": "2026-01-25T20:03:23.157287+00:00",
+      "last_reason": "ready",
+      "last_debug": {
+        "tickets_processed": 0
       }
     }
   },
-  "signals": {}
+  "signals": {},
+  "tracked_activities_state": {
+    "activities": {
+      "coffee": {
+        "last_occurrence_utc": "2026-02-01T14:41:24.511187+00:00",
+        "count_today": 1,
+        "count_date_local": "2026-02-01",
+        "last_reset_utc": "2026-02-01T20:50:04.570233+00:00",
+        "last_reset_reason": "init",
+        "suppress_overdue_until_utc": null
+      },
+      "finger_stretch": {
+        "last_occurrence_utc": "2026-02-01T20:42:44.955591+00:00",
+        "count_today": 8,
+        "count_date_local": "2026-02-01",
+        "last_reset_utc": "2026-02-01T20:50:04.570233+00:00",
+        "last_reset_reason": "init",
+        "suppress_overdue_until_utc": null
+      },
+      "hydration": {
+        "last_occurrence_utc": "2026-02-01T19:09:25.679560+00:00",
+        "count_today": 3,
+        "count_date_local": "2026-02-01",
+        "last_reset_utc": "2026-02-01T20:50:04.570233+00:00",
+        "last_reset_reason": "init",
+        "suppress_overdue_until_utc": null
+      },
+      "meal": {
+        "last_occurrence_utc": "2026-02-01T20:42:42.419730+00:00",
+        "count_today": 1,
+        "count_date_local": "2026-02-01",
+        "last_reset_utc": "2026-02-01T20:50:04.570233+00:00",
+        "last_reset_reason": "init",
+        "suppress_overdue_until_utc": null
+      },
+      "snack": {
+        "last_occurrence_utc": null,
+        "count_today": 0,
+        "count_date_local": "2026-02-01",
+        "last_reset_utc": "2026-02-01T20:50:04.570233+00:00",
+        "last_reset_reason": "init",
+        "suppress_overdue_until_utc": null
+      },
+      "standing_break": {
+        "last_occurrence_utc": "2026-02-01T20:42:46.397743+00:00",
+        "count_today": 6,
+        "count_date_local": "2026-02-01",
+        "last_reset_utc": "2026-02-01T20:50:04.570233+00:00",
+        "last_reset_reason": "init",
+        "suppress_overdue_until_utc": null
+      }
+    },
+    "schema_version": 2,
+    "last_updated_utc": "2026-02-01T21:08:23.034286+00:00"
+  }
 }

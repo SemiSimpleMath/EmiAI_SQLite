@@ -24,8 +24,9 @@ class Planner(Agent):
         action = result_dict.get("action", "")
         is_exit_action = "exit" in str(action).lower()
         
-        # Use "result" for final message, "plan_message" for intermediate planning
-        sub_data_type = "result" if is_exit_action else "plan_message"
+        # Tagging: use list-based subtypes for scalable routing.
+        # Legacy "plan_message" is replaced by the tag "plan".
+        sub_data_type = ["result"] if is_exit_action else ["plan"]
         
         # 1. Create the main planner_result message
         plan_message = Message(
@@ -50,7 +51,7 @@ class Planner(Agent):
 
             summary_msg = Message(
                 data_type="tool_result_summary",
-                sub_data_type="result_summary",
+                sub_data_type=["result_summary"],
                 sender=self.name,
                 receiver="Blackboard",
                 content=summary_val.strip()

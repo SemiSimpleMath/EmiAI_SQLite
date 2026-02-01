@@ -6,7 +6,7 @@ from typing import Any, Dict, Optional
 
 from app.assistant.utils.logging_config import get_logger
 from app.assistant.ServiceLocator.service_locator import DI
-from app.assistant.day_flow_manager.manager import BaseStage, StageContext, StageResult
+from app.assistant.day_flow_manager.day_flow_manager import BaseStage, StageContext, StageResult
 
 logger = get_logger(__name__)
 

@@ -1,6 +1,6 @@
 {
   "stage_id": "afk_statistics",
-  "description": "AFK statistics aggregation and computer activity tracking",
+  "description": "AFK statistics aggregation and computer activity tracking - always runs, no gating",
   
   "afk_thresholds": {
     "is_potentially_afk_minutes": 1,
@@ -13,6 +13,7 @@
   },
   
   "daily_reset": {
+    "boundary_hour_local": 5,
     "description": "Clear daily AFK statistics at 5AM boundary - all zeros",
     "output_resource_defaults": {
       "is_afk": false,
@@ -25,8 +26,7 @@
       "total_active_time_since_wake": 0,
       "total_afk_time_since_wake": 0,
       "active_work_session_minutes": 0,
-      "current_afk_minutes": 0,
-      "last_completed_afk_duration": 0
+      "current_afk_minutes": 0
     }
   }
 }

@@ -130,14 +130,154 @@ def _filter_inferred_that_overlaps_user(
     return kept
 
 
-def _sleep_quality(total_sleep_minutes: float, cfg: SleepConfig) -> str:
+def _calculate_sleep_score(
+    total_sleep_minutes: float,
+    segment_count: int,
+    cfg: SleepConfig,
+) -> Tuple[int, str]:
+    """
+    Calculate sleep quality score and tier.
+    
+    Scoring philosophy:
+    - Start at 100 points
+    - Subtract linearly for each hour away from ideal duration
+    - SEVERE penalty for first fragmentation (2 segments caps at OK)
+    - Smaller incremental penalty for additional segments
+    
+    Returns (score, tier) where:
+    - score: 0-100 based on duration and fragmentation
+    - tier: one of excellent/great/very_good/good/pretty_good/ok/mediocre/poor/bad/terrible
+    """
     if total_sleep_minutes <= 0:
-        return "unknown"
-    if total_sleep_minutes >= float(cfg.good_min_minutes):
-        return "good"
-    if total_sleep_minutes >= float(cfg.fair_min_minutes):
-        return "fair"
-    return "poor"
+        return 0, "terrible"
+    
+    # Get scoring config
+    scoring = cfg.get("sleep_quality_scoring", default={}) or {}
+    
+    ideal_min = float(scoring.get("ideal_min_minutes", 480))  # 8 hours
+    ideal_max = float(scoring.get("ideal_max_minutes", 510))  # 8.5 hours
+    
+    duration_cfg = scoring.get("duration_scoring", {}) or {}
+    points_per_hour_under = float(duration_cfg.get("points_per_hour_under", 27.5))
+    points_per_hour_over = float(duration_cfg.get("points_per_hour_over", 8))
+    min_duration_for_points = float(duration_cfg.get("min_duration_for_points", 60))
+    
+    frag_cfg = scoring.get("fragmentation_penalty", {}) or {}
+    first_segment_penalty = float(frag_cfg.get("first_segment_penalty", 25))
+    additional_segment_penalty = float(frag_cfg.get("additional_segment_penalty", 10))
+    
+    tier_thresholds = scoring.get("tier_thresholds", {}) or {}
+    
+    # Duration score (start at 100, subtract linearly for deviation from ideal)
+    duration_score = 100.0
+    
+    if total_sleep_minutes < min_duration_for_points:
+        # Very short sleep gets minimal points
+        duration_score = 5.0
+    elif total_sleep_minutes < ideal_min:
+        # Under ideal - linear penalty per hour short
+        hours_under = (ideal_min - total_sleep_minutes) / 60.0
+        duration_score = max(0.0, 100.0 - (hours_under * points_per_hour_under))
+    elif total_sleep_minutes > ideal_max:
+        # Over ideal - gentler linear penalty per hour over
+        hours_over = (total_sleep_minutes - ideal_max) / 60.0
+        duration_score = max(0.0, 100.0 - (hours_over * points_per_hour_over))
+    # else: within ideal range, keep 100
+    
+    # Fragmentation penalty
+    # First extra segment is SEVERE (2 segments = max OK even with perfect duration)
+    # Additional segments have smaller incremental penalty
+    frag_penalty = 0.0
+    if segment_count > 1:
+        # First extra segment: severe penalty
+        frag_penalty = first_segment_penalty
+        # Additional segments beyond 2: smaller incremental penalty
+        if segment_count > 2:
+            frag_penalty += (segment_count - 2) * additional_segment_penalty
+    
+    # Final score (floor at 0)
+    final_score = max(0, int(round(duration_score - frag_penalty)))
+    
+    # Map score to tier
+    tier = "terrible"
+    tier_order = [
+        ("excellent", tier_thresholds.get("excellent", 90)),
+        ("great", tier_thresholds.get("great", 80)),
+        ("very_good", tier_thresholds.get("very_good", 70)),
+        ("good", tier_thresholds.get("good", 60)),
+        ("pretty_good", tier_thresholds.get("pretty_good", 50)),
+        ("ok", tier_thresholds.get("ok", 40)),
+        ("mediocre", tier_thresholds.get("mediocre", 30)),
+        ("poor", tier_thresholds.get("poor", 20)),
+        ("bad", tier_thresholds.get("bad", 10)),
+    ]
+    
+    for tier_name, threshold in tier_order:
+        if final_score >= threshold:
+            tier = tier_name
+            break
+    
+    return final_score, tier
+
+
+def _sleep_quality(total_sleep_minutes: float, cfg: SleepConfig) -> str:
+    """Legacy function - returns just the tier string."""
+    _, tier = _calculate_sleep_score(total_sleep_minutes, 1, cfg)
+    return tier
+
+
+def _apply_sleep_segment_trim(
+    start_utc: datetime,
+    end_utc: datetime,
+    cfg: SleepConfig,
+) -> Optional[Tuple[datetime, datetime, float]]:
+    """
+    Apply realistic trim to a sleep segment derived from AFK.
+    
+    AFK doesn't perfectly reflect sleep:
+    - User doesn't fall asleep instantly when going AFK
+    - User doesn't race to computer immediately upon waking
+    
+    Returns (trimmed_start, trimmed_end, duration_minutes) or None if segment
+    becomes invalid after trimming.
+    """
+    raw_duration_min = (end_utc - start_utc).total_seconds() / 60.0
+    
+    # Only apply trim to segments longer than threshold
+    min_hours = cfg.min_segment_hours_for_trim
+    if raw_duration_min < (min_hours * 60.0):
+        # Segment too short for trim - return as-is
+        return start_utc, end_utc, raw_duration_min
+    
+    # Calculate trim amounts
+    start_trim = cfg.start_trim_minutes
+    end_trim = cfg.end_trim_minutes
+    total_trim = start_trim + end_trim
+    
+    # Apply safety cap - never trim more than max_trim_percent
+    max_trim = raw_duration_min * (cfg.max_trim_percent / 100.0)
+    if total_trim > max_trim:
+        # Scale down proportionally
+        scale = max_trim / total_trim
+        start_trim *= scale
+        end_trim *= scale
+        total_trim = start_trim + end_trim
+    
+    # Apply trims
+    trimmed_start = start_utc + timedelta(minutes=start_trim)
+    trimmed_end = end_utc - timedelta(minutes=end_trim)
+    
+    # Validate result
+    if trimmed_end <= trimmed_start:
+        # Trimming made segment invalid - shouldn't happen with safety cap
+        logger.warning(
+            f"Sleep segment trim made segment invalid: "
+            f"raw={raw_duration_min:.1f}min, trim={total_trim:.1f}min"
+        )
+        return None
+    
+    trimmed_duration = (trimmed_end - trimmed_start).total_seconds() / 60.0
+    return trimmed_start, trimmed_end, trimmed_duration
 
 
 # -------------------------------------------------------------------------
@@ -272,14 +412,25 @@ def compute_sleep_data(now_utc: Optional[datetime] = None) -> Dict[str, Any]:
                 if not clipped:
                     continue
 
-                dur_min = (clipped.end_utc - clipped.start_utc).total_seconds() / 60.0
+                # Apply realistic trim (fall-asleep and wake-up buffers)
+                trim_result = _apply_sleep_segment_trim(
+                    clipped.start_utc,
+                    clipped.end_utc,
+                    cfg,
+                )
+                if trim_result is None:
+                    continue
+                
+                trimmed_start, trimmed_end, dur_min = trim_result
+                
+                # Check minimum duration after trimming
                 if dur_min < float(cfg.min_sleep_afk_minutes):
                     continue
 
                 inferred_sleep_segments.append(
                     {
-                        "start": clipped.start_utc.isoformat(),
-                        "end": clipped.end_utc.isoformat(),
+                        "start": trimmed_start.isoformat(),
+                        "end": trimmed_end.isoformat(),
                         "duration_minutes": dur_min,
                         "source": "inferred_sleep",
                     }
@@ -384,13 +535,19 @@ def compute_sleep_data(now_utc: Optional[datetime] = None) -> Dict[str, Any]:
         if first_active_after_divider_utc is not None:
             wake_time_local_from_activity = utc_to_local(first_active_after_divider_utc)
 
+        # Calculate sleep quality score and tier
+        sleep_score, sleep_tier = _calculate_sleep_score(
+            total_sleep_minutes, len(sleep_periods_out), cfg
+        )
+
         data: Dict[str, Any] = {
             "timezone": str(get_local_timezone().key),
             "date": day_date.isoformat(),
             "total_sleep_minutes": round(total_sleep_minutes, 1),
             "last_night_sleep_minutes": round(total_sleep_minutes, 1),
             "main_sleep_minutes": round(primary_sleep_minutes, 1),
-            "sleep_quality": _sleep_quality(total_sleep_minutes, cfg),
+            "sleep_quality_score": sleep_score,
+            "sleep_quality": sleep_tier,
             "fragmented": fragmented,
             "segment_count": int(len(sleep_periods_out)),
             "total_wake_minutes": round(total_wake_minutes, 1),
