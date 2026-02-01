@@ -7,13 +7,13 @@
     "social_capacity": "normal"
   },
   "cognitive": {
-    "load": "Medium",
-    "interruption_tolerance": "Medium",
+    "load": "Low",
+    "interruption_tolerance": "High",
     "focus_depth": "Normal"
   },
   "physical": {
     "energy_level": "Normal",
-    "pain_level": "none"
+    "pain_level": "mild"
   },
   "physiology": {
     "hunger_probability": "Low",
@@ -21,10 +21,11 @@
     "caffeine_state": "Under-caffeinated"
   },
   "health_concerns_today": [
-    "Chronic finger pain",
-    "Chronic back pain"
+    "Finger stretch overdue by 19 minutes",
+    "Hydration overdue",
+    "Chronic back pain monitoring"
   ],
-  "general_health_assessment": "User is successfully managing chronic finger and back pain through high compliance with stretch breaks. Energy is entering the post-lunch dip but remains stable after 6.2 hours of quality sleep.",
-  "last_updated": "2026-02-01 01:04 PM",
-  "last_updated_utc": "2026-02-01T21:04:17.045794+00:00"
+  "general_health_assessment": "User is currently in the natural post-lunch energy dip with normal energy levels. Chronic finger pain is at risk of flaring as stretches are nearly 20 minutes overdue.",
+  "last_updated": "2026-02-01 01:26 PM",
+  "last_updated_utc": "2026-02-01T21:26:45.262377+00:00"
 }

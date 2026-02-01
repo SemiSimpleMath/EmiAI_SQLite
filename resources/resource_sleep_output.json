@@ -29,7 +29,7 @@
   "night_start_time": "2026-02-01 00:13",
   "night_start_time_local": "2026-02-01 12:13 AM PST",
   "night_start_time_utc": "2026-02-01T08:13:04.669786+00:00",
-  "last_updated": "2026-02-01 01:08 PM",
+  "last_updated": "2026-02-01 01:26 PM",
   "source_breakdown_minutes": {
     "user_sleep": 0,
     "inferred_sleep": 370.7
@@ -40,5 +40,5 @@
   "day_started": true,
   "day_start_time": "2026-02-01 06:38 AM PST",
   "day_start_time_utc": "2026-02-01T14:38:47.613857+00:00",
-  "last_updated_utc": "2026-02-01T21:08:23.034286+00:00"
+  "last_updated_utc": "2026-02-01T21:26:45.262377+00:00"
 }

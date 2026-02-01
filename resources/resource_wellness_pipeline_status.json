@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "last_updated_utc": "2026-02-01T21:08:23.051285+00:00",
+  "last_updated_utc": "2026-02-01T21:29:01.778519+00:00",
   "boundary_date_local": "2026-02-01",
   "last_daily_reset_utc": "2026-02-01T13:01:42.394839+00:00",
   "last_daily_reset_boundary": "2026-02-01",
@@ -14,7 +14,7 @@
   },
   "stage_runs": {
     "sleep": {
-      "last_run_utc": "2026-02-01T21:08:23.034286+00:00",
+      "last_run_utc": "2026-02-01T21:26:45.262377+00:00",
       "last_reason": "ready",
       "last_debug": {
         "total_sleep_minutes": 370.7,
@@ -25,10 +25,10 @@
       }
     },
     "activity_tracker": {
-      "last_run_utc": "2026-02-01T21:08:23.034286+00:00",
+      "last_run_utc": "2026-02-01T21:26:45.262377+00:00",
       "last_reason": "ready",
       "last_debug": {
-        "last_run_utc": "2026-02-01T21:04:17.045794+00:00",
+        "last_run_utc": "2026-02-01T21:23:45.232744+00:00",
         "tickets_found": 0,
         "chat_messages": 0,
         "agent_called": false,
@@ -36,7 +36,7 @@
       }
     },
     "daily_context_generator": {
-      "last_run_utc": "2026-02-01T21:04:17.045794+00:00",
+      "last_run_utc": "2026-02-01T21:26:45.262377+00:00",
       "last_reason": "ready",
       "last_debug": {
         "mode": "incremental",
@@ -50,7 +50,7 @@
       }
     },
     "health_inference": {
-      "last_run_utc": "2026-02-01T21:04:17.045794+00:00",
+      "last_run_utc": "2026-02-01T21:26:45.262377+00:00",
       "last_reason": "ready",
       "last_debug": {
         "output_keys": [
@@ -64,7 +64,7 @@
       }
     },
     "day_flow_orchestrator": {
-      "last_run_utc": "2026-02-01T21:04:17.045794+00:00",
+      "last_run_utc": "2026-02-01T21:26:45.262377+00:00",
       "last_reason": "ready",
       "last_debug": {
         "output_keys": [
@@ -93,7 +93,7 @@
       }
     },
     "afk_statistics": {
-      "last_run_utc": "2026-02-01T21:08:23.034286+00:00",
+      "last_run_utc": "2026-02-01T21:26:45.262377+00:00",
       "last_reason": "ready",
       "last_debug": {
         "boundary_time_local_hm": "05:00",
@@ -163,6 +163,6 @@
       }
     },
     "schema_version": 2,
-    "last_updated_utc": "2026-02-01T21:08:23.034286+00:00"
+    "last_updated_utc": "2026-02-01T21:26:45.262377+00:00"
   }
 }
