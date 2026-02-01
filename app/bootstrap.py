@@ -100,10 +100,14 @@ def initialize_services(app):
     logger.info("✅ Background task manager started (physical_status, proactive, location)")
 
     # Initialize DJ Manager (music automation)
-    # Note: Does not auto-start; user enables via UI or command
+    #
+    # IMPORTANT:
+    # - DJ runs as a long-lived manager thread (like BackgroundTaskManager), independent of UI.
+    # - Heavy work stays lazy: dataset/agents are only loaded when a pick is requested.
     from app.assistant.dj_manager import get_dj_manager
     dj_manager = get_dj_manager()
     ServiceLocator.register('dj_manager', dj_manager)
-    logger.info("✅ DJ Manager initialized (enable via /music or command)")
+    dj_manager.start()
+    logger.info("✅ DJ Manager initialized + thread started (heavy resources load on pick)")
 
     return DI

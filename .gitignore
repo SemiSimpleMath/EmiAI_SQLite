@@ -99,3 +99,9 @@ temp_audio/
 
 app/assistant/lib/core_tools/credentials/
 *.pickle
+
+# SQLite transient files
+*.db-wal
+*.db-shm
+*.db-journal
+
