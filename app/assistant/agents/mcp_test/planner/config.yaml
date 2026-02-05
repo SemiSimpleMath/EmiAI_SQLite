@@ -1,0 +1,24 @@
+name: mcp_test::planner
+class_name: Planner
+color: "green"
+llm_params:
+  llm_provider: "openai"
+  engine: "gpt-5-mini"
+  temperature: 0.5
+
+allowed_tools: "all"
+except_tools: [mcp_test_manager]
+allowed_nodes: [flow_exit_node]
+
+user_context_items:
+  - date_time
+  - task
+  - information
+  - recent_history
+  - checklist
+  - action_count
+
+system_context_items:
+  - tool_descriptions
+  - allowed_nodes
+

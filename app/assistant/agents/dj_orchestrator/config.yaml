@@ -1,0 +1,19 @@
+name: dj_orchestrator
+class_name: Agent
+color: "magenta"
+llm_params:
+  llm_provider: "gemini"
+  engine: "gemini-3-flash-preview"
+  temperature: 0.9
+
+system_context_items:
+- resource_music_preferences
+
+user_context_items:
+- date_time
+- day_of_week
+- vibe
+- recently_played
+- last_played
+- provided_songs
+- resource_music_preferences

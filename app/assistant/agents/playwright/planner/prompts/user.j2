@@ -1,0 +1,24 @@
+Today is {{ date_time }}.
+
+Task:
+{{ task }}
+
+{% if information %}
+Additional information:
+{{ information }}
+{% endif %}
+
+{% if checklist %}
+Current checklist:
+{{ checklist }}
+{% endif %}
+
+{% if recent_history %}
+Recent history:
+{{ recent_history }}
+{% endif %}
+
+{% if action_count %}
+Action Count: {{ action_count }}/15
+{% endif %}
+
