@@ -1,31 +1,32 @@
 {
   "mental": {
     "mood": "neutral",
-    "stress_load": "neutral",
-    "anxiety": "low",
-    "mental_energy": "normal",
-    "social_capacity": "normal"
+    "stress_load": "elevated",
+    "anxiety": "neutral",
+    "mental_energy": "low",
+    "social_capacity": "low"
   },
   "cognitive": {
-    "load": "Low",
-    "interruption_tolerance": "High",
+    "load": "Medium",
+    "interruption_tolerance": "Low",
     "focus_depth": "Normal"
   },
   "physical": {
-    "energy_level": "Normal",
+    "energy_level": "Low",
     "pain_level": "mild"
   },
   "physiology": {
-    "hunger_probability": "Low",
-    "hydration_need": "Medium",
-    "caffeine_state": "Under-caffeinated"
+    "hunger_probability": "Medium",
+    "hydration_need": "High",
+    "caffeine_state": "Cutoff-Reached"
   },
   "health_concerns_today": [
-    "Finger stretch overdue by 19 minutes",
+    "Finger pain management overdue",
+    "Back pain management overdue",
     "Hydration overdue",
-    "Chronic back pain monitoring"
+    "Suboptimal sleep (6.1 hours)"
   ],
-  "general_health_assessment": "User is currently in the natural post-lunch energy dip with normal energy levels. Chronic finger pain is at risk of flaring as stretches are nearly 20 minutes overdue.",
-  "last_updated": "2026-02-01 01:26 PM",
-  "last_updated_utc": "2026-02-01T21:26:45.262377+00:00"
+  "general_health_assessment": "User is finishing the workday with several overdue physical maintenance tasks, increasing the risk of chronic back and finger pain flares. Energy is low due to suboptimal sleep and the late afternoon waning period.",
+  "last_updated": "2026-02-04 04:20 PM",
+  "last_updated_utc": "2026-02-05T00:20:57.538926+00:00"
 }

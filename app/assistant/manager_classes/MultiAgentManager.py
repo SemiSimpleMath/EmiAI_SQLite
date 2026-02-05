@@ -66,14 +66,14 @@ class MultiAgentManager:
             event_hub = DI.event_hub
             try:
                 event_hub.register_event(event_name, handler)
-            except SystemExit as e:
-                # We intercepted a duplicate registration
-                print(f"❌ Duplicate event registration in manager '{self.name}'")
+            except Exception as e:
+                # Duplicate registration or conflicting handler
+                print(f"❌ Event registration failed in manager '{self.name}'")
                 print(f"Event: {event_name}")
                 print(f"Handler: {handler} (ID: {id(handler)})")
-                print("🔍 Stack trace of duplicate registration:")
+                print("🔍 Stack trace of registration attempt:")
                 traceback.print_stack(limit=10)
-                raise e  # Optional: Re-raise or just log
+                raise e
 
     def request_handler(self, user_message: Message):
         """
@@ -85,6 +85,20 @@ class MultiAgentManager:
             self.blackboard.reset_blackboard()
             self.blackboard.update_state_value('task', user_message.task)
             self.blackboard.update_state_value('information', user_message.information)
+
+            # Manager loop counters (reset every request).
+            # These are useful for delegator-gated behaviors (e.g., run critic every N loops).
+            try:
+                self.blackboard.update_global_state_value("manager_name", self.name)
+                self.blackboard.update_global_state_value("manager_loop_count", 0)    # 0-based
+                self.blackboard.update_global_state_value("manager_loop_number", 1)   # 1-based (next loop number)
+                self.blackboard.update_global_state_value(
+                    "manager_max_cycles",
+                    int(self.manager_config.get("max_cycles", 30)),
+                )
+            except Exception:
+                # Keep request startup resilient; counters are optional.
+                pass
 
 
             if user_message.data is not None:
@@ -105,6 +119,22 @@ class MultiAgentManager:
             print(f"\n{'='*80}")
             print(f"🔄 MANAGER LOOP - Cycle {cycles + 1}/{max_cycles}")
             print(f"{'='*80}")
+
+            # Expose current loop counters on the blackboard BEFORE delegator runs.
+            # This makes them visible to delegator/planner logic without relying on local variables.
+            try:
+                self.blackboard.update_state_value("manager_loop_count", cycles)       # 0-based completed loops so far
+                self.blackboard.update_state_value("manager_loop_number", cycles + 1) # 1-based current loop number
+                # Also update global so nested scopes can always read it.
+                self.blackboard.update_global_state_value("manager_loop_count", cycles)
+                self.blackboard.update_global_state_value("manager_loop_number", cycles + 1)
+            except Exception:
+                pass
+
+            # Cooperative cancellation hook (used by orchestrators).
+            if self.blackboard.get_state_value("cancelled", False) or self.blackboard.get_state_value("cancel", False):
+                logger.warning(f"⚠️ {self.name} cancelled. Exiting loop.")
+                return "cancelled"
             
             if cycles >= max_cycles:
                 logger.warning(f"⚠️ {self.name} reached max cycles ({max_cycles}).")

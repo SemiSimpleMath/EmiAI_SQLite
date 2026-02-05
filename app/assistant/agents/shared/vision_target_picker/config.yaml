@@ -1,0 +1,20 @@
+name: shared::vision_target_picker
+class_name: Agent
+color: "blue"
+llm_params:
+  llm_provider: "openai"
+  # Vision-capable model: returns coordinates from screenshots.
+  engine: "gpt-5-mini"
+  temperature: 1
+
+allowed_tools: []
+except_tools: []
+
+system_context_items: []
+
+user_context_items:
+  - date_time
+  - task
+  - image
+  # Intentionally omit recent_history (can be huge). ToolCaller passes screenshot marker via incoming_message.
+

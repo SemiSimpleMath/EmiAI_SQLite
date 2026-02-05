@@ -1,3 +1,4 @@
+import os
 from jinja2 import Template
 
 from app.assistant.agent_classes.Agent import Agent  # Base Agent class
@@ -34,10 +35,10 @@ class Blackboard(Agent):
                 print(f"[{self.name}] Error during prompt construction: {e}")
                 logger.error(f"[{self.name}] Error during prompt construction: {e}")
                 return None
-            print("\n\n----- BLACKBOARD DEBUG -----")
-            print(messages, f"{self.name} Summarization Input")
-
-            print("\n\n\n\n")
+            if os.environ.get("EMI_PRINT_PROMPTS", "0") == "1":
+                print("\n\n----- BLACKBOARD DEBUG -----")
+                print(messages, f"{self.name} Summarization Input")
+                print("\n\n\n\n")
 
             schema = self.config.get('structured_output')
             result = self._run_llm_with_schema(messages, schema)

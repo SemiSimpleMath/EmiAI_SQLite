@@ -4,8 +4,8 @@ color: green
 llm_params:
   llm_provider: openai
   api_key: dummy_api_key
-  engine: gpt-4o-mini
-  temperature: .1
+  engine: gpt-5-mini
+  temperature: 1
 
 system_context_items:
   - allowed_nodes

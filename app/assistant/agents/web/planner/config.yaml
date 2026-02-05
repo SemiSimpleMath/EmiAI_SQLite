@@ -7,17 +7,24 @@ llm_params:
   temperature: 1
   api_key: "dummy_api_key"
 
-allowed_nodes: [shared::writer, shared::mathematician, shared::final_answer]
+allowed_nodes: [shared::writer, shared::mathematician, shared::final_answer_lite]
 
 allowed_tools:
   all
 
 except_tools: [emi_team]
 
+append_fields: [progress_report]
+
 user_context_items:
   - date_time
   - task
   - information
+  - orchestrator_global_objective
+  - orchestrator_global_guidance
+  - orchestrator_job_id
+  - orchestrator_job_guidance
+  - progress_report
   - recent_history
   - checklist
   - action_count

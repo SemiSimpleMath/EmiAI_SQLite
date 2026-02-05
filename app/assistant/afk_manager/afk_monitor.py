@@ -91,6 +91,9 @@ class AFKMonitor:
         self._current_afk_start_utc: Optional[datetime] = None
         self._current_idle_seconds_start: Optional[int] = None
         self._current_active_start_utc: Optional[datetime] = None
+        # Persisted transition timestamps (stable API for interval consumers)
+        self._last_afk_start_utc: Optional[datetime] = None
+        self._last_afk_return_utc: Optional[datetime] = None
         
         # Provisional segment tracking
         self._current_segment_id: Optional[int] = None
@@ -331,6 +334,7 @@ class AFKMonitor:
             
             # Track when AFK started (for current_afk_minutes calculation)
             self._current_afk_start_utc = now_utc
+            self._last_afk_start_utc = now_utc
             self._current_idle_seconds_start = int(idle_seconds)
             self._current_active_start_utc = None
             self._current_segment_id = None
@@ -355,6 +359,8 @@ class AFKMonitor:
 
             # Start new active session
             self._current_active_start_utc = now_utc
+            # Persist the return timestamp for downstream interval consumers.
+            self._last_afk_return_utc = now_utc
             
             # Clear AFK state
             self._current_afk_start_utc = None
@@ -440,6 +446,10 @@ class AFKMonitor:
             "is_afk": bool(is_afk),
             "last_checked": now_utc.isoformat(),
         }
+
+        # Stable API: always include these keys (None until first transition observed).
+        snapshot["last_afk_start_utc"] = self._last_afk_start_utc.isoformat() if self._last_afk_start_utc else None
+        snapshot["last_afk_return_utc"] = self._last_afk_return_utc.isoformat() if self._last_afk_return_utc else None
 
         # While active, expose the current active start time
         if not is_afk and self._current_active_start_utc is not None:

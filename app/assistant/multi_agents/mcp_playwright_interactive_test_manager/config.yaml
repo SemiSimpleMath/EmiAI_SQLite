@@ -1,0 +1,69 @@
+name: mcp_playwright_interactive_test_manager
+class_name: MultiAgentManager
+description: "Manager test: Playwright MCP interactive (snapshot -> click -> wait -> back)."
+# CNN flows can take extra steps (wait -> snapshot -> read_tool_result -> click -> wait -> snapshot -> screenshot -> summarize).
+# Give the planner enough runway to finish without hitting max_cycles mid-task.
+# Real websites (Flickr/CNN) often require extra snapshot/read_tool_result cycles.
+max_cycles: 60
+
+role_bindings:
+  delegator: mcp_playwright_interactive_test::delegator
+
+agents:
+  - name: shared::delegator
+    class: Delegator
+  - name: mcp_playwright_interactive_test::delegator
+    class: WebCriticDelegator
+  - name: mcp_playwright_interactive_test::planner
+    class: Planner
+  - name: shared::tool_arguments
+    class: ToolArguments
+  - name: shared::vision_page_scout
+    class: Agent
+  - name: shared::vision_describe
+    class: Agent
+  - name: shared::web_critic
+    class: Agent
+  - name: shared::final_answer
+    class: FinalAnswer
+
+control_nodes:
+  - name: tool_caller
+    class: ToolCaller
+  - name: tool_result_handler
+    class: ToolResultHandler
+  - name: flow_exit_node
+    class: FlowExitNode
+  - name: manager_exit_node
+    class: ManagerExitNode
+
+tools:
+  allowed_tools:
+    - mcp::npm/playwright-mcp::browser_navigate
+    - mcp::npm/playwright-mcp::browser_snapshot
+    - mcp::npm/playwright-mcp::browser_click
+    - mcp::npm/playwright-mcp::browser_type
+    - mcp::npm/playwright-mcp::browser_press_key
+    - mcp::npm/playwright-mcp::browser_wait_for
+    - mcp::npm/playwright-mcp::browser_navigate_back
+    - mcp::npm/playwright-mcp::browser_take_screenshot
+    - mcp::npm/playwright-mcp::browser_run_code
+    - mcp::npm/playwright-mcp::browser_tabs
+    - mcp::npm/playwright-mcp::browser_mouse_move_xy
+    - mcp::npm/playwright-mcp::browser_mouse_click_xy
+    - mcp::npm/playwright-mcp::browser_mouse_wheel
+    - mcp::npm/playwright-mcp::browser_close
+    - read_tool_result
+  except_tools: []
+
+# Graceful-exit loop budget (used when max_cycles is reached / error paths).
+max_exit_cycles: 100
+
+flow_config:
+  state_map:
+    "mcp_playwright_interactive_test::delegator": "mcp_playwright_interactive_test::planner"
+    "shared::tool_arguments": "tool_caller"
+    "tool_caller": "tool_result_handler"
+    "shared::web_critic": "mcp_playwright_interactive_test::planner"
+    "shared::final_answer": "manager_exit_node"
+

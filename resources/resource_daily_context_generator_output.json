@@ -1,36 +1,41 @@
 {
-  "date": "2026-02-01",
-  "expected_schedule": "Give Bonnie and Clyde flea medication with food 5:00 PM - 6:00 PM\nFamily time 6:00 PM - 8:00 PM\nWalk the dogs 9:00 PM - 9:30 PM",
-  "day_theme": "Today is a Sunday focused on pet care and family time. Jukka was practicing intermittent fasting until he broke his fast at 11:00 AM.",
+  "date": "2026-02-04",
+  "expected_schedule": "Work 6:30 AM - 4:30 PM\nAnalytics Team Meeting 9:15 AM - 10:00 AM\nFamily time 6:00 PM - 8:00 PM\nTrash Night! 8:00 PM - 12:00 AM\nWalk the dogs 9:00 PM - 9:30 PM",
+  "day_theme": "Jukka is working an early Wednesday starting at 6:30 AM while practicing intermittent fasting and managing mid-afternoon fatigue and hunger. The day centers around work tasks and an Analytics Team Meeting, followed by evening family time and trash night.",
   "milestones": [
     {
-      "time": "7:01 AM",
-      "description": "Skipped breakfast; confirmed intermittent fasting.",
+      "time": "6:30 AM",
+      "description": "Started working early.",
       "evidence": "Reported"
     },
     {
-      "time": "8:02 AM",
-      "description": "Postponed morning dog walk.",
+      "time": "8:00 AM - 8:30 AM",
+      "description": "Take out the dogs.",
+      "evidence": "Calendar"
+    },
+    {
+      "time": "9:15 AM - 10:00 AM",
+      "description": "Analytics Team Meeting.",
+      "evidence": "Calendar"
+    },
+    {
+      "time": "12:10 PM",
+      "description": "Lunch.",
       "evidence": "Reported"
     },
     {
-      "time": "9:30 AM - 9:40 AM",
-      "description": "Cooked breakfast for family; Katy took the dogs for a walk.",
-      "evidence": "Reported"
-    },
-    {
-      "time": "11:00 AM - 11:23 AM",
-      "description": "Broke fast and had lunch.",
+      "time": "2:04 PM",
+      "description": "Coffee break (managing hunger and fatigue).",
       "evidence": "Reported"
     },
     {
       "time": "[Currently]",
-      "description": "At keyboard.",
+      "description": "At keyboard working.",
       "evidence": "Inferred",
       "ongoing": true
     }
   ],
-  "current_status": "At keyboard",
-  "last_updated": "2026-02-01 01:26 PM",
-  "last_updated_utc": "2026-02-01T21:26:45.262377+00:00"
+  "current_status": "At work",
+  "last_updated": "2026-02-04 04:20 PM",
+  "last_updated_utc": "2026-02-05T00:20:57.538926+00:00"
 }

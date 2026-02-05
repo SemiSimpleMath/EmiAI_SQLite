@@ -65,7 +65,7 @@ def create_app(config_class="config.DevelopmentConfig"):
     initialize_system()
 
 
-# Import and register blueprints
+    # Import and register blueprints
     from .routes import (
         index_route_bp,
         main_bp,
@@ -85,6 +85,7 @@ def create_app(config_class="config.DevelopmentConfig"):
         health_check_bp,
         debug_status_bp,
         debug_orchestrator_bp,
+        debug_logging_bp,
         ticket_api_bp
     )
     
@@ -121,6 +122,7 @@ def create_app(config_class="config.DevelopmentConfig"):
     app.register_blueprint(health_check_bp)
     app.register_blueprint(debug_status_bp)
     app.register_blueprint(debug_orchestrator_bp)
+    app.register_blueprint(debug_logging_bp)
     app.register_blueprint(ticket_api_bp)
     
     # Wellness management
@@ -130,6 +132,10 @@ def create_app(config_class="config.DevelopmentConfig"):
     # Music player
     from app.routes.music import music_bp
     app.register_blueprint(music_bp)
+
+    # Agent progress (separate tab, separate socket client)
+    from app.routes.progress import progress_bp
+    app.register_blueprint(progress_bp)
     
     # KG/Taxonomy/Graph Visualizer routes - only register if available (disabled in alpha)
     # All of these require chromadb/sentence-transformers
@@ -145,5 +151,12 @@ def create_app(config_class="config.DevelopmentConfig"):
     app.register_blueprint(user_settings_bp)
     app.register_blueprint(setup_bp)
     app.register_blueprint(preferences_bp)
+
+    # Apply saved logging controls after services are initialized (console threshold + per-logger overrides)
+    try:
+        from app.assistant.utils.logging_config import apply_saved_logging_controls_from_user_settings
+        apply_saved_logging_controls_from_user_settings()
+    except Exception:
+        pass
 
     return app, socketio

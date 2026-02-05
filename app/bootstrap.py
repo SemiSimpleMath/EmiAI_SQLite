@@ -6,6 +6,9 @@ from app.assistant.agent_registry.agent_registry import AgentRegistry
 from app.assistant.lib.tool_registry.tool_registry import ToolRegistry
 from app.assistant.manager_registry.manager_registry import ManagerRegistry
 from app.assistant.multi_agent_manager_factory.MultiAgentManagerFactory import MultiAgentManagerFactory
+from app.assistant.orchestrator_registry.orchestrator_registry import OrchestratorRegistry
+from app.assistant.orchestrator_classes.OrchestratorFactory import OrchestratorFactory
+from app.assistant.orchestrator_registry.orchestrator_instance_handler import OrchestratorInstanceHandler
 from app.assistant.lib.data_conversion_module.DataConversion import DataConversionModule
 from app.assistant.global_blackboard.global_blackboard import GlobalBlackBoard
 from app.resource_manager.resource_manager import ResourceManager
@@ -43,6 +46,8 @@ def initialize_services(app):
     ServiceLocator.register('agent_registry', AgentRegistry())
     ServiceLocator.register('tool_registry', ToolRegistry())
     DI.tool_registry.load_tools()
+    DI.tool_registry.load_mcp_servers()
+    DI.tool_registry.load_mcp_tool_cache(enabled_only=True)
     DI.agent_registry.load_agents()
     ServiceLocator.register('agent_factory', AgentFactory(agent_registry=DI.agent_registry, tool_registry=DI.tool_registry))
     base_path = Path(__file__).resolve().parents[0] / "assistant" / "multi_agents"
@@ -50,6 +55,19 @@ def initialize_services(app):
     ServiceLocator.register('manager_registry', manager_registry)
     manager_factory = MultiAgentManagerFactory()
     ServiceLocator.register("multi_agent_manager_factory", manager_factory)
+
+    # Orchestrators (parallel to managers)
+    orchestrators_path = Path(__file__).resolve().parents[0] / "assistant" / "orchestrators"
+    orchestrator_registry = OrchestratorRegistry(orchestrators_path)
+    ServiceLocator.register("orchestrator_registry", orchestrator_registry)
+    orchestrator_registry.preload_all()
+    ServiceLocator.register("orchestrator_instance_handler", OrchestratorInstanceHandler())
+    orchestrator_factory = OrchestratorFactory(
+        registry=orchestrator_registry,
+        tool_registry=DI.tool_registry,
+        agent_registry=DI.agent_registry,
+    )
+    ServiceLocator.register("orchestrator_factory", orchestrator_factory)
 
     data_conversion_module = DataConversionModule()
     ServiceLocator.register("data_conversion_module", data_conversion_module)

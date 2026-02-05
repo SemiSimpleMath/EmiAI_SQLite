@@ -1,6 +1,8 @@
 import json
 from datetime import datetime
-from typing import Dict
+import re
+from urllib.parse import urlsplit, parse_qsl
+from typing import Dict, List, Optional, Tuple
 
 from app.assistant.utils.pydantic_classes import ToolResult
 
@@ -13,6 +15,207 @@ class DataConversionModule:
     def __init__(self):
         return
 
+    # ---------------------------------------------------------------------
+    # Playwright snapshot cleaning (deterministic, no LLM)
+    # ---------------------------------------------------------------------
+    @staticmethod
+    def _clean_playwright_snapshot_for_history(
+        snapshot_yaml: str,
+        *,
+        max_items: int = 40,
+        max_chars: int = 1800,
+    ) -> str:
+        """
+        Deterministically reduce a large Playwright accessibility snapshot to a compact,
+        high-signal "interaction digest" suitable for prompt history (<~2k chars).
+
+        Design goals:
+        - Do NOT require an LLM.
+        - Prefer actionable controls (buttons/links/textboxes/comboboxes/options).
+        - Surface likely overlay/consent blockers first.
+        - Stop early (streaming) once enough candidates are collected.
+
+        Easy removal:
+        - This function is only called from `_convert_mcp_playwright_tool_result`.
+          Replacing those call sites with `_summarize_snapshot_refs` reverts behavior.
+        """
+        if not snapshot_yaml:
+            return ""
+
+        def _shorten_url(u: Optional[str], *, max_len: int = 120) -> Optional[str]:
+            """
+            For prompt history the agent usually only needs refs, not full URLs.
+            DoorDash (and similar sites) often include extremely long cursor/query params.
+            We keep only the path (drop query/fragment) to prevent multi-page history spam.
+            If we cannot extract a reasonable path, return a generic placeholder.
+            """
+            if not u:
+                return None
+            u = str(u).strip()
+            if not u:
+                return None
+            try:
+                parts = urlsplit(u)
+                path = parts.path or ""
+                # For "URLs" that are actually just huge strings, path can be empty.
+                if not path:
+                    return "[url]"
+                if len(path) <= max_len:
+                    return path
+                return path[: max_len - 3] + "..."
+            except Exception:
+                return "[url]"
+
+        actionable_roles = {
+            "link",
+            "button",
+            "textbox",
+            "search",
+            "menuitem",
+            "checkbox",
+            "radio",
+            "combobox",
+            "tab",
+            "option",
+        }
+        input_roles = {"textbox", "combobox", "search"}
+        consent_words = (
+            "cookie",
+            "consent",
+            "accept",
+            "reject",
+            "agree",
+            "continue",
+            "close",
+            "dismiss",
+            "upgrade",
+            "sign in",
+            "sign up",
+        )
+
+        # Match snapshot lines like:
+        # - button "See what's nearby" [ref=e45]
+        # - link "Burger King" [ref=e1364]
+        pat = re.compile(
+            r'^\s*-\s*(?P<role>[a-zA-Z0-9_<>\-]+)'
+            r'(?:\s+"(?P<label>[^"]{0,220})")?'
+            r'(?P<rest>.*?\[ref=(?P<ref>[^\]]+)\].*)$'
+        )
+
+        pending_url: Optional[str] = None
+        overlays: List[Tuple[int, str]] = []
+        inputs: List[Tuple[int, str]] = []
+        actions: List[Tuple[int, str]] = []
+
+        def _mk_line(role: str, label: str, ref: str, url: Optional[str]) -> str:
+            parts = [role]
+            if label:
+                safe_label = label.encode("ascii", "ignore").decode("ascii")
+                if len(safe_label) > 120:
+                    safe_label = safe_label[:117] + "..."
+                parts.append(f"\"{safe_label}\"")
+            parts.append(f"[ref={ref}]")
+            if url and role == "link":
+                short = _shorten_url(url)
+                if short:
+                    parts.append(f"url={short}")
+            return " ".join(parts)
+
+        # Stream scan: collect candidates and stop early.
+        for raw_line in snapshot_yaml.splitlines():
+            line = raw_line.rstrip()
+
+            # Best-effort: attach /url to the next emitted link.
+            murl = re.search(r"/url:\s*(\S+)", line)
+            if murl:
+                pending_url = murl.group(1).strip()
+                continue
+
+            m = pat.match(line)
+            if not m:
+                continue
+
+            role = (m.group("role") or "").strip().lower()
+            label = (m.group("label") or "").strip()
+            ref = (m.group("ref") or "").strip()
+            if not ref:
+                continue
+
+            label_l = label.lower()
+
+            # Score: overlays/consent highest, then inputs, then general actions.
+            score = 0
+            if any(w in label_l for w in consent_words):
+                score += 100
+            if role in {"dialog", "alert", "banner"}:
+                score += 70
+            if role in input_roles:
+                score += 40
+            if role in actionable_roles:
+                score += 10
+
+            # Skip iframe noise unless it's clearly important.
+            if role == "iframe" and score < 60:
+                continue
+
+            out_line = _mk_line(role=role, label=label, ref=ref, url=pending_url)
+            if pending_url and role == "link":
+                pending_url = None
+
+            # Bucket
+            if any(w in label_l for w in consent_words) or role in {"dialog", "alert", "banner"}:
+                overlays.append((score, out_line))
+            elif role in input_roles:
+                inputs.append((score, out_line))
+            elif role in actionable_roles:
+                actions.append((score, out_line))
+
+            # Early exit once we have enough overall candidates.
+            if (len(overlays) + len(inputs) + len(actions)) >= max_items * 3:
+                break
+
+        def _take(items: List[Tuple[int, str]], n: int) -> List[str]:
+            items.sort(key=lambda x: x[0], reverse=True)
+            seen = set()
+            out: List[str] = []
+            for _s, v in items:
+                if v in seen:
+                    continue
+                seen.add(v)
+                out.append(v)
+                if len(out) >= n:
+                    break
+            return out
+
+        # Build digest with stable structure.
+        # Keep overlays first, then inputs, then other actions.
+        overlay_lines = _take(overlays, n=max(0, min(8, max_items)))
+        input_lines = _take(inputs, n=max(0, min(10, max_items)))
+        action_lines = _take(actions, n=max(0, min(max_items, 30)))
+
+        lines: List[str] = []
+        if overlay_lines:
+            lines.append("Overlay/consent candidates:")
+            lines.extend([f"- {l}" for l in overlay_lines])
+        if input_lines:
+            if lines:
+                lines.append("")
+            lines.append("Inputs:")
+            lines.extend([f"- {l}" for l in input_lines])
+        if action_lines:
+            if lines:
+                lines.append("")
+            lines.append("Top actions:")
+            lines.extend([f"- {l}" for l in action_lines])
+
+        digest = "\n".join(lines).strip()
+        if not digest:
+            return ""
+
+        if len(digest) > max_chars:
+            digest = digest[: max_chars - 20].rstrip() + "\n\n[truncated]"
+        return digest
+
     @staticmethod
     def convert(tool_result: ToolResult, level: str = "summary") -> Dict:
         """
@@ -20,7 +223,6 @@ class DataConversionModule:
         Uses a mapping to route to the correct conversion function.
         """
         result_type = tool_result.result_type
-        print("At convert function")
         conversion_methods = {
             "fetch_email": DataConversionModule._convert_email,
             "search_result": DataConversionModule._convert_search,
@@ -35,7 +237,12 @@ class DataConversionModule:
             "final_answer": DataConversionModule._convert_final_answer,
             "node_description": DataConversionModule._convert_node_description,
             "search_web": DataConversionModule._convert_search_web,
-            "taxonomy_paths": DataConversionModule._convert_taxonomy_paths
+            "taxonomy_paths": DataConversionModule._convert_taxonomy_paths,
+            # Generic wrapper results (e.g., MCP tools return result_type="tool_result")
+            "tool_result": DataConversionModule._convert_generic_tool_result,
+            "error": DataConversionModule._convert_generic_tool_result,
+            # Artifact reads: return content as-is so the planner can actually use it.
+            "tool_result_artifact": DataConversionModule._convert_tool_result_artifact,
         }
         if result_type in conversion_methods:
             return conversion_methods[result_type](tool_result, level)
@@ -58,6 +265,294 @@ class DataConversionModule:
             readable_output = f"Tool '{result_type}' returned:\n{json.dumps(result_data, indent=2, default=str)}"
             
             return {"tool_result": readable_output}
+
+    @staticmethod
+    def _convert_generic_tool_result(tool_result: ToolResult, level: str = "summary") -> Dict:
+        """
+        Compact summary for generic tool wrappers like MCP (result_type="tool_result").
+        Keeps planner history small; full payload is stored as an artifact and referenced separately.
+        """
+        data = tool_result.data if isinstance(tool_result.data, dict) else {}
+        if data.get("backend") == "mcp" and data.get("server_id") == "npm/playwright-mcp":
+            return DataConversionModule._convert_mcp_playwright_tool_result(tool_result, level)
+
+        # Prefer tiny previews; the agent can call read_tool_result if it truly needs details.
+        content = (tool_result.content or "").strip()
+        if len(content) > 1200:
+            content = content[:1200] + "\n\n[truncated]"
+
+        meta_bits = []
+        backend = data.get("backend")
+        if backend:
+            meta_bits.append(f"backend={backend}")
+        server_id = data.get("server_id")
+        if server_id:
+            meta_bits.append(f"server_id={server_id}")
+        mcp_tool = data.get("mcp_tool_name")
+        if mcp_tool:
+            meta_bits.append(f"tool={mcp_tool}")
+        attachments = data.get("attachments") if isinstance(data, dict) else None
+        if isinstance(attachments, list) and attachments:
+            meta_bits.append(f"attachments={len(attachments)}")
+
+        header = "Tool returned"
+        if meta_bits:
+            header += f" ({', '.join(meta_bits)})"
+
+        if not content:
+            content = "[no content]"
+
+        return {"tool_result": f"{header}:\n{content}"}
+
+    @staticmethod
+    def _convert_mcp_playwright_tool_result(tool_result: ToolResult, level: str = "summary") -> Dict:
+        """
+        Specialized, high-signal history trimming for Playwright MCP tool results.
+
+        Goal:
+        - Keep prompts small and actionable (URL/title + ref index)
+        - Avoid iframe/ad-dominated snapshot dumps
+        - Preserve full-fidelity via tool_result artifact + read_tool_result when needed
+        """
+        data = tool_result.data if isinstance(tool_result.data, dict) else {}
+        mcp_tool = data.get("mcp_tool_name") or ""
+        raw = (tool_result.content or "").strip()
+        # Keep history ASCII-safe; non-ASCII in tool output is common (e.g., fancy quotes in site content).
+        raw_ascii = raw.encode("ascii", "ignore").decode("ascii")
+
+        url, title = DataConversionModule._extract_playwright_page_meta(raw_ascii)
+        header_bits = ["backend=mcp", "server_id=npm/playwright-mcp"]
+        if mcp_tool:
+            header_bits.append(f"tool={mcp_tool}")
+        header = f"Tool returned ({', '.join(header_bits)}):"
+
+        # Screenshots: keep minimal text; the image attachment markers are stored separately on the Message metadata.
+        if mcp_tool == "browser_take_screenshot":
+            parts = [header]
+            if url:
+                parts.append(f"- Page URL: {url}")
+            if title:
+                parts.append(f"- Page Title: {title}")
+            parts.append("Screenshot captured (see attached image marker).")
+            return {"tool_result": "\n".join(parts)}
+
+        # Snapshots: extract a compact "ref index" view.
+        if mcp_tool == "browser_snapshot":
+            snapshot = DataConversionModule._extract_markdown_code_block(raw_ascii, fence_lang="yaml")
+            digest = DataConversionModule._clean_playwright_snapshot_for_history(snapshot or "")
+            parts = [header]
+            if url:
+                parts.append(f"- Page URL: {url}")
+            if title:
+                parts.append(f"- Page Title: {title}")
+            if digest:
+                parts.append(digest)
+            else:
+                # Fallback: avoid dumping huge trees; keep a small preview.
+                preview = raw_ascii[:1200] + ("\n\n[truncated]" if len(raw_ascii) > 1200 else "")
+                parts.append(preview if preview else "[no content]")
+            parts.append("Tip: use read_tool_result on [tool_result_id: ...] for full snapshot text.")
+            return {"tool_result": "\n".join(parts)}
+
+        # Click/navigate/wait/back/close often include a full snapshot block; prefer a small ref index instead.
+        if mcp_tool in {
+            "browser_navigate",
+            "browser_click",
+            "browser_wait_for",
+            "browser_navigate_back",
+            "browser_close",
+        }:
+            snapshot = DataConversionModule._extract_markdown_code_block(raw_ascii, fence_lang="yaml")
+            digest = DataConversionModule._clean_playwright_snapshot_for_history(snapshot or "", max_items=25)
+            parts = [header]
+            if url:
+                parts.append(f"- Page URL: {url}")
+            if title:
+                parts.append(f"- Page Title: {title}")
+            if digest:
+                parts.append(digest)
+            parts.append("Tip: use read_tool_result on [tool_result_id: ...] for full details.")
+            return {"tool_result": "\n".join(parts)}
+
+        # Run-code and other tools: keep a small ASCII preview.
+        preview = raw_ascii[:900] + ("\n\n[truncated]" if len(raw_ascii) > 900 else "")
+        parts = [header]
+        if url:
+            parts.append(f"- Page URL: {url}")
+        if title:
+            parts.append(f"- Page Title: {title}")
+        parts.append(preview if preview else "[no content]")
+        return {"tool_result": "\n".join(parts)}
+
+    @staticmethod
+    def _extract_playwright_page_meta(text: str) -> Tuple[Optional[str], Optional[str]]:
+        """
+        Extract page URL/title from Playwright MCP markdown.
+        Returns (url, title).
+        """
+        url = None
+        title = None
+        for line in (text or "").splitlines():
+            line = line.strip()
+            if line.startswith("- Page URL:"):
+                url = line.split(":", 2)[-1].strip()
+            elif line.startswith("- Page Title:"):
+                title = line.split(":", 2)[-1].strip()
+            if url and title:
+                break
+        return url, title
+
+    @staticmethod
+    def _extract_markdown_code_block(text: str, fence_lang: str = "") -> Optional[str]:
+        """
+        Best-effort extraction of the first fenced markdown code block.
+        If fence_lang is provided, matches ```<lang>.
+        Returns inner text (no fences).
+        """
+        t = text or ""
+        if fence_lang:
+            m = re.search(rf"```{re.escape(fence_lang)}\s*\n([\s\S]*?)\n```", t)
+        else:
+            m = re.search(r"```\s*\n([\s\S]*?)\n```", t)
+        if not m:
+            return None
+        return (m.group(1) or "").strip()
+
+    @staticmethod
+    def _summarize_snapshot_refs(snapshot_yaml: str, limit: int = 60) -> List[str]:
+        """
+        Reduce a Playwright accessibility snapshot (YAML-ish) to a compact list of actionable refs.
+        """
+        if not snapshot_yaml:
+            return []
+
+        def _shorten_url(u: Optional[str], *, max_len: int = 120) -> Optional[str]:
+            if not u:
+                return None
+            u = str(u).strip()
+            if not u:
+                return None
+            try:
+                parts = urlsplit(u)
+                path = parts.path or ""
+                if not path:
+                    return "[url]"
+                if len(path) <= max_len:
+                    return path
+                return path[: max_len - 3] + "..."
+            except Exception:
+                return "[url]"
+
+        actionable_roles = {
+            "link",
+            "button",
+            "textbox",
+            "search",
+            "menuitem",
+            "checkbox",
+            "radio",
+            "combobox",
+            "tab",
+            "option",
+        }
+        consent_words = (
+            "cookie",
+            "consent",
+            "accept",
+            "reject",
+            "agree",
+            "continue",
+            "close",
+            "dismiss",
+            "upgrade",
+            "sign in",
+            "sign up",
+        )
+
+        items: List[Tuple[int, str]] = []
+
+        # Match lines like:
+        # - link "Text" [ref=e123] [cursor=pointer]:
+        # Also handles non-quoted labels.
+        pat = re.compile(
+            r'^\s*-\s*(?P<role>[a-zA-Z0-9_<>\-]+)'
+            r'(?:\s+"(?P<label>[^"]{0,200})")?'
+            r'(?P<rest>.*?\[ref=(?P<ref>[^\]]+)\].*)$'
+        )
+
+        pending_url: Optional[str] = None
+        for raw_line in snapshot_yaml.splitlines():
+            line = raw_line.rstrip()
+
+            # Capture /url lines to attach to the last link we emitted (best-effort).
+            murl = re.search(r"/url:\s*(\S+)", line)
+            if murl:
+                pending_url = murl.group(1).strip()
+                continue
+
+            m = pat.match(line)
+            if not m:
+                continue
+
+            role = (m.group("role") or "").strip().lower()
+            label = (m.group("label") or "").strip()
+            ref = (m.group("ref") or "").strip()
+
+            # Score for ordering: consent/modals first, then actionable roles.
+            score = 0
+            label_l = label.lower()
+            if any(w in label_l for w in consent_words):
+                score += 100
+            if role in actionable_roles:
+                score += 10
+            if role in {"dialog", "alert", "banner"}:
+                score += 50
+
+            # Skip obvious iframe noise unless it looks actionable.
+            if role == "iframe" and score < 50:
+                continue
+
+            # Build a concise index line.
+            parts = [role]
+            if label:
+                # Keep ASCII-safe label
+                safe_label = label.encode("ascii", "ignore").decode("ascii")
+                parts.append(f"\"{safe_label}\"")
+            parts.append(f"[ref={ref}]")
+            if pending_url and role == "link":
+                short = _shorten_url(pending_url)
+                if short:
+                    parts.append(f"url={short}")
+                pending_url = None
+
+            items.append((score, " ".join(parts)))
+            if len(items) >= limit * 3:
+                break
+
+        # Sort by score desc, then keep first N unique lines.
+        items.sort(key=lambda x: x[0], reverse=True)
+        seen = set()
+        out: List[str] = []
+        for _score, line in items:
+            if line in seen:
+                continue
+            seen.add(line)
+            out.append(line)
+            if len(out) >= limit:
+                break
+        return out
+
+    @staticmethod
+    def _convert_tool_result_artifact(tool_result: ToolResult, level: str = "summary") -> Dict:
+        """
+        For read_tool_result outputs: keep the returned content (already truncated as requested).
+        This is intentionally not aggressively summarized, because the whole point is to
+        surface the full artifact content back into the planner context when needed.
+        """
+        content = (tool_result.content or "").strip()
+        if not content:
+            content = "[no content]"
+        return {"tool_result": content}
 
     @staticmethod
     def _convert_email(tool_result: ToolResult, level: str, importance_threshold: int = 5) -> Dict:

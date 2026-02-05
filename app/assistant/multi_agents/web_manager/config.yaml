@@ -13,7 +13,7 @@ agents:
     class: Planner
   - name: shared::tool_arguments
     class: Agent
-  - name: shared::final_answer
+  - name: shared::final_answer_lite
     class: FinalAnswer
   - name: shared::mathematician
     class: Agent
@@ -43,7 +43,7 @@ flow_config:
     "web::delegator": "web::planner"
     "shared::tool_arguments": "tool_caller"
     "tool_caller": "tool_result_handler"
-    "web::planner_flow_exit_node": "shared::final_answer"
-    "shared::final_answer": "manager_exit_node"
+    "web::planner_flow_exit_node": "shared::final_answer_lite"
+    "shared::final_answer_lite": "manager_exit_node"
     "graceful_exit": "graceful_exit_control_node"
-    "graceful_exit_control_node": "shared::final_answer"
+    "graceful_exit_control_node": "shared::final_answer_lite"

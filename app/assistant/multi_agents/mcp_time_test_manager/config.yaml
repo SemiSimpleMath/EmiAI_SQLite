@@ -1,0 +1,42 @@
+name: mcp_time_test_manager
+class_name: MultiAgentManager
+description: "Manager test: MCP time tool end-to-end (tool_descriptions -> tool_arguments -> tool_caller)."
+max_cycles: 10
+
+role_bindings:
+  delegator: shared::delegator
+
+agents:
+  - name: shared::delegator
+    class: Delegator
+  - name: mcp_time_test::planner
+    class: Planner
+  - name: shared::tool_arguments
+    class: ToolArguments
+  - name: shared::final_answer
+    class: FinalAnswer
+
+control_nodes:
+  - name: tool_caller
+    class: ToolCaller
+  - name: tool_result_handler
+    class: ToolResultHandler
+  - name: flow_exit_node
+    class: FlowExitNode
+  - name: manager_exit_node
+    class: ManagerExitNode
+
+tools:
+  allowed_tools:
+    - mcp::io.modelcontextprotocol/time::get_current_time
+  except_tools: []
+
+flow_config:
+  state_map:
+    "shared::delegator": "mcp_time_test::planner"
+    "shared::tool_arguments": "tool_caller"
+    "tool_caller": "tool_result_handler"
+    "tool_result_handler": "mcp_time_test::planner"
+    "mcp_time_test::planner_flow_exit_node": "shared::final_answer"
+    "shared::final_answer": "manager_exit_node"
+

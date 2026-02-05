@@ -58,8 +58,8 @@ class AgentLoader:
             logger.error(f"❌ No config found for {agent_name}.")
 
         agent_entry = self.agent_registry.configs.get(agent_name, self.agent_registry.control_nodes.get(agent_name))
-
-        print(f"\n\nRegistering agent: {agent_name}")
+        # Use logging (not print) so Dev Logging Controls can filter this
+        logger.info("Registering agent: %s", agent_name)
         
         if not agent_entry:
             logger.error(f"❌ No config found for {agent_name}. Skipping.")
@@ -67,8 +67,7 @@ class AgentLoader:
 
         # Determine agent type from registry
         agent_type = agent_entry.get("type", "agent")  # Default to "agent" if missing
-        
-        print(f"Agent type: {agent_type}\n\n")
+        logger.info("Agent type: %s", agent_type)
 
         if agent_type == "agent":
             agent_instance = self._load_standard_agent(agent_name, agent_entry["class"])
@@ -82,7 +81,7 @@ class AgentLoader:
             self.register_agent_events(agent_instance, full_agent_config)
             self.agent_registry.register_agent_instance(agent_name, agent_instance)
         else:
-            print("NO AGENT INSTANCE BRO!")
+            logger.error("Failed to instantiate agent '%s' (type=%s)", agent_name, agent_type)
 
     def _load_standard_agent(self, agent_name, agent_class_name):
         """

@@ -1,5 +1,7 @@
 import json
 import re
+import os
+from pathlib import Path
 from typing import List, Dict
 
 from jinja2 import Template
@@ -191,6 +193,76 @@ class ToolArguments(Agent):
                 "action": "error",
                 "content": f"Invalid result type: {type(result_dict)}"
             }
+
+        # Heuristic normalizations for specific tools where units are easy to confuse.
+        # Example: Playwright MCP `browser_wait_for.time` is in SECONDS, but agents sometimes
+        # provide milliseconds (e.g. 2000 meaning 2 seconds). If it looks like milliseconds,
+        # convert to seconds.
+        try:
+            selected_tool = self.blackboard.get_state_value("selected_tool")
+            if (
+                isinstance(result_dict, dict)
+                and selected_tool == "mcp::npm/playwright-mcp::browser_wait_for"
+                and isinstance(result_dict.get("time"), (int, float))
+            ):
+                t = result_dict.get("time")
+                # Only apply when it strongly looks like ms (>=1000 and divisible by 1000).
+                if isinstance(t, (int, float)) and t >= 1000 and float(t).is_integer() and int(t) % 1000 == 0:
+                    result_dict["time"] = int(t) // 1000
+        except Exception:
+            pass
+
+        # Deterministic normalization for vision helper agent inputs:
+        # Vision agents require an absolute path to an on-disk PNG.
+        #
+        # The planner often only sees the screenshot filename (e.g. "mcp_....png") in summaries,
+        # because `[mcp_image_path: ...]` markers are stripped and converted to multimodal blocks
+        # before the LLM sees them.
+        #
+        # So: if the callee expects `image` and it is not absolute, resolve it to:
+        #   <repo_root>/uploads/temp/<filename>
+        #
+        # Fail loudly if the resulting file does not exist.
+        try:
+            selected_node = self.blackboard.get_state_value("selected_tool")
+            if (
+                isinstance(result_dict, dict)
+                and isinstance(result_dict.get("image"), str)
+                and isinstance(selected_node, str)
+                and selected_node in {"shared::vision_page_scout", "shared::vision_target_picker"}
+            ):
+                raw_image = (result_dict.get("image") or "").strip()
+                if not raw_image:
+                    raise RuntimeError(
+                        f"[{self.name}] Vision agent '{selected_node}' requires image path, but got empty 'image'."
+                    )
+
+                # Resolve relative/filename-only to uploads/temp/<filename>
+                img_path = Path(raw_image)
+                if not os.path.isabs(raw_image):
+                    fname = img_path.name
+                    if not fname:
+                        raise RuntimeError(
+                            f"[{self.name}] Vision agent '{selected_node}' got invalid image value: {raw_image!r}"
+                        )
+                    repo_root = Path(__file__).resolve().parents[3]
+                    candidate = (repo_root / "uploads" / "temp" / fname).resolve()
+                    result_dict["image"] = str(candidate)
+                    img_path = candidate
+
+                # Validate existence
+                if not img_path.exists():
+                    raise RuntimeError(
+                        f"[{self.name}] Vision agent '{selected_node}' image path does not exist: {str(img_path)}"
+                    )
+                # Validate png
+                if img_path.suffix.lower() != ".png":
+                    raise RuntimeError(
+                        f"[{self.name}] Vision agent '{selected_node}' requires a .png image, got: {str(img_path)}"
+                    )
+        except Exception as e:
+            logger.error(f"[{self.name}] Vision image normalization failed: {e}")
+            raise
 
         self.blackboard.update_state_value("tool_arguments", result_dict)
 

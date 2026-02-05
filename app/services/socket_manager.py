@@ -39,8 +39,14 @@ class SocketManager:
     
     def get_music_connection(self):
         """Get the music tab's socket connection."""
-        return self.get_connection("music")
+        return self.get_connection("music")    def get_progress_connection(self):
+        """Get the progress tab's socket connection."""
+        return self.get_connection("progress")
     
     def has_music_connection(self) -> bool:
         """Check if music tab is connected."""
         return "music" in self._connections
+
+    def has_progress_connection(self) -> bool:
+        """Check if progress tab is connected."""
+        return "progress" in self._connections

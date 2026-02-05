@@ -1,0 +1,27 @@
+Today is {{ date_time }}.
+
+Task:
+{{ task }}
+
+{% if information %}
+Information:
+{{ information }}
+{% endif %}
+
+{% if checklist %}
+Checklist:
+{{ checklist }}
+{% endif %}
+
+{% if recent_history %}
+Recent history (high-signal):
+{{ recent_history }}
+{% endif %}
+
+{% if final_answer_content %}
+Collected final_answer_content:
+{{ final_answer_content }}
+{% endif %}
+
+Return `final_answer_answer` and `final_answer_sources`.
+

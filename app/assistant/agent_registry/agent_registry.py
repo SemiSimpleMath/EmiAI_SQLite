@@ -34,6 +34,32 @@ class AgentRegistry:
 
         self.registry_loaded = True
 
+    def fork(self):
+        """
+        Create a lightweight copy of the registry suitable for parallel managers/orchestrators.
+
+        - Shares immutable config data and loaded classes/prompts
+        - Clears per-agent `instance` fields so each runtime can instantiate independently
+        - Avoids deepcopy (locks/clients/lambdas can break deepcopy and it's expensive)
+        """
+        child = AgentRegistry(agents_dir=self.agents_dir, control_nodes_dir=self.control_nodes_dir)
+        # Preserve loaded state and control nodes.
+        child.registry_loaded = bool(getattr(self, "registry_loaded", False))
+        if hasattr(self, "control_nodes"):
+            child.control_nodes = getattr(self, "control_nodes")
+
+        # Shallow-copy configs, but remove any instantiated agent objects.
+        new_configs = {}
+        for name, cfg in (getattr(self, "configs", {}) or {}).items():
+            if not isinstance(cfg, dict):
+                new_configs[name] = cfg
+                continue
+            cfg2 = dict(cfg)
+            cfg2.pop("instance", None)
+            new_configs[name] = cfg2
+        child.configs = new_configs
+        return child
+
     def _load_all_agent_configs(self):
         """Load all agent configurations, prompts, structured outputs, and dynamically load agent classes."""
 
@@ -89,7 +115,18 @@ class AgentRegistry:
 
             logger.info(f"📥 Loading configuration for agent: {canonical_name}")
             prompts = self._load_prompts(agent_folder / "prompts", canonical_name)
+            # Structured output precedence:
+            # 1) agent_form.py (Pydantic) if present (preferred / strongest)
+            # 2) config.yaml structured_output (JSON schema dict) as a fallback
             structured_output = self._load_agent_form(agent_folder / "agent_form.py")
+            if structured_output is None:
+                structured_output = config_data.get("structured_output")
+            else:
+                if config_data.get("structured_output") is not None:
+                    logger.info(
+                        f"Agent {canonical_name} defines both agent_form.py and config.yaml structured_output; "
+                        f"preferring agent_form.py."
+                    )
             input_schema = self._load_agent_args(agent_folder / "input_schema.py")
             if canonical_name in self.configs:
                 import traceback

@@ -1,0 +1,19 @@
+name: web_parallel_test_facts_curator
+class_name: Agent
+color: "yellow"
+llm_params:
+  llm_provider: "openai"
+  engine: "gpt-5-mini"
+  temperature: 1
+
+allowed_tools: []
+except_tools: []
+
+user_context_items:
+  - date_time
+  - task
+  - orchestrator_results
+  - orchestrator_tick
+
+system_context_items: []
+

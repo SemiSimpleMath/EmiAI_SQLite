@@ -15,6 +15,39 @@ log_queue = queue.Queue()
 log_listener = None
 log_lock = threading.Lock()
 
+# Handlers created inside the queue listener (captured so we can adjust levels at runtime)
+_console_handler = None
+_file_handler = None
+
+# Runtime logging controls (persisted via UserSettingsManager)
+_pending_console_level = None  # used if settings applied before first logger initializes handlers
+_baseline_logger_state = {}    # name -> {"level": int, "disabled": bool}
+_baseline_console_level = None
+_applied_overrides = set()     # logger names we have overridden during this process
+_saved_controls_applied_once = False
+_current_overrides = {}        # last applied override map (name -> level string)
+_current_console_level = None  # last applied console threshold (string)
+
+
+def _apply_override_to_logger(logger_name: str, logger_obj: logging.Logger, level_name: str):
+    """
+    Apply one override to one logger (without touching others).
+    """
+    if logger_name not in _baseline_logger_state:
+        _baseline_logger_state[logger_name] = {
+            "level": logger_obj.level,
+            "disabled": bool(getattr(logger_obj, "disabled", False)),
+        }
+
+    level = _normalize_level(level_name)
+    if level is None:
+        logger_obj.disabled = True
+    else:
+        logger_obj.disabled = False
+        logger_obj.setLevel(level)
+
+    _applied_overrides.add(logger_name)
+
 # ========================
 # 1. Define Custom Levels
 # ========================
@@ -89,7 +122,15 @@ def ensure_logs_directory():
     return logs_dir
 
 def setup_logger(name, level=None, log_file="project.log"):
-    global log_listener
+    global log_listener, _console_handler, _file_handler, _baseline_console_level, _saved_controls_applied_once
+
+    # Apply persisted logging controls as early as possible (works for test harness too).
+    # Safe to call repeatedly; we guard it to run once per process.
+    if not _saved_controls_applied_once:
+        try:
+            apply_saved_logging_controls_from_user_settings()
+        finally:
+            _saved_controls_applied_once = True
 
     # Ensure logs directory exists and update log file path
     logs_dir = ensure_logs_directory()
@@ -119,11 +160,29 @@ def setup_logger(name, level=None, log_file="project.log"):
 
             console_handler = UnicodeStreamHandler(sys.stdout)
             console_handler.setFormatter(LOG_FORMATTER)
+            # Apply pending console level (if set before listener initialized)
+            if _pending_console_level is not None:
+                console_handler.setLevel(_pending_console_level)
+
+            _file_handler = file_handler
+            _console_handler = console_handler
+            if _baseline_console_level is None:
+                _baseline_console_level = console_handler.level
 
             log_listener = QueueListener(log_queue, file_handler, console_handler)
             log_listener.start()
         elif not log_listener._thread.is_alive():
             log_listener.start()
+
+    # IMPORTANT:
+    # setup_logger always sets a default level (GLOBAL_LOG_LEVEL). If we have a saved per-logger
+    # custom level, apply it again here so it isn't clobbered by the default.
+    try:
+        override_level = _current_overrides.get(name)
+        if override_level:
+            _apply_override_to_logger(name, logger, override_level)
+    except Exception:
+        pass
 
     return logger
 
@@ -134,6 +193,210 @@ def get_logger(name: str, level=None, log_file="emi_logs.log"):
     All log files will be written to the /logs subfolder.
     """
     return setup_logger(name, level, log_file)
+
+
+# ========================
+# 6. Runtime Logging Controls (Dev UI)
+# ========================
+def _normalize_level(level_name: str):
+    """
+    Convert a string level to logging level int.
+    Special case: "OFF" returns None.
+    """
+    if level_name is None:
+        raise ValueError("level_name cannot be None")
+
+    if isinstance(level_name, int):
+        return level_name
+
+    s = str(level_name).strip().upper()
+    if s in ("OFF", "DISABLED", "NONE"):
+        return None
+    if s in ("CRITICAL", "FATAL"):
+        return logging.CRITICAL
+    if s == "ERROR":
+        return logging.ERROR
+    if s in ("WARN", "WARNING"):
+        return logging.WARNING
+    if s == "INFO":
+        return logging.INFO
+    if s == "DEBUG":
+        return logging.DEBUG
+    if s == "NOTSET":
+        return logging.NOTSET
+    raise ValueError(f"Unknown log level: {level_name!r}")
+
+
+def list_runtime_loggers(prefix: str | None = None):
+    """
+    Return a snapshot of known runtime loggers.
+    Note: This lists loggers that have been created/imported in this process.
+    """
+    result = []
+
+    # root logger
+    root = logging.getLogger()
+    result.append({
+        "name": "root",
+        "level": logging.getLevelName(root.level),
+        "effective_level": logging.getLevelName(root.getEffectiveLevel()),
+        "disabled": bool(getattr(root, "disabled", False)),
+        "propagate": bool(getattr(root, "propagate", False)),
+        "has_override": "root" in _applied_overrides,
+    })
+
+    logger_dict = getattr(logging.root.manager, "loggerDict", {}) or {}
+    for name, obj in logger_dict.items():
+        if prefix and not name.startswith(prefix):
+            continue
+
+        # obj can be a Logger or a PlaceHolder (for hierarchical names)
+        if isinstance(obj, logging.Logger):
+            logger = obj
+            result.append({
+                "name": name,
+                "level": logging.getLevelName(logger.level),
+                "effective_level": logging.getLevelName(logger.getEffectiveLevel()),
+                "disabled": bool(getattr(logger, "disabled", False)),
+                "propagate": bool(getattr(logger, "propagate", False)),
+                "has_override": name in _applied_overrides,
+                "placeholder": False,
+            })
+            continue
+
+        # Show placeholders too (these can be “invisible” otherwise)
+        if isinstance(obj, logging.PlaceHolder):
+            result.append({
+                "name": name,
+                "level": "PLACEHOLDER",
+                "effective_level": "PLACEHOLDER",
+                "disabled": False,
+                "propagate": True,
+                "has_override": name in _applied_overrides,
+                "placeholder": True,
+            })
+            continue
+
+        # Unknown type, ignore safely
+
+    # Ensure any overridden logger appears even if it wasn't present yet
+    for name in sorted(_applied_overrides):
+        if prefix and not name.startswith(prefix):
+            continue
+        if any(r["name"] == name for r in result):
+            continue
+        logger = logging.getLogger(name if name != "root" else "")
+        result.append({
+            "name": name,
+            "level": logging.getLevelName(logger.level),
+            "effective_level": logging.getLevelName(logger.getEffectiveLevel()),
+            "disabled": bool(getattr(logger, "disabled", False)),
+            "propagate": bool(getattr(logger, "propagate", False)),
+            "has_override": True,
+            "placeholder": False,
+        })
+
+    # stable ordering for UI
+    result.sort(key=lambda x: x["name"])
+    return result
+
+
+def set_console_level(level_name: str):
+    """
+    Set the console handler threshold at runtime.
+    If handlers aren't initialized yet, stores a pending level.
+    """
+    global _pending_console_level, _baseline_console_level
+    level = _normalize_level(level_name)
+    if level is None:
+        # "OFF" doesn't make sense for handler level; treat as CRITICAL+1
+        level = logging.CRITICAL + 1
+
+    with log_lock:
+        if _console_handler is None:
+            _pending_console_level = level
+            return
+
+        if _baseline_console_level is None:
+            _baseline_console_level = _console_handler.level
+
+        _console_handler.setLevel(level)
+
+
+def apply_logger_overrides(overrides: dict):
+    """
+    Apply per-logger overrides at runtime.
+
+    overrides format:
+      { "logger.name": "DEBUG" | "INFO" | "WARNING" | "ERROR" | "CRITICAL" | "OFF", ... }
+
+    Behavior:
+    - "OFF": logger.disabled=True (hard off)
+    - Other levels: logger.disabled=False and logger.setLevel(level)
+    - Removing an override restores the baseline logger state captured when first overridden
+    """
+    global _applied_overrides, _current_overrides
+
+    if overrides is None:
+        overrides = {}
+
+    # Cache the latest override map for future logger creations
+    try:
+        _current_overrides = dict(overrides)
+    except Exception:
+        _current_overrides = {}
+
+    # Restore removed overrides first
+    to_restore = [name for name in _applied_overrides if name not in overrides]
+    for name in to_restore:
+        logger = logging.getLogger(name if name != "root" else "")
+        baseline = _baseline_logger_state.get(name)
+        if baseline:
+            logger.setLevel(baseline["level"])
+            logger.disabled = baseline["disabled"]
+        else:
+            logger.disabled = False
+            logger.setLevel(GLOBAL_LOG_LEVEL)
+        _applied_overrides.discard(name)
+
+    # Apply current overrides
+    for name, level_name in overrides.items():
+        logger = logging.getLogger(name if name != "root" else "")
+        if name not in _baseline_logger_state:
+            _baseline_logger_state[name] = {"level": logger.level, "disabled": bool(getattr(logger, "disabled", False))}
+
+        try:
+            _apply_override_to_logger(name, logger, level_name)
+        except Exception:
+            continue
+
+
+def apply_logging_controls(console_level: str | None = None, overrides: dict | None = None):
+    """
+    Convenience: apply both console threshold + logger overrides.
+    """
+    global _current_console_level
+    if console_level:
+        _current_console_level = str(console_level).upper()
+        set_console_level(console_level)
+    if overrides is not None:
+        apply_logger_overrides(overrides)
+
+
+def apply_saved_logging_controls_from_user_settings():
+    """
+    Load persisted logging controls from UserSettingsManager and apply them.
+    Safe to call multiple times.
+    """
+    try:
+        from app.assistant.user_settings_manager.user_settings import get_settings_manager
+        settings = get_settings_manager()
+        console_level = settings.get("logging.console_level", "WARNING")
+        overrides = settings.get("logging.overrides", {}) or {}
+        apply_logging_controls(console_level=console_level, overrides=overrides)
+    except Exception:
+        # Never allow logging UI controls to break app startup
+        return
 
 
 def get_maintenance_logger(name: str, level=None):

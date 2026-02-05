@@ -4,6 +4,7 @@ from app.assistant.utils.pydantic_classes import Message, ToolResult
 
 from app.assistant.utils.logging_config import get_logger
 from app.assistant.utils.time_utils import get_local_time_str
+from app.assistant.ServiceLocator.service_locator import DI
 
 logger = get_logger(__name__)
 
@@ -98,5 +99,50 @@ class Planner(Agent):
         self.blackboard.update_state_value(f'{self.name}_action_count', new_action_count)
         logger.info(f"[{self.name}] Action count: {new_action_count}")
 
+        # Best-effort: publish high-signal progress to an orchestrator (if this planner is running under one).
+        try:
+            self._publish_orchestrator_progress(result_dict)
+        except Exception:
+            pass
+
+
+    def _publish_orchestrator_progress(self, result_dict: dict) -> None:
+        if not isinstance(result_dict, dict):
+            return
+
+        # Gate: only publish if this manager was spawned by an orchestrator.
+        orch_name = self.blackboard.get_state_value("orchestrator_name", None)
+        job_id = self.blackboard.get_state_value("orchestrator_job_id", None)
+        if not isinstance(orch_name, str) or not orch_name.strip():
+            return
+        if not isinstance(job_id, str) or not job_id.strip():
+            return
+
+        progress = result_dict.get("progress_report")
+        if not isinstance(progress, list) or not progress:
+            return
+
+        # With append_fields + list-extend semantics, planners should emit ONLY newly discovered items each step.
+        # Treat the current `progress_report` as a delta and publish it directly.
+        major_impact = any(isinstance(x, dict) and bool(x.get("major_impact", False)) for x in progress)
+
+        mgr_name = self.blackboard.get_state_value("manager_name", None)
+        mgr_name = mgr_name if isinstance(mgr_name, str) else None
+
+        DI.event_hub.publish(
+            Message(
+                sender=self.name,
+                receiver=str(orch_name),
+                event_topic="orchestrator_progress",
+                data={
+                    "orchestrator": str(orch_name),
+                    "job_id": str(job_id),
+                    "manager_name": mgr_name,
+                    "agent": self.name,
+                    "major_impact": bool(major_impact),
+                    "progress_items": progress,
+                },
+            )
+        )
 
 

@@ -1,6 +1,6 @@
 name: emi_team_manager
 class_name: MultiAgentManager
-description: "A team manager that orchestrates agent execution for task completion."
+description: "An extremely capable manager used mostly for Google Calendar, email, and todo tasks."
 max_cycles: 80  # Prevent infinite loops
 role_bindings:
   delegator: emi_team::delegator

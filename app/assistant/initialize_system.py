@@ -11,6 +11,7 @@ from app.assistant.manager_registry.manager_instance_handler import ManagerInsta
 from app.assistant.slack_interface.slack_interface import SlackInterface
 from app.assistant.system_state_monitor.system_state_monitor import SystemStateMonitor
 from app.assistant.ui_tool_caller.ui_tool_caller import UIToolCaller
+from app.assistant.progress_curator import ProgressCurator
 from app.services.socket_manager import SocketManager
 from app.assistant.validation.agent_validator import validate_all
 
@@ -49,6 +50,9 @@ def initialize_system():
 
     event_relay = EmiEventRelay()
     ServiceLocator.register('event_relay', event_relay)
+
+    progress_curator = ProgressCurator()
+    ServiceLocator.register("progress_curator", progress_curator)
     ui_tool_caller = UIToolCaller()
     ServiceLocator.register('ui_tool_caller', ui_tool_caller)
 

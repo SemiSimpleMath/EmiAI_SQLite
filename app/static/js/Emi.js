@@ -16,6 +16,57 @@ let speakingMode = false;
 // Chat mode state management
 let chatMode = 'normal'; // 'normal', 'test', 'memo'
 
+// ===== Image attachment state (paste/drag/drop) =====
+const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
+const ALLOWED_IMAGE_MIMES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
+let pendingImageFile = null;
+let pendingImageObjectUrl = null;
+
+function updatePendingImagePreviewUI() {
+    const container = document.getElementById('pending-image-preview');
+    const img = document.getElementById('pending-image-thumb');
+    const nameEl = document.getElementById('pending-image-name');
+    if (!container || !img || !nameEl) return;
+
+    if (!pendingImageFile || !pendingImageObjectUrl) {
+        container.classList.add('hidden');
+        img.removeAttribute('src');
+        nameEl.textContent = '';
+        return;
+    }
+
+    img.src = pendingImageObjectUrl;
+    nameEl.textContent = pendingImageFile.name || 'image';
+    container.classList.remove('hidden');
+}
+
+function clearPendingImage() {
+    try {
+        if (pendingImageObjectUrl) URL.revokeObjectURL(pendingImageObjectUrl);
+    } catch (e) { /* best-effort */ }
+    pendingImageObjectUrl = null;
+    pendingImageFile = null;
+    updatePendingImagePreviewUI();
+}
+
+function setPendingImage(file) {
+    if (!file) return;
+    const mime = file.type || "";
+    if (!ALLOWED_IMAGE_MIMES.has(mime)) {
+        alert("Only PNG, JPEG, WEBP, or GIF images are supported.");
+        return;
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+        alert("Image is too large (max 20MB).");
+        return;
+    }
+
+    clearPendingImage();
+    pendingImageFile = file;
+    pendingImageObjectUrl = URL.createObjectURL(file);
+    updatePendingImagePreviewUI();
+}
+
 // Mode management functions
 function toggleTestMode() {
     chatMode = chatMode === 'test' ? 'normal' : 'test';
@@ -651,12 +702,26 @@ function createBotBubble(text) {
  * Creates a new user chat bubble.
  * @param {string} message - The user's message.
  */
-function createUserBubble(message) {
+function createUserBubble(message, imagePreviewUrl = null) {
     console.log("Creating user bubble with message:", message); // Debug log
     const bubble = document.createElement("div");
-    const p = document.createElement("p");
-    p.innerHTML = message;
-    bubble.appendChild(p);
+    if (message && message.trim() !== "") {
+        const p = document.createElement("p");
+        p.innerHTML = message;
+        bubble.appendChild(p);
+    }
+    if (imagePreviewUrl) {
+        const img = document.createElement("img");
+        img.className = "chat-image-thumb";
+        img.src = imagePreviewUrl;
+        img.alt = "Attached image";
+        img.loading = "lazy";
+        // Revoke the blob URL after the image loads to free memory.
+        img.onload = () => {
+            try { URL.revokeObjectURL(imagePreviewUrl); } catch (e) { /* best-effort */ }
+        };
+        bubble.appendChild(img);
+    }
     bubble.className = "user-bubble";
     const chatBox = document.getElementById("chat-box");
     if (chatBox) {
@@ -726,6 +791,13 @@ function prepareDataToBeSent(message, audioBlob) {
     formData.append('socket_id', socket.id);
     formData.append('text', text); // Use parsed text (may be different from original message)
 
+    // Attach image (chat-only; no audio+image in this iteration)
+    const imageToSend = (!audioBlob && pendingImageFile) ? pendingImageFile : null;
+    const hadImage = !!imageToSend;
+    if (imageToSend) {
+        formData.append('image', imageToSend, imageToSend.name || 'image');
+    }
+
     // Add mode flags
     if (chatMode === 'test') {
         formData.append('test', 'true');
@@ -750,13 +822,17 @@ function prepareDataToBeSent(message, audioBlob) {
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
+    .then(async (response) => {
+        let data = {};
+        try { data = await response.json(); } catch (e) { /* best-effort */ }
+        if (!response.ok) {
+            const errMsg = (data && (data.error || data.message)) ? (data.error || data.message) : `HTTP ${response.status}`;
+            throw new Error(errMsg);
+        }
+        return data;
+    })
     .then(data => {
-        if (data.error) {
-            console.error('Error from server:', data.error);
-            // Optionally, display the error to the user
-            alert(`Error: ${data.error}`);
-        } else if (data.transcribed_text) {
+        if (data.transcribed_text) {
             console.log('Transcribed Text Received:', data.transcribed_text); // Debug log
             // Display the transcribed text as a user message
             createUserBubble(data.transcribed_text);
@@ -765,11 +841,13 @@ function prepareDataToBeSent(message, audioBlob) {
             console.log('Data received:', data);
         }
 
+        // Clear pending image only after a successful send
+        if (hadImage) clearPendingImage();
     })
     .catch(error => {
         console.error('Error sending data:', error);
         // Optionally, display the error to the user
-        alert('An error occurred while sending your message. Please try again.');
+        alert(`An error occurred while sending your message. ${error?.message ? error.message : ''}`.trim());
     });
 
     // Reset audio chunks after sending
@@ -1990,8 +2068,6 @@ function setupSocketListeners() {
         }
     });
 
-
-
     socket.on('audio_file', audioData => {
         console.log(`Received audio file URL: ${audioData.audio_url}`);
         audioQueue.push(audioData.audio_url);
@@ -2000,6 +2076,7 @@ function setupSocketListeners() {
         }
     });
 }
+
 
 socket.on('repo_update_notification', (updateData) => {
     console.log("Received repo update notification:", updateData);
@@ -2072,9 +2149,11 @@ function setupEventListeners() {
             const messageInput = document.getElementById("chat-input"); // Updated ID
             if (messageInput) {
                 const message = messageInput.value.trim();
-                if (message === "") return;
+                const canSend = message !== "" || !!pendingImageFile;
+                if (!canSend) return;
 
-                createUserBubble(message);
+                const bubbleImageUrl = pendingImageFile ? URL.createObjectURL(pendingImageFile) : null;
+                createUserBubble(message, bubbleImageUrl);
                 prepareDataToBeSent(message, null); // No audio blob
                 messageInput.value = "";
             } else {
@@ -2133,6 +2212,22 @@ function setupEventListeners() {
     // Handle user typing a message and pressing Enter
     const messageInput = document.getElementById("chat-input"); // Updated ID
     if (messageInput) {
+        // Paste image support
+        messageInput.addEventListener('paste', (event) => {
+            const items = event.clipboardData?.items;
+            if (!items) return;
+            for (const item of items) {
+                if (item?.kind === 'file') {
+                    const file = item.getAsFile();
+                    if (file && (file.type || "").startsWith("image/")) {
+                        setPendingImage(file);
+                        event.preventDefault();
+                        break;
+                    }
+                }
+            }
+        });
+
         messageInput.addEventListener('keydown', event => { // Changed from 'keyup' to 'keydown'
             if (event.key === 'Enter') {
                 if (event.shiftKey) {
@@ -2142,9 +2237,11 @@ function setupEventListeners() {
 
                 event.preventDefault(); // Prevent the default newline insertion
                 const message = messageInput.value.trim();
-                if (message === "") return;
+                const canSend = message !== "" || !!pendingImageFile;
+                if (!canSend) return;
 
-                createUserBubble(message);
+                const bubbleImageUrl = pendingImageFile ? URL.createObjectURL(pendingImageFile) : null;
+                createUserBubble(message, bubbleImageUrl);
                 prepareDataToBeSent(message, null); // No audio blob
                 messageInput.value = "";
             }
@@ -2162,6 +2259,29 @@ function setupEventListeners() {
     } else {
         console.warn("Message input element with ID 'chat-input' not found.");
     }
+
+    // Drag/drop image support
+    const chatBox = document.getElementById("chat-box");
+    const dropTargets = [chatBox, messageInput].filter(Boolean);
+    dropTargets.forEach((el) => {
+        el.addEventListener('dragover', (event) => {
+            event.preventDefault();
+        });
+        el.addEventListener('drop', (event) => {
+            event.preventDefault();
+            const files = event.dataTransfer?.files;
+            if (!files || files.length === 0) return;
+            const file = Array.from(files).find(f => (f.type || "").startsWith("image/"));
+            if (file) setPendingImage(file);
+        });
+    });
+
+    // Remove pending image button
+    const removeBtn = document.getElementById('pending-image-remove');
+    if (removeBtn) {
+        removeBtn.addEventListener('click', () => clearPendingImage());
+    }
+    updatePendingImagePreviewUI();
 }
 
 function setupThemeListener()

@@ -42,6 +42,21 @@ def register_socket_handlers(socketio):
             logger.info(f"🎵 Music client registered: {socket_id[:8]}...")
         except Exception as e:
             logger.exception(f"Error registering music client: {e}")
+
+    @socketio.on('register_progress_client')
+    def handle_progress_registration(data):
+        """Progress tab registers itself as the progress client."""
+        try:
+            socket_id = request.sid
+            if not socket_id:
+                logger.error("Missing socket_id during progress registration.")
+                return
+            DI = current_app.DI
+            socket_manager = DI.socket_manager
+            socket_manager.update_connection(socket_id, "progress")
+            logger.info(f"🧭 Progress client registered: {socket_id[:8]}...")
+        except Exception as e:
+            logger.exception(f"Error registering progress client: {e}")
     
     # Music state update handler
     @socketio.on('music_state_update')

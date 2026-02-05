@@ -572,12 +572,24 @@ class PhysicalPipelineManager:
             reason: str,
             debug: Optional[Dict[str, Any]],
     ) -> None:
+        """
+        Record stage run bookkeeping.
+
+        Important: do NOT overwrite the entire per-stage dict.
+        Stages may store additional keys under state["stage_runs"][stage_id]
+        (e.g., cursors like last_afk_reset_utc). We preserve those.
+        """
         runs = self.state.setdefault("stage_runs", {})
-        runs[stage_id] = {
-            "last_run_utc": now_utc.isoformat(),
-            "last_reason": reason,
-            "last_debug": debug,
-        }
+        existing = runs.get(stage_id)
+        info: Dict[str, Any] = existing if isinstance(existing, dict) else {}
+        info.update(
+            {
+                "last_run_utc": now_utc.isoformat(),
+                "last_reason": reason,
+                "last_debug": debug,
+            }
+        )
+        runs[stage_id] = info
         self._mark_dirty()
 
     def run_stage(self, stage_id: str, reason: str = "on_demand") -> Optional[StageResult]:

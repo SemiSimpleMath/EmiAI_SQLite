@@ -1,10 +1,51 @@
 import json
+import uuid
+from datetime import datetime, timezone
+from pathlib import Path
+
 from app.assistant.ServiceLocator.service_locator import DI
 from app.assistant.utils.pydantic_classes import Message
 from app.assistant.control_nodes.control_node import ControlNode
 
 from app.assistant.utils.logging_config import get_logger
 logger = get_logger(__name__)
+
+
+def _repo_root_from_here() -> Path:
+    # app/assistant/control_nodes/tool_result_handler.py -> repo root
+    return Path(__file__).resolve().parents[3]
+
+
+def _tool_results_dir() -> Path:
+    return _repo_root_from_here() / "uploads" / "temp" / "tool_results"
+
+
+def _persist_tool_result_artifact(*, tool_result, calling_agent: str | None, scope_id: str | None) -> dict[str, str] | None:
+    """
+    Persist a full ToolResult payload to disk and return a small reference dict.
+    Intended to keep future prompts small while preserving the full payload for on-demand retrieval.
+    """
+    try:
+        tool_results_dir = _tool_results_dir()
+        tool_results_dir.mkdir(parents=True, exist_ok=True)
+
+        tool_result_id = uuid.uuid4().hex
+        filename = f"tool_result_{tool_result_id}.json"
+        path = tool_results_dir / filename
+
+        payload = {
+            "tool_result_id": tool_result_id,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "calling_agent": calling_agent,
+            "scope_id": scope_id,
+            "tool_result": tool_result.model_dump() if hasattr(tool_result, "model_dump") else str(tool_result),
+        }
+        path.write_text(json.dumps(payload, indent=2, default=str), encoding="utf-8")
+        return {"tool_result_id": tool_result_id, "path": str(path)}
+    except Exception as e:
+        logger.warning(f"[tool_result_handler] Failed to persist tool result artifact: {e}")
+        return None
+
 
 class ToolResultHandler(ControlNode):
     def __init__(self, name, blackboard, agent_registry, tool_registry):
@@ -57,7 +98,28 @@ class ToolResultHandler(ControlNode):
         Process a tool result and record it in the calling agent's history.
         This is only called for actual tool calls (not agent calls).
         """
-        logger.debug(f"Processing tool result: {tool_result}")
+        # NOTE: tool_result.data can include very large payloads (e.g., base64 screenshots from MCP).
+        # Avoid logging the full object to keep logs readable and prevent huge terminal output.
+        try:
+            data = getattr(tool_result, "data", None) if tool_result else None
+            backend = data.get("backend") if isinstance(data, dict) else None
+            server_id = data.get("server_id") if isinstance(data, dict) else None
+            mcp_tool = data.get("mcp_tool_name") if isinstance(data, dict) else None
+            content_preview = (getattr(tool_result, "content", "") or "")[:300]
+            attachments = []
+            if isinstance(data, dict) and isinstance(data.get("attachments"), list):
+                attachments = data.get("attachments") or []
+            logger.debug(
+                "Processing tool result: result_type=%r backend=%r server_id=%r mcp_tool=%r attachments=%d content_preview=%r",
+                getattr(tool_result, "result_type", None),
+                backend,
+                server_id,
+                mcp_tool,
+                len(attachments),
+                content_preview,
+            )
+        except Exception:
+            logger.debug("Processing tool result (preview failed)")
 
         # Convert the tool result into a summarized format
         tool_result_msg = DI.data_conversion_module.convert(tool_result, "summary")
@@ -68,9 +130,38 @@ class ToolResultHandler(ControlNode):
 
         # For tool calls, get the calling agent from blackboard
         calling_agent = self.blackboard.get_state_value('original_calling_agent')
+        scope_id = None
+        try:
+            scope_id = self.blackboard.get_current_scope_id()
+        except Exception:
+            scope_id = None
         
+        # Attachments: allow tools (including MCP) to surface image/file outputs.
+        attachments = []
+        try:
+            if isinstance(getattr(tool_result, "data", None), dict):
+                atts = tool_result.data.get("attachments")
+                if isinstance(atts, list):
+                    attachments = [a for a in atts if isinstance(a, dict)]
+        except Exception:
+            attachments = []
+
+        # Persist the full tool result payload to disk (artifact store) so agents can
+        # later retrieve it without bloating their prompt context.
+        artifact_ref = _persist_tool_result_artifact(
+            tool_result=tool_result,
+            calling_agent=calling_agent,
+            scope_id=scope_id,
+        )
+
         # Create a message object with the processed tool result
         # scope_id will be auto-tagged with current scope by add_msg
+        metadata = {}
+        if attachments:
+            metadata["attachments"] = attachments
+        if artifact_ref:
+            metadata.update(artifact_ref)
+
         message = Message(
             data_type="tool_result",
             sub_data_type=[tool_result.result_type] if getattr(tool_result, "result_type", None) else [],
@@ -78,11 +169,39 @@ class ToolResultHandler(ControlNode):
             receiver=calling_agent,
             content=content_str,
             data=tool_result_msg,
+            metadata=metadata or None,
         )
 
         # Store processed tool result in blackboard
         # This will auto-tag with the current scope_id
         self.blackboard.add_msg(message)
+
+        # Emit a progress fact for UI (short, curated later).
+        try:
+            preview = ""
+            try:
+                if isinstance(tool_result_msg, dict):
+                    preview = str(tool_result_msg.get("tool_result") or "")[:400]
+            except Exception:
+                preview = ""
+
+            DI.event_hub.publish(
+                Message(
+                    sender=self.name,
+                    receiver=None,
+                    event_topic="agent_progress_fact",
+                    data={
+                        "kind": "tool_result",
+                        "agent": calling_agent,
+                        "tool": self.blackboard.get_state_value("selected_tool"),
+                        "result_type": getattr(tool_result, "result_type", None),
+                        "tool_result_id": (artifact_ref or {}).get("tool_result_id") if isinstance(artifact_ref, dict) else None,
+                        "preview": preview,
+                    },
+                )
+            )
+        except Exception:
+            pass
 
         # Update last agent to track execution
         self.blackboard.update_state_value('last_agent', self.name)

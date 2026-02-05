@@ -163,6 +163,11 @@ class UserSettingsManager:
                     }
                 }
             },
+            "logging": {
+                "_comment": "Runtime logging controls (Dev UI). console_level affects terminal output; overrides are per-logger.",
+                "console_level": "WARNING",
+                "overrides": {}
+            },
             "system": {
                 "first_run": True,
                 "setup_complete": False,

@@ -3,8 +3,57 @@ class_name: FinalAnswer
 color: "blue"
 llm_params:
   llm_provider: "openai"
-  engine: "gpt-5-mini"
+  # NOTE: For structured JSON output, llm_client uses `model` (not `engine`) in many paths.
+  # Keep this deterministic to avoid contradictions.
+  model: "gpt-5-mini"
   temperature: 1
+
+# Required: llm_client structured output requires a response_format.
+structured_output:
+  type: object
+  additionalProperties: false
+  properties:
+    final_answer_task:
+      type: string
+    final_answer_answer:
+      type: string
+    final_answer_what_was_done:
+      type: string
+    final_answer_interesting_info:
+      type: string
+    final_answer_sources_used:
+      type: string
+    final_answer_data_list:
+      type: array
+      items:
+        type: object
+        additionalProperties: false
+        properties:
+          data_type:
+            type: string
+          key:
+            type: string
+          value:
+            type: string
+          url:
+            type: string
+          link:
+            type: string
+          title:
+            type: string
+          description:
+            type: string
+          source:
+            type: string
+          timestamp:
+            type: string
+  required:
+    - final_answer_task
+    - final_answer_answer
+    - final_answer_what_was_done
+    - final_answer_interesting_info
+    - final_answer_sources_used
+    - final_answer_data_list
 
 allowed_tools: []  # No tools needed for this agent
 except_tools: []

@@ -1,4 +1,5 @@
 import copy
+import json
 from pathlib import Path
 from importlib import util as import_util
 from jinja2 import Environment, FileSystemLoader
@@ -6,6 +7,10 @@ from jinja2 import Environment, FileSystemLoader
 
 from app.assistant.utils.logging_config import get_logger
 logger = get_logger(__name__)
+
+from app.assistant.lib.tool_registry.mcp_server_directory import load_mcp_server_directory
+from app.assistant.lib.tool_registry.mcp_tool_cache import load_mcp_tool_cache
+from app.assistant.lib.tool_registry.mcp_schema_to_pydantic import build_mcp_tool_models
 
 
 def get_tool_registry_dir():
@@ -32,9 +37,127 @@ class ToolRegistry:
             tools_dir = get_tool_registry_dir()
         self.tools_dir = Path(tools_dir)
         self.registry = {}
+        # MCP server directory entries (metadata only; not tools yet)
+        self.mcp_server_entries = {}
+        self.mcp_directory_errors = []
+        self.mcp_tool_cache_errors = []
 
     def load_tool_registry(self):
         self.load_tools()
+
+    def load_mcp_servers(self, servers_dir: str | None = None):
+        """
+        Load curated MCP server entries from `mcp/servers/`.
+
+        This loads metadata only (no server processes are started, no network calls).
+        """
+        result = load_mcp_server_directory(servers_dir=servers_dir)
+        self.mcp_server_entries = result.entries_by_id
+        self.mcp_directory_errors = result.errors
+        if result.errors:
+            logger.warning(f"MCP server directory loaded with {len(result.errors)} error(s).")
+        else:
+            logger.info(f"MCP server directory loaded ({len(result.entries_by_id)} servers).")
+
+    def load_mcp_tool_cache(self, enabled_only: bool = True):
+        """
+        Load cached MCP tools for curated servers and register them as ToolRegistry entries.
+
+        This allows:
+        - tool descriptions to be injected into prompts
+        - tool argument schemas to be available (via generated Pydantic models)
+
+        No MCP connections are made here; this reads `mcp/tool_cache/*.json`.
+        """
+        self.mcp_tool_cache_errors = []
+
+        for server_id, entry in (self.mcp_server_entries or {}).items():
+            if enabled_only and not bool(entry.get("enabled", False)):
+                continue
+
+            allowlist = entry.get("tool_allowlist") or []
+            denylist = entry.get("tool_denylist") or []
+            allowset = set(allowlist) if isinstance(allowlist, list) else set()
+            denyset = set(denylist) if isinstance(denylist, list) else set()
+
+            res = load_mcp_tool_cache(server_id)
+            if res.errors:
+                self.mcp_tool_cache_errors.extend([f"{server_id}: {e}" for e in res.errors])
+                continue
+
+            # If the server is enabled but no cache file exists yet, surface a clear warning.
+            # (Otherwise we misleadingly log "MCP tool cache loaded successfully" even though
+            # nothing was loaded for this enabled server.)
+            try:
+                if not res.cache_path.exists():
+                    self.mcp_tool_cache_errors.append(
+                        f"{server_id}: missing tool cache file (expected: {res.cache_path})"
+                    )
+                    continue
+            except Exception:
+                # If filesystem checks fail for some reason, fall back to old behavior.
+                pass
+
+            if not res.tools:
+                continue
+
+            for tool in res.tools:
+                raw_tool_name = tool.get("name")
+                if not isinstance(raw_tool_name, str) or not raw_tool_name:
+                    continue
+                if allowset and raw_tool_name not in allowset:
+                    continue
+                if denyset and raw_tool_name in denyset:
+                    continue
+                description = tool.get("description") or ""
+                input_schema = tool.get("inputSchema") if isinstance(tool.get("inputSchema"), dict) else {}
+
+                namespaced = f"mcp::{server_id}::{raw_tool_name}"
+                try:
+                    models = build_mcp_tool_models(
+                        namespaced_tool_name=namespaced,
+                        input_schema=input_schema,
+                    )
+                except Exception as e:
+                    self.mcp_tool_cache_errors.append(
+                        f"{server_id}/{raw_tool_name}: failed to build pydantic models: {e}"
+                    )
+                    continue
+
+                # Register as a tool entry (no local tool_class yet; execution adapter will handle)
+                self.registry[namespaced] = {
+                    "backend": "mcp",
+                    "tool_class": None,
+                    "tool_args": {"args": models.inner_args_model, "arguments": models.outer_arguments_model},
+                    # IMPORTANT: for MCP tools, the ToolArguments agent should generate the *inner*
+                    # MCP `arguments` object (not our local envelope). ToolCaller will wrap this
+                    # into an MCP `tools/call` request at execution time.
+                    "tool_form": models.inner_args_model,
+                    "prompts": {},  # not used for MCP tools
+                    "mcp_server_id": server_id,
+                    "mcp_tool_name": raw_tool_name,
+                    "mcp_input_schema": input_schema,
+                    "mcp_description": description,
+                    "mcp_annotations": tool.get("annotations") if isinstance(tool.get("annotations"), dict) else {},
+                }
+
+        if self.mcp_tool_cache_errors:
+            logger.warning(f"MCP tool cache loaded with {len(self.mcp_tool_cache_errors)} error(s).")
+        else:
+            logger.info("MCP tool cache loaded successfully.")
+
+    def list_mcp_servers(self, enabled_only: bool = False) -> list[str]:
+        servers = list(self.mcp_server_entries.keys())
+        if not enabled_only:
+            return servers
+        enabled = []
+        for sid, entry in self.mcp_server_entries.items():
+            if bool(entry.get("enabled", False)):
+                enabled.append(sid)
+        return enabled
+
+    def get_mcp_server_entry(self, server_id: str):
+        return self.mcp_server_entries.get(server_id)
 
     def load_tools(self):
         for tool_dir in self.tools_dir.iterdir():
@@ -127,11 +250,12 @@ class ToolRegistry:
             logger.debug(f"Tool '{tool_name}' not found in registry.")
             return None
 
-        # Ensure correct structure for tool_form
-        return {
-            **tool_config,
-            "tool_form": tool_config["tool_args"]["arguments"]
-        }
+        # Ensure correct structure for tool_form.
+        # Local tools use the outer `<tool>_arguments` form; MCP tools should use the inner
+        # MCP arguments model so ToolArguments generates the correct shape.
+        if tool_config.get("backend") == "mcp":
+            return {**tool_config, "tool_form": tool_config.get("tool_form") or tool_config["tool_args"]["args"]}
+        return {**tool_config, "tool_form": tool_config["tool_args"]["arguments"]}
 
     def list_tools(self):
         return list(self.registry.keys())
@@ -153,6 +277,10 @@ class ToolRegistry:
             logger.debug(f"Tool '{tool_name}' not found in registry.")
             return None
 
+        # MCP tools store their description directly (no Jinja templates).
+        if tool.get("backend") == "mcp":
+            return tool.get("mcp_description") or "No description available."
+
         description_template = tool["prompts"].get(f"{tool_name}_description")
         if description_template:
             try:
@@ -169,6 +297,19 @@ class ToolRegistry:
         if not tool:
             logger.debug(f"Tool '{tool_name}' not found in registry.")
             return None
+
+        # MCP tools: generate a generic args prompt from the cached schema.
+        if tool.get("backend") == "mcp":
+            schema = tool.get("mcp_input_schema") or {}
+            try:
+                schema_str = json.dumps(schema, indent=2, ensure_ascii=True)
+            except Exception:
+                schema_str = str(schema)
+            return (
+                "Fill the tool call arguments according to this JSON Schema. "
+                "Return ONLY the arguments object that matches the schema.\n\n"
+                f"{schema_str}"
+            )
 
         args_template = tool["prompts"].get(f"{tool_name}_args")
         if args_template:

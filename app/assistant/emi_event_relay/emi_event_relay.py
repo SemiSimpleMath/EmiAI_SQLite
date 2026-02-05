@@ -29,6 +29,7 @@ class EmiEventRelay:
         DI.event_hub.register_event('socket_emit_all_done', self.socket_emit_all_done_handler)
         DI.event_hub.register_event('repo_update', self.notify_ui_of_repo_update)
         DI.event_hub.register_event('proactive_suggestion', self.proactive_suggestion_handler)
+        DI.event_hub.register_event('agent_progress_emit', self.agent_progress_emit_handler)
 
 
     def socket_emit_handler(self, message: UserMessage):
@@ -87,6 +88,25 @@ class EmiEventRelay:
         with self.socket_lock:
             socket_io.emit('proactive_suggestion', suggestion_data, room=socket_id)
             logger.info(f"📋 Emitted proactive_suggestion to socket_id {socket_id}")
+
+    def agent_progress_emit_handler(self, message: Message):
+        """
+        Emit curated agent-progress updates to frontend via Socket.IO.
+        Payload is expected in message.data as a dict (already curated).
+        """
+        socket_manager = DI.socket_manager
+        # Prefer dedicated progress tab socket when available.
+        progress_socket_id, socket_io = socket_manager.get_progress_connection()
+        if not socket_io or not progress_socket_id:
+            logger.debug("Agent progress not emitted (no progress socket connected).")
+            return
+
+        payload = message.data if isinstance(getattr(message, "data", None), dict) else {}
+        if not payload:
+            return
+
+        with self.socket_lock:
+            socket_io.emit("agent_progress_update", payload, room=progress_socket_id)
 
     def process_queue(self):
         """Continuously process messages from the queue and emit via WebSocket."""

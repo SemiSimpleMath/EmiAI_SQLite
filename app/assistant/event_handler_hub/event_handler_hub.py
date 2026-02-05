@@ -1,304 +1,260 @@
 import queue
-import random
-import sys
 import threading
-import time
+from concurrent.futures import ThreadPoolExecutor
+from collections import deque
+from dataclasses import dataclass
+from time import time
+from typing import Callable, Deque, Dict, List, Optional, Sequence
 
-from app.assistant.ServiceLocator.service_locator import DI
-from app.assistant.utils.pydantic_classes import Message
 from app.assistant.utils.logging_config import get_logger
+from app.assistant.utils.pydantic_classes import Message
 
 logger = get_logger(__name__)
 
+
+@dataclass(frozen=True)
+class _MailboxItem:
+    ts: float
+    message: Message
+
+
 class EventHandlerHub:
-    def __init__(self):
-        self.queue = queue.Queue()  # Thread-safe queue
-        self.running = True
+    """
+    Production-grade event hub:
+    - Non-blocking for publishers (publish just enqueues).
+    - No thread-per-message. Delivery runs via a bounded worker pool.
+    - "Busy receiver" semantics are supported via per-receiver mailboxes:
+      if receiver is BUSY, messages are buffered until it becomes AVAILABLE.
+
+    Notes:
+    - The hub does NOT validate that receivers are agents. Receivers may be agents, managers, or services.
+    - Handlers should be fast; heavy work should be delegated to their own queues/threads.
+    """
+
+    def __init__(
+        self,
+        *,
+        worker_threads: int = 8,
+        max_mailbox_messages_per_receiver: int = 5000,
+        mailbox_ttl_seconds: Optional[float] = None,
+        drain_per_available_edge: int = 256,
+    ):
+        self.queue: "queue.Queue[Optional[Message]]" = queue.Queue()
+        self._stop_event = threading.Event()
 
         # Event routing table (maps event keys to handler functions)
-        self.event_registry = {}
+        self.event_registry: Dict[str, List[Callable[[Message], None]]] = {}
 
-        # Track agent busy status: agent_name -> bool (True if busy)
-        self.agent_status = {}
+        # Receiver status + mailbox buffering (works for agents, managers, services)
+        self.receiver_status: Dict[str, bool] = {}
+        self.pending_messages: Dict[str, Deque[_MailboxItem]] = {}
+        self.max_mailbox_messages_per_receiver = max(1, int(max_mailbox_messages_per_receiver))
+        self.mailbox_ttl_seconds = mailbox_ttl_seconds
+        self.drain_per_available_edge = max(1, int(drain_per_available_edge))
 
-        # Store pending messages per agent: agent_name -> list of messages
-        self.pending_messages = {}
+        # Protect event registry + statuses + mailboxes (hub is multi-threaded)
+        self._lock = threading.Lock()
 
-        # Track when an agent's message was first requeued: agent_name -> timestamp
-        self.requeued_timestamps = {}
+        # Fixed worker pool for handler execution (no thread-per-message)
+        self._executor = ThreadPoolExecutor(max_workers=max(1, int(worker_threads)))
 
-        # Track requeue counts per agent: agent_name -> count
-        self.requeue_counts = {}
-        
-        # Track first requeue time per agent: agent_name -> timestamp (for backoff calculation)
-        self.requeue_first_time = {}
-
-        # Maximum wait time (seconds) before force-releasing an agent
-        self.max_wait_time = 200
-
-        # Maximum requeue attempts before killing the program (for debugging stuck agents)
-        self.max_requeue_attempts = 30  # Increased from 10 since we now have backoff
-        
-        # Backoff settings for busy agents
-        self.requeue_backoff_seconds = 2.0  # Wait this long between requeue attempts
-
-        # Start a worker thread for processing messages
+        # Start a single dispatcher thread for routing messages to handlers
         self.worker_thread = threading.Thread(target=self.process_queue, daemon=True)
         self.worker_thread.start()
-        logger.info("✅ EventHandlerHub initialized and worker thread started.")
+        logger.info("✅ EventHandlerHub initialized and dispatcher thread started.")
 
-    def register_event(self, event_key, handler):
-        """Registers an event with a unique key and its handler. Raises on duplicate."""
-        if event_key in self.event_registry:
-            existing_handler = self.event_registry[event_key]
-            if existing_handler == handler:
-                logger.critical(
-                    f"❌ Duplicate registration attempt for event '{event_key}' "
-                    f"with the same handler: {handler} (id: {id(handler)})"
+    def register_event(self, event_key: str, handler: Callable[[Message], None]) -> None:
+        """Registers a subscriber for an event. Raises on exact-duplicate handler."""
+        with self._lock:
+            handlers = self.event_registry.setdefault(event_key, [])
+            if any(h == handler for h in handlers):
+                raise RuntimeError(
+                    f"Duplicate registration for event '{event_key}' with same handler: {handler} (id: {id(handler)})"
                 )
-                sys.exit(f"🛑 Fatal: duplicate handler registration for '{event_key}'")
-            else:
-                logger.critical(
-                    f"❌ Conflicting handlers for event '{event_key}'!\n"
-                    f"- Existing: {existing_handler} (id: {id(existing_handler)})\n"
-                    f"- New: {handler} (id: {id(handler)})"
-                )
-                sys.exit(f"🛑 Fatal: handler conflict on '{event_key}'")
-
-        self.event_registry[event_key] = handler
+            handlers.append(handler)
         logger.info(f"✅ Registered event: {event_key} with handler {handler}")
 
-    def set_agent_status(self, agent_name, is_busy):
-        """Marks an agent as busy or available. When an agent becomes available, dispatch any pending messages."""
-        previous_status = self.agent_status.get(agent_name, None)
-        self.agent_status[agent_name] = is_busy
+    def unregister_event(self, event_key: str, handler: Optional[Callable[[Message], None]] = None) -> None:
+        """
+        Unregister previously registered event subscribers.
+        - If `handler` is None: removes ALL subscribers for the event.
+        - If `handler` is provided: removes that subscriber only (if present).
+        """
+        with self._lock:
+            if event_key not in self.event_registry:
+                logger.warning(f"⚠️ Attempted to unregister unknown event: {event_key}")
+                return
+
+            if handler is None:
+                removed = self.event_registry.pop(event_key)
+                logger.info(f"🗑️ Unregistered event: {event_key} (Subscribers removed: {len(removed)})")
+                return
+
+            handlers = self.event_registry.get(event_key, [])
+            before = len(handlers)
+            handlers = [h for h in handlers if h != handler]
+            after = len(handlers)
+            if after == before:
+                logger.warning(f"⚠️ Handler not found while unregistering event '{event_key}': {handler}")
+                return
+            if handlers:
+                self.event_registry[event_key] = handlers
+            else:
+                self.event_registry.pop(event_key, None)
+            logger.info(f"🗑️ Unregistered subscriber for event: {event_key} (remaining: {after})")
+
+    # Back-compat name (used by Agent.py)
+    def set_agent_status(self, agent_name: str, is_busy: bool) -> None:
+        self.set_receiver_status(agent_name, is_busy)
+
+    def set_receiver_status(self, receiver: str, is_busy: bool) -> None:
+        """Marks a receiver as busy or available. When available, drains buffered mailbox messages."""
+        with self._lock:
+            previous_status = self.receiver_status.get(receiver, None)
+            self.receiver_status[receiver] = bool(is_busy)
         status = "BUSY" if is_busy else "AVAILABLE"
+        logger.debug(f"🔄 Receiver '{receiver}' changed from {previous_status} to {status}")
 
-        logger.debug(f"🔄 Agent '{agent_name}' changed from {previous_status} to {status}")
+        if is_busy:
+            return
 
-        if not is_busy and agent_name in self.pending_messages:
-            while self.pending_messages[agent_name]:
-                pending_message = self.pending_messages[agent_name].pop(0)
-                logger.debug(f"🚀 Dispatching pending message for agent '{agent_name}'")
-                self.dispatch_message(pending_message)
+        # Drain a bounded number of pending messages directly (avoid flooding global queue).
+        drained: List[Message] = []
+        with self._lock:
+            mailbox = self.pending_messages.get(receiver)
+            if not mailbox:
+                return
 
-            # Clear the requeue timestamp, count, and first_time if present
-            if agent_name in self.requeued_timestamps:
-                del self.requeued_timestamps[agent_name]
-            if agent_name in self.requeue_counts:
-                del self.requeue_counts[agent_name]
-            if agent_name in self.requeue_first_time:
-                del self.requeue_first_time[agent_name]
+            # Optional TTL cleanup (prevents unbounded growth if a receiver never returns)
+            if self.mailbox_ttl_seconds is not None:
+                cutoff = time() - float(self.mailbox_ttl_seconds)
+                while mailbox and mailbox[0].ts < cutoff:
+                    mailbox.popleft()
 
-    def is_agent_busy(self, agent_name):
-        """Returns whether an agent is currently busy."""
-        busy_status = self.agent_status.get(agent_name, False)
-        logger.debug(f"🔍 Agent '{agent_name}' busy status: {busy_status}")
-        return busy_status
+            max_drain = min(self.drain_per_available_edge, len(mailbox))
+            for _ in range(max_drain):
+                if not mailbox:
+                    break
+                drained.append(mailbox.popleft().message)
 
-    def publish(self, message: Message):
-        """Handles incoming events, warning if no subscribers exist but still allowing late registrations."""
-        logger.debug(f"🔵 Received event: {message.event_topic} for agent '{message.receiver}' with content: {message.content}")
+            if not mailbox:
+                self.pending_messages.pop(receiver, None)
 
-        if message.event_topic not in self.event_registry:
+        for m in drained:
+            self._deliver(m)
+
+    def is_agent_busy(self, agent_name: str) -> bool:
+        """Back-compat helper for agent busy status."""
+        return self.is_receiver_busy(agent_name)
+
+    def is_receiver_busy(self, receiver: Optional[str]) -> bool:
+        if receiver is None:
+            return False
+        with self._lock:
+            return bool(self.receiver_status.get(receiver, False))
+
+    def publish(self, message: Message) -> None:
+        """Non-blocking publish: enqueue and return immediately."""
+        logger.debug(
+            f"🔵 Received event: {message.event_topic} receiver='{message.receiver}' sender='{message.sender}'"
+        )
+
+        with self._lock:
+            has_subscriber = bool(self.event_registry.get(message.event_topic or "", []))
+        if not has_subscriber:
             # Some events are optional and don't require handlers
-            if message.event_topic in ['settings_changed']:
-                logger.debug(f"ℹ️ Event '{message.event_topic}' was published (no subscribers registered, which is normal)")
+            if message.event_topic in ["settings_changed"]:
+                logger.debug(f"ℹ️ Event '{message.event_topic}' published (no subscribers yet; normal)")
             else:
                 logger.warning(f"⚠️ Event '{message.event_topic}' was published but has NO registered subscribers yet.")
 
-        logger.debug(f"📥 Putting message for '{message.receiver}' into the queue")
-        # print("JUKKA DEBUG In queue:")
-        # for item in list(self.queue.queue):  # copy to avoid race conditions
-        #     print("  •", item)
-
         self.queue.put(message)
 
-    def process_queue(self):
-        logger.info("🔄 EventHandlerHub worker thread running...")
+    def _deliver(self, message: Message) -> None:
+        receiver = message.receiver
 
-        empty_queue_wait = 0.01  # Reduced from 0.1 to 0.01 seconds
-        max_empty_queue_wait = 0.5  # Reduced from 2.0 to 0.5 seconds
+        # If the receiver is busy, buffer it in that receiver mailbox (FIFO)
+        if receiver is not None:
+            with self._lock:
+                if bool(self.receiver_status.get(receiver, False)):
+                    mailbox = self.pending_messages.setdefault(receiver, deque())
+                    if len(mailbox) >= self.max_mailbox_messages_per_receiver:
+                        # Drop oldest to preserve more recent state transitions.
+                        mailbox.popleft()
+                        logger.warning(
+                            f"⚠️ Mailbox overflow for receiver='{receiver}'. Dropped oldest message. "
+                            f"max={self.max_mailbox_messages_per_receiver}"
+                        )
+                    mailbox.append(_MailboxItem(ts=time(), message=message))
+                    return
 
-        while self.running:
+        handlers: Sequence[Callable[[Message], None]]
+        with self._lock:
+            handlers = tuple(self.event_registry.get(message.event_topic or "", []))
+
+        if not handlers:
+            handlers = (self.default_handler,)
+
+        # Fan-out to all subscribers (bounded worker pool).
+        for handler in handlers:
+            self._executor.submit(self._safe_invoke, handler, message)
+
+    def _safe_invoke(self, handler: Callable[[Message], None], message: Message) -> None:
+        try:
+            handler(message)
+        except Exception:
+            # Never crash the hub for a handler bug; log and continue.
+            logger.critical(
+                f"🔥 Handler crashed for event '{message.event_topic}' receiver='{message.receiver}' handler={handler}",
+                exc_info=True,
+            )
+
+    def process_queue(self) -> None:
+        logger.info("🔄 EventHandlerHub dispatcher thread running...")
+
+        while not self._stop_event.is_set():
             try:
-                queue_size = self.queue.qsize()
-                #logger.debug(f"🟢 Queue size: {queue_size}")
-                # print(f"print statement says Queue size: {queue_size}")
+                msg = self.queue.get(timeout=0.5)
+            except queue.Empty:
+                continue
 
-                if queue_size == 0:
-                    #logger.debug(f"⏳ Queue is empty. Sleeping for {empty_queue_wait} seconds...")
-                    #print(f"print statement says: Queue is empty. Sleeping for {empty_queue_wait} seconds...")
-                    time.sleep(empty_queue_wait)
-                    empty_queue_wait = min(max_empty_queue_wait, empty_queue_wait * 1.2)  # Reduced multiplier from 1.5 to 1.2
+            if msg is None:
+                continue
+
+            # Batch-drain quickly to reduce overhead under load, while preserving FIFO order.
+            batch: List[Message] = [msg]
+            while True:
+                try:
+                    nxt = self.queue.get_nowait()
+                except queue.Empty:
+                    break
+                if nxt is None:
                     continue
-                else:
-                    empty_queue_wait = 0.01  # Reset wait time when messages arrive
+                batch.append(nxt)
 
-                messages_to_requeue = []
-                messages = []
+            for message in batch:
+                self._deliver(message)
 
-                while not self.queue.empty():
-                    msg = self.queue.get()
-                    logger.debug(f"📤 Processing message from queue: {msg.event_topic} for {msg.receiver}")
-                    messages.append(msg)
-
-                logger.debug(f"📌 Processing {len(messages)} messages from queue")
-                random.shuffle(messages)
-
-                for message in messages:
-                    agent_name = message.receiver
-
-                    if agent_name is not None and agent_name not in DI.agent_registry.list_agents():
-                        logger.error(f"🚨 Message has an invalid agent_name: {agent_name}. Message: {message} ")
-                        continue
-
-                    logger.debug(f"📬 Processing message for agent '{agent_name}'")
-
-                    if agent_name is not None and self.agent_status.get(agent_name, False):
-                        current_time = time.time()
-                        
-                        # Initialize tracking for this agent if first requeue
-                        if agent_name not in self.requeue_first_time:
-                            self.requeue_first_time[agent_name] = current_time
-                            self.requeue_counts[agent_name] = 0
-                        
-                        # Check if enough time has passed since last requeue attempt (backoff)
-                        time_since_first = current_time - self.requeue_first_time[agent_name]
-                        expected_attempts = int(time_since_first / self.requeue_backoff_seconds)
-                        actual_attempts = self.requeue_counts[agent_name]
-                        
-                        # Only count as a new attempt if backoff period has passed
-                        if expected_attempts > actual_attempts:
-                            self.requeue_counts[agent_name] = expected_attempts
-                            requeue_count = expected_attempts
-                            
-                            logger.warning(f"⚠️ Agent '{agent_name}' is busy. Requeuing message. "
-                                         f"(attempt {requeue_count}/{self.max_requeue_attempts}, "
-                                         f"waiting {time_since_first:.1f}s)")
-                            
-                            if requeue_count >= self.max_requeue_attempts:
-                                total_wait = requeue_count * self.requeue_backoff_seconds
-                                logger.critical(f"🛑 KILLING PROGRAM: Agent '{agent_name}' has been busy for {requeue_count} attempts (~{total_wait:.0f}s)!")
-                                logger.critical(f"🛑 This indicates the agent never released its busy flag. Check _set_agent_idle() calls.")
-                                logger.critical(f"🛑 Message that couldn't be delivered: {message.event_topic} -> {message.receiver}")
-                                import os
-                                os._exit(1)  # Force kill - use os._exit to bypass cleanup and ensure immediate termination
-                        
-                        messages_to_requeue.append(message)
-                    else:
-                        handler = self.event_registry.get(message.event_topic, self.default_handler)
-                        logger.debug(f"📨 Dispatching message to handler {handler}")
-
-                        try:
-                            threading.Thread(target=handler, args=(message,), daemon=True).start()
-                        except Exception as e:
-                            logger.critical(f"🔥 Handler for event '{message.event_topic}' crashed for agent '{agent_name}': {e}", exc_info=True)
-                            sys.exit(f"💥 Fatal error in handler '{handler.__name__}' for agent '{agent_name}' — exiting for debug.")
-
-                for msg in messages_to_requeue:
-                    logger.debug(f"🔁 Re-queuing message for agent '{msg.receiver}'")
-                    self.queue.put(msg)
-
-                # If we have messages waiting for busy agents, sleep longer to allow backoff
-                if messages_to_requeue:
-                    time.sleep(0.5)  # Wait 500ms before re-checking busy agents
-                else:
-                    time.sleep(0.01)  # Normal processing speed when no blocked messages
-
-            except Exception as e:
-                logger.error(f"🚨 Uncaught exception in process_queue: {e}", exc_info=True)
-
-    def dispatch_message(self, message: Message):
-        """Routes messages to the correct handler based on registered events."""
-        agent_name = message.receiver
-
-        if message.receiver is not None:
-            if message.receiver not in DI.agent_registry.list_all_agent_names():
-                logger.warning(f"🚨 Message has receiver='{message.receiver}', but it's not a known agent. "
-                               f"This may be a handler misusing receiver or a namespacing bug.")
-                print(f"\n{'=' * 80}")
-                print(f"🛑 FATAL: Unknown agent receiver '{message.receiver}'")
-                print(f"   Event topic: {message.event_topic}")
-                print(f"   Known agents: {DI.agent_registry.list_all_agent_names()[:10]}...")
-                print(f"{'=' * 80}\n")
-                exit(1)
-
-        if agent_name is not None and agent_name not in DI.agent_registry.list_all_agent_names():
-            logger.error(f"🚨 Received a message with an invalid agent_name: {message}")
-            return
-
-        if self.is_agent_busy(agent_name):
-            current_time = time.time()
-            logger.warning(f"⚠️ Agent '{agent_name}' is busy. Queuing message.")
-
-            if agent_name not in self.requeued_timestamps:
-                self.requeued_timestamps[agent_name] = current_time
-            else:
-                elapsed = current_time - self.requeued_timestamps[agent_name]
-                if elapsed >= self.max_wait_time:
-                    logger.error(f"🚨 Agent '{agent_name}' has been busy for {self.max_wait_time} seconds. Forcing release.")
-                    self.set_agent_status(agent_name, False)
-                else:
-                    logger.warning(f"⚠️ Agent '{agent_name}' still busy (waited {elapsed:.2f}s).")
-
-            self.pending_messages.setdefault(agent_name, []).append(message)
-            return
-
-        # Clear requeue timestamp if present
-        self.requeued_timestamps.pop(agent_name, None)
-
-        handler = self.event_registry.get(message.event_topic, self.default_handler)
-
-        if handler == self.default_handler:
-            # Some events are optional and don't require handlers
-            if message.event_topic in ['settings_changed']:
-                logger.debug(f"ℹ️ No handler registered for event: {message.event_topic} (using default handler, which is normal)")
-            else:
-                logger.warning(f"⚠️ No handler registered for event: {message.event_topic}. Using default handler.")
-
-        logger.debug(f"🚀 Dispatching message with event key '{message.event_topic}' to handler {handler}")
-        handler(message)
-
-
-    def default_handler(self, message: Message):
+    def default_handler(self, message: Message) -> None:
         """Handles unknown or unregistered events."""
-        # Only log if it's not an expected optional event
-        if message.event_topic not in ['settings_changed']:
+        if message.event_topic not in ["settings_changed"]:
             logger.warning(f"⚠️ No handler registered for event: {message.event_topic}")
 
-    def list_registered_events(self):
-        """Lists all registered events and their handlers."""
+    def list_registered_events(self) -> None:
         logger.debug("=== Registered Events in Hub ===")
-        if not self.event_registry:
+        with self._lock:
+            items = list(self.event_registry.items())
+        if not items:
             logger.debug("No events have been registered yet.")
         else:
-            for event_key, handler in self.event_registry.items():
-                logger.debug(f"Event: {event_key}, Handler: {handler}")
+            for event_key, handlers in items:
+                logger.debug(f"Event: {event_key}, Subscribers: {len(handlers)}")
         logger.debug("==================================")
 
-
-    def unregister_event(self, event_key, handler=None):
-        """
-        Unregisters a previously registered event. If a handler is provided, it must match the registered one.
-        Logs a warning if the event wasn't found or the handler doesn't match.
-        """
-        if event_key in self.event_registry:
-            if handler is None or self.event_registry[event_key] == handler:
-                removed_handler = self.event_registry.pop(event_key)
-                logger.info(f"🗑️ Unregistered event: {event_key} (Handler: {removed_handler})")
-            else:
-                logger.warning(
-                    f"⚠️ Handler mismatch while trying to unregister event '{event_key}'. "
-                    f"Expected: {self.event_registry[event_key]}, Got: {handler}"
-                )
-        else:
-            logger.warning(f"⚠️ Attempted to unregister unknown event: {event_key}")
-
-
-    def stop(self):
-        """Stops the message processing thread gracefully."""
-        self.running = False
+    def stop(self) -> None:
+        """Stops the dispatcher thread and worker pool."""
+        self._stop_event.set()
         self.queue.put(None)
-        self.worker_thread.join()
-        logger.info("🛑 EventHandlerHub stopped gracefully.")
+        self.worker_thread.join(timeout=2.0)
+        self._executor.shutdown(wait=False)
+        logger.info("🛑 EventHandlerHub stopped.")

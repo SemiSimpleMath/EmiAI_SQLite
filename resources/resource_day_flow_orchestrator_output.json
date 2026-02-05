@@ -1,6 +1,15 @@
 {
-  "suggestions": [],
-  "assessment": "Jukka is currently focused at his keyboard following his post-lunch return, with active reminders for hydration, finger stretches, and coffee already pending and a standing break approaching in six minutes.",
-  "last_updated": "2026-02-01 01:26 PM",
-  "tickets_created": 0
+  "suggestions": [
+    {
+      "suggestion_type": "task",
+      "title": "Workday wrap-up",
+      "message": "You're in the final stretch of your workday, Jukka! Once you wrap up at 4:30, it might be a good time for a quick dog break and a breath of fresh air to clear your head before family time starts at 6.",
+      "priority": 4,
+      "action_type": "notify",
+      "trigger_reason": "User is finishing work in 15 minutes and the dogs are due for a break since their morning walk."
+    }
+  ],
+  "assessment": "Jukka is concluding an early work shift while managing chronic pain and fatigue, with current wellness needs already addressed by active reminders.",
+  "last_updated": "2026-02-04 04:13 PM",
+  "tickets_created": 1
 }

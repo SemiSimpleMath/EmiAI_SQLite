@@ -1,0 +1,15 @@
+name: delegator
+class_name: WebCriticDelegator
+color: "blue"
+llm_params:
+  llm_provider: "openai"
+  engine: "gpt-5-mini"
+  temperature: 1
+
+# Deterministic delegator; no tools and no prompts needed.
+allowed_tools: []
+except_tools: []
+
+user_context_items: []
+system_context_items: []
+

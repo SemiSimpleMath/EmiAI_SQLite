@@ -1,0 +1,32 @@
+Today is {{ date_time }}.
+
+Task:
+{{ task }}
+
+{% if information %}
+Information:
+{{ information }}
+{% endif %}
+
+{% if manager_loop_number is not none %}
+Manager loop: {{ manager_loop_number }} (count={{ manager_loop_count }})
+{% endif %}
+
+Pending tool call proposed by planner (NOT executed yet):
+- selected_tool: {{ selected_tool }}
+- tool_arguments: {{ tool_arguments }}
+
+{% if web_critic_image %}
+Latest screenshot (if available):
+[emi_image: {{ web_critic_image }}]
+{% endif %}
+
+{% if web_critic_trigger_reason %}
+Critic trigger reason: {{ web_critic_trigger_reason }}
+{% endif %}
+
+Recent history:
+{{ recent_history }}
+
+Critique this situation now. If the pending tool call is likely wrong or wasteful, set critic_must_revise_plan=true and give one actionable change.
+

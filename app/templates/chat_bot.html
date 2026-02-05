@@ -70,6 +70,12 @@
           <span>Music</span>
         </a>
       </li>
+      <li class="menu-item">
+        <a href="/progress" target="_blank" class="menu-btn">
+          <i class="fas fa-route"></i>
+          <span>Agent Progress</span>
+        </a>
+      </li>
       <li class="menu-item menu-submenu">
         <button class="menu-btn submenu-toggle">
           <i class="fas fa-tools"></i>
@@ -111,6 +117,12 @@
             <a href="/debug/orchestrator" target="_blank" class="menu-btn">
               <i class="fas fa-lightbulb"></i>
               <span>Day Flow Debug</span>
+            </a>
+          </li>
+          <li class="submenu-item">
+            <a href="/debug/logging" target="_blank" class="menu-btn">
+              <i class="fas fa-stream"></i>
+              <span>Logging Controls</span>
             </a>
           </li>
         </ul>
@@ -183,6 +195,18 @@
     <!-- Chat Area -->
     <div class="chat-area" role="log" aria-live="polite" id="chat-box">
       <!-- Existing Chat Messages will appear here -->
+    </div>
+    <!-- Pending image attachment preview (paste/drag/drop) -->
+    <div id="pending-image-preview" class="pending-image-preview hidden" aria-live="polite">
+      <div class="pending-image-preview__inner">
+        <img id="pending-image-thumb" class="pending-image-thumb" alt="Pending image attachment preview" />
+        <div class="pending-image-preview__meta">
+          <div id="pending-image-name" class="pending-image-name"></div>
+          <button type="button" id="pending-image-remove" class="pending-image-remove" aria-label="Remove image attachment">
+            Remove
+          </button>
+        </div>
+      </div>
     </div>
     <!-- Chat Form -->
     <form class="chat-form" aria-label="Send a message">

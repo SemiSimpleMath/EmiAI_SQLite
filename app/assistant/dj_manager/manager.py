@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import queue
 import threading
-import time
 from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, Optional
 
@@ -30,8 +29,6 @@ logger = get_logger(__name__)
 
 PICK_DEBOUNCE_SECONDS = 5
 QUEUE_RETRY_COOLDOWN_SECONDS = 20
-MUSIC_CHAT_POLL_SECONDS = 2.5
-MUSIC_CHAT_LOOKBACK_HOURS = 6
 
 PICK_SONG_TIMEOUT_SECONDS = 90
 
@@ -71,11 +68,6 @@ class DJManager:
         self._queue_retry_after_utc: Optional[datetime] = None
 
         self._current_track_id: Optional[str] = None
-
-        # Music-chat trigger: if a new /music instruction arrives, trigger a fresh pick.
-        self._last_seen_music_chat_utc: Optional[datetime] = None
-        self._last_music_chat_poll_monotonic: float = 0.0
-        self._last_music_chat_trigger_utc: Optional[datetime] = None
 
         self._stats = {
             "started_at": None,
@@ -268,10 +260,6 @@ class DJManager:
 
     def _loop(self) -> None:
         while True:
-            # Poll for new /music chat instructions (cheap; the LLM is the bottleneck anyway).
-            # Only runs while DJ is enabled + continuous mode.
-            self._poll_music_chat_once()
-
             try:
                 event = self._q.get(timeout=0.25)
             except queue.Empty:
@@ -284,78 +272,6 @@ class DJManager:
                 self._handle_event(event)
             except Exception as e:
                 logger.exception(f"Error handling DJ event {type(event).__name__}: {e}")
-
-    def _poll_music_chat_once(self) -> None:
-        """
-        Periodically check for new music-scoped chat (e.g. /music commands) and trigger a pick.
-
-        We intentionally avoid a global "new chat" event; this keeps the wake-up localized
-        to the DJ subsystem and gives ~2-3s latency.
-        """
-        if not self._enabled or not self._continuous_mode:
-            return
-
-        now_mono = time.monotonic()
-        if (now_mono - self._last_music_chat_poll_monotonic) < MUSIC_CHAT_POLL_SECONDS:
-            return
-        self._last_music_chat_poll_monotonic = now_mono
-
-        try:
-            from app.assistant.ServiceLocator.service_locator import DI
-
-            now_utc = datetime.now(timezone.utc)
-            # Start with a conservative lookback; once we've seen a message, use that as the cutoff.
-            cutoff = self._last_seen_music_chat_utc or (now_utc - timedelta(hours=MUSIC_CHAT_LOOKBACK_HOURS))
-            # Nudge back slightly so we don't miss messages with identical timestamps.
-            cutoff = cutoff - timedelta(seconds=1)
-
-            msgs = DI.global_blackboard.get_recent_chat_since_utc(
-                cutoff,
-                limit=20,
-                content_limit=220,
-                include_tags=["music"],
-                include_command_scopes=["music"],
-            )
-            if not msgs:
-                return
-
-            newest_utc: Optional[datetime] = None
-            newest_msg = None
-            for m in msgs:
-                ts = getattr(m, "timestamp", None)
-                if ts is None:
-                    continue
-                if getattr(ts, "tzinfo", None) is None:
-                    ts = ts.replace(tzinfo=timezone.utc)
-                ts = ts.astimezone(timezone.utc)
-                if newest_utc is None or ts > newest_utc:
-                    newest_utc = ts
-                    newest_msg = m
-
-            if newest_utc is None:
-                return
-
-            prev = self._last_seen_music_chat_utc
-            if prev is None or newest_utc > prev:
-                self._last_seen_music_chat_utc = newest_utc
-
-                # Debounce repeated triggers in a short window (e.g. multiple polls before a pick starts).
-                if self._last_music_chat_trigger_utc and (now_utc - self._last_music_chat_trigger_utc).total_seconds() < 2.0:
-                    return
-                self._last_music_chat_trigger_utc = now_utc
-
-                preview = ""
-                try:
-                    preview = (getattr(newest_msg, "content", "") or "").strip()
-                except Exception:
-                    preview = ""
-                logger.info(f"DJ: new /music instruction detected -> triggering pick (preview='{preview[:120]}')")
-
-                # Queue next song; do not interrupt current track.
-                self.enqueue(RequestPickAndQueue(reason="music_chat"))
-
-        except Exception as e:
-            logger.debug(f"DJ: music chat poll failed: {e}", exc_info=True)
 
     # Event handling
 

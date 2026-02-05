@@ -1,6 +1,8 @@
 # Note to coding agents: This file should not be modified without user permission.
 from datetime import datetime, timezone
+import os
 import uuid
+from typing import Any, Dict, List, Optional, Union
 
 from jinja2 import Template
 
@@ -10,6 +12,7 @@ from app.assistant.agent_classes.Agent import Agent
 from app.assistant.utils.time_utils import get_local_time_str
 from app.assistant.entity_management.entity_card_injector import EntityCardInjector
 from app.assistant.utils.assistant_name import get_assistant_name
+from app.services.llm_factory import LLMFactory
 
 from app.assistant.utils.logging_config import get_logger
 logger = get_logger(__name__)
@@ -17,6 +20,23 @@ logger = get_logger(__name__)
 class EmiAgent(Agent):
     def __init__(self, name, blackboard, agent_registry, tool_registry, llm_params=None, parent=None):
         super().__init__(name, blackboard, agent_registry, tool_registry, llm_params, parent)
+
+    def _get_first_image_attachment(self, message: Optional[Message]) -> Optional[Dict[str, Any]]:
+        """
+        Returns the first image attachment dict from message.metadata.attachments, if present.
+        """
+        if not message:
+            return None
+        meta = getattr(message, "metadata", None)
+        if not isinstance(meta, dict):
+            return None
+        attachments = meta.get("attachments")
+        if not isinstance(attachments, list):
+            return None
+        for att in attachments:
+            if isinstance(att, dict) and att.get("type") == "image" and att.get("path"):
+                return att
+        return None
 
     def _parse_slash_command(self, text: str):
         """
@@ -114,6 +134,18 @@ class EmiAgent(Agent):
             # Store payload as the content so downstream consumers can focus on intent.
             content = cmd.get("payload") or ""
 
+        # If an image is attached (non-slash-command), store only a marker in history.
+        if not cmd:
+            att = self._get_first_image_attachment(message)
+            if att:
+                # Prefer original filename, fallback to basename of stored path.
+                fname = att.get("original_filename") or os.path.basename(str(att.get("path") or "image"))
+                marker = f"[image attached: {fname}]"
+                if isinstance(content, str) and content.strip():
+                    content = f"{content}\n{marker}"
+                else:
+                    content = marker
+
         user_chat_msg = Message(
             data_type="user_msg",
             sender="User",
@@ -127,6 +159,79 @@ class EmiAgent(Agent):
         # EmiAgent uses global blackboard natively, so only add once
         self.blackboard.add_msg(user_chat_msg)
 
+    def construct_prompt(self, message: Message = None) -> List[Dict[str, Any]]:
+        """
+        If an image attachment is present, turn the user turn into a multimodal
+        content-block list: input_text + image_path.
+        """
+        msgs: List[Dict[str, Any]] = super().construct_prompt(message)
+        att = self._get_first_image_attachment(message)
+        if not att:
+            return msgs
+
+        try:
+            image_path = str(att.get("path"))
+            fname = att.get("original_filename") or os.path.basename(image_path)
+            marker = f"\n\n[image attached: {fname}]"
+            user_text = msgs[1].get("content", "")
+            if not isinstance(user_text, str):
+                user_text = str(user_text)
+            msgs[1]["content"] = [
+                {"type": "input_text", "text": f"{user_text}{marker}"},
+                {"type": "image_path", "path": image_path},
+            ]
+        except Exception as e:
+            logger.error(f"[{self.name}] Failed to build multimodal prompt: {e}")
+
+        return msgs
+
+    def call_llm(
+        self,
+        messages: List[Dict[str, Any]],
+        response_format: Optional[Union[dict, str]] = None,
+        use_json: bool = False,
+    ) -> Any:
+        """
+        Overrides base caller to:
+        - force a vision-capable model when images are present
+        - cleanup temp image files after the call
+        """
+        image_paths: List[str] = []
+        try:
+            for msg in messages or []:
+                content = msg.get("content")
+                if isinstance(content, list):
+                    for part in content:
+                        if isinstance(part, dict) and part.get("type") == "image_path" and part.get("path"):
+                            image_paths.append(str(part["path"]))
+
+            # Build per-call params without mutating self.llm_params.
+            params = dict(self.llm_params)
+            if response_format is not None:
+                params["response_format"] = response_format
+
+            # IMPORTANT: Gemini adapter does not support OpenAI-style multimodal content blocks.
+            # For image messages, always route through the OpenAI provider.
+            if image_paths:
+                params["llm_provider"] = "openai"
+                params["engine"] = "gpt-5.2"
+                llm_interface = LLMFactory.get_llm_interface(llm_provider="openai")
+            else:
+                if self.llm_interface is None:
+                    self.llm_interface = self.get_llm_interface()
+                llm_interface = self.llm_interface
+
+            response = llm_interface.structured_output(messages, use_json=use_json, **params)
+            self._check_for_quota_error(response)
+            return response
+        finally:
+            # Best-effort cleanup of temp image files.
+            for p in image_paths:
+                try:
+                    if p and os.path.exists(p):
+                        os.remove(p)
+                except Exception:
+                    pass
 
     def get_user_prompt(self, message: Message = None):
         user_prompt_template = self.config.get("prompts", {}).get("user", "")

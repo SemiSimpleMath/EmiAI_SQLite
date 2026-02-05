@@ -68,8 +68,8 @@ class Agent:
     def get_default_llm_params(self):
         return {
             "llm_provider": "openai",
-            "engine": "gpt-4o-mini",
-            "temperature": 0.1,
+            "engine": "gpt-5-mini",
+            "temperature": 1,
             "api_key": "dummy_api_key"
         }
 
@@ -234,7 +234,7 @@ class Agent:
 
     def call_llm(
             self,
-            messages: List[Dict[str, str]],
+            messages: List[Dict[str, Any]],
             response_format: Optional[Union[dict, str]] = None,
             use_json: bool = False,
     ) -> Any:
@@ -255,22 +255,41 @@ class Agent:
             if response_format is not None:
                 params["response_format"] = response_format
 
-            # Debug print prompts
-            for msg in messages:
-                role = msg.get("role")
-                content = msg.get("content", "")
-                if role == "system":
-                    print(f"\n{'=' * 60}")
-                    print(f"SYSTEM PROMPT {self.name}")
-                    print(f"{'=' * 60}")
-                    print(content)
-                    print(f"{'=' * 60}\n")
-                elif role == "user":
-                    print(f"\n{'=' * 60}")
-                    print(f"USER PROMPT {self.name}")
-                    print(f"{'=' * 60}")
-                    print(content)
-                    print(f"{'=' * 60}\n")
+            # Debug print prompts (disabled by default; parallel agents interleave stdout).
+            # To enable temporarily, set: EMI_PRINT_PROMPTS=1
+            if os.environ.get("EMI_PRINT_PROMPTS", "0") == "1":
+                for msg in messages:
+                    role = msg.get("role")
+                    content = msg.get("content", "")
+                    # Multimodal content can be a list of blocks; print just the text and placeholders.
+                    if isinstance(content, list):
+                        parts = []
+                        for part in content:
+                            if isinstance(part, str):
+                                parts.append(part)
+                                continue
+                            if not isinstance(part, dict):
+                                continue
+                            ptype = part.get("type")
+                            if ptype in ("input_text", "text"):
+                                parts.append(part.get("text") or "")
+                            elif ptype in ("input_image", "image_url", "image_path", "image_base64"):
+                                parts.append("[image]")
+                            else:
+                                parts.append(f"[{ptype or 'block'}]")
+                        content = "\n".join([p for p in parts if p])
+                    if role == "system":
+                        print(f"\n{'=' * 60}")
+                        print(f"SYSTEM PROMPT {self.name}")
+                        print(f"{'=' * 60}")
+                        print(content)
+                        print(f"{'=' * 60}\n")
+                    elif role == "user":
+                        print(f"\n{'=' * 60}")
+                        print(f"USER PROMPT {self.name}")
+                        print(f"{'=' * 60}")
+                        print(content)
+                        print(f"{'=' * 60}\n")
 
             response = self.llm_interface.structured_output(
                 messages,
@@ -303,6 +322,36 @@ class Agent:
         system_prompt = re.sub(r'\n{3,}', '\n\n', system_prompt)
         user_prompt = re.sub(r'\n{3,}', '\n\n', user_prompt)
 
+        # If the prompt includes Emi image markers, convert this turn into a multimodal
+        # content-block list so OpenAI can analyze the referenced image(s).
+        #
+        # Marker format:
+        #   [emi_image: mcp_<id>.png]
+        #   [emi_image: E:\EmiAi_sqlite\uploads\temp\mcp_<id>.png]
+        #
+        # IMPORTANT:
+        # - We intentionally do NOT inject this marker into generic recent_history. Planners should remain text-only.
+        # - Vision agents may include this marker explicitly in their own prompts.
+        emi_image_refs: list[str] = []
+        try:
+            pat = re.compile(r"\[emi_image:\s*([^\]]+?)\s*\]")
+            for m in pat.finditer(user_prompt or ""):
+                p = (m.group(1) or "").strip()
+                if p:
+                    emi_image_refs.append(p)
+            # Back-compat: accept legacy marker too (from older logs/prompts).
+            pat_legacy = re.compile(r"\[mcp_image_path:\s*([^\]]+?)\s*\]")
+            for m in pat_legacy.finditer(user_prompt or ""):
+                p = (m.group(1) or "").strip()
+                if p:
+                    emi_image_refs.append(p)
+
+            # Remove only the marker lines from the text.
+            user_prompt = pat.sub("", user_prompt or "")
+            user_prompt = pat_legacy.sub("", user_prompt or "")
+        except Exception:
+            emi_image_refs = []
+
         # Normalize to ASCII to prevent encoding issues
         system_prompt = normalize_to_ascii(system_prompt)
         user_prompt = normalize_to_ascii(user_prompt)
@@ -311,6 +360,12 @@ class Agent:
             {'role': 'system', 'content': system_prompt or f"[{self.name}] Error forming system prompt."},
             {'role': 'user', 'content': user_prompt or f"[{self.name}] Error forming user prompt."}
         ]
+
+        if emi_image_refs:
+            blocks = [{"type": "input_text", "text": msg[1]["content"]}]
+            for p in emi_image_refs:
+                blocks.append({"type": "image_path", "path": p})
+            msg[1]["content"] = blocks
         return msg
 
     def get_system_prompt(self, message: Message = None):
@@ -421,11 +476,35 @@ class Agent:
 
         except_nodes = set(agent_config.get("except_nodes", []))
         all_nodes = set(self.agent_registry.list_agents())
-        valid_nodes = [a for a in allowed_nodes if a in all_nodes and a not in except_nodes]
 
-        missing_agents = allowed_nodes - all_nodes
-        if missing_agents:
-            logger.warning(f"[{self.name}] References unavailable agents: {missing_agents}")
+        # In manager runtimes, an agent is only truly callable if it has an instantiated
+        # instance registered in the AgentRegistry. (Otherwise ToolCaller will crash later.)
+        instantiated_nodes = set()
+        try:
+            # AgentRegistry stores instances under configs[name]["instance"] once loaded by AgentLoader.
+            for name, cfg in (getattr(self.agent_registry, "configs", {}) or {}).items():
+                if isinstance(cfg, dict) and cfg.get("instance") is not None:
+                    instantiated_nodes.add(name)
+        except Exception:
+            instantiated_nodes = set()
+
+        # If we have any instantiated nodes at all, enforce "callable" == "instantiated".
+        # Otherwise (e.g., non-manager AgentFactory usage), fall back to config-exists behavior.
+        enforce_instantiated = len(instantiated_nodes) > 0
+        availability_set = instantiated_nodes if enforce_instantiated else all_nodes
+
+        valid_nodes = [a for a in allowed_nodes if a in availability_set and a not in except_nodes]
+
+        missing_configs = allowed_nodes - all_nodes
+        if missing_configs:
+            logger.warning(f"[{self.name}] References unavailable agents (no config): {missing_configs}")
+
+        if enforce_instantiated:
+            not_instantiated = (allowed_nodes & all_nodes) - instantiated_nodes
+            if not_instantiated:
+                logger.warning(
+                    f"[{self.name}] References agents not instantiated in this runtime: {not_instantiated}"
+                )
 
         logger.debug(f"[{self.name}] Final allowed nodes: {valid_nodes}")
         return valid_nodes
@@ -488,10 +567,51 @@ class Agent:
             c = getattr(m, "content", "")
             return "" if c is None else str(c).strip()
 
+        # Helper to include attachment markers (e.g., MCP screenshots saved to disk).
+        # We keep these as plain text lines so downstream prompt parsing can extract paths
+        # without dealing with JSON escaping.
+        def _attachment_markers(m) -> str:
+            meta = getattr(m, "metadata", None)
+            if not isinstance(meta, dict):
+                return ""
+            atts = meta.get("attachments")
+            if not isinstance(atts, list) or not atts:
+                return ""
+            lines: list[str] = []
+            for att in atts:
+                if not isinstance(att, dict):
+                    continue
+                if att.get("type") != "image":
+                    continue
+                p = att.get("path")
+                if not isinstance(p, str) or not p.strip():
+                    continue
+                fname = att.get("original_filename") or os.path.basename(p)
+                lines.append(f"[image attached: {fname}]")
+            return "\n".join(lines).strip()
+
+        # Helper to include tool-result artifact pointers for on-demand retrieval.
+        # These are intentionally short; the agent can call `read_tool_result` if needed.
+        def _tool_result_ref_markers(m) -> str:
+            meta = getattr(m, "metadata", None)
+            if not isinstance(meta, dict):
+                return ""
+            tool_result_id = meta.get("tool_result_id")
+            if isinstance(tool_result_id, str) and tool_result_id.strip():
+                return f"[tool_result_id: {tool_result_id.strip()}]"
+            return ""
+
         # 2) Simple path if no summaries present
         has_summary = any(getattr(m, "data_type", None) == "tool_result_summary" for m in msgs)
         if not has_summary:
-            pieces = [ct for ct in (_safe_content(m) for m in msgs) if ct]
+            pieces = []
+            for m in msgs:
+                ct = _safe_content(m)
+                extra_a = _attachment_markers(m)
+                extra_r = _tool_result_ref_markers(m)
+                combined = "\n".join([x for x in (ct, extra_a, extra_r) if x]).strip()
+                if combined:
+                    pieces.append(combined)
             return "\n\n".join(pieces).strip()
 
         # 3) Summary path with single pass and lookahead
@@ -514,8 +634,10 @@ class Agent:
                 # If this is the last message, keep raw
                 if i == n - 1:
                     ct = _safe_content(m)
-                    if ct:
-                        pieces.append(ct)
+                    extra = _attachment_markers(m)
+                    combined = "\n".join([x for x in (ct, extra) if x]).strip()
+                    if combined:
+                        pieces.append(combined)
                     i += 1
                     continue
 
@@ -525,13 +647,19 @@ class Agent:
                     ct = _safe_content(nxt)
                     if len(ct) > 0:
                         ct = "SUMMARY CREATED: " + ct
-                    if ct:
-                        pieces.append(ct)
+                    extra_a = _attachment_markers(m)
+                    extra_r = _tool_result_ref_markers(m)
+                    combined = "\n".join([x for x in (ct, extra_a, extra_r) if x]).strip()
+                    if combined:
+                        pieces.append(combined)
                     i += 2  # skip the summary we just emitted
                 else:
                     ct = _safe_content(m)
-                    if ct:
-                        pieces.append(ct)
+                    extra_a = _attachment_markers(m)
+                    extra_r = _tool_result_ref_markers(m)
+                    combined = "\n".join([x for x in (ct, extra_a, extra_r) if x]).strip()
+                    if combined:
+                        pieces.append(combined)
                     i += 1
                 continue
 
@@ -963,6 +1091,39 @@ class Agent:
 
         # Step 4: Handle flow control (Shared Logic)
         self._handle_flow_control(result_dict)
+
+        # Step 4b: Emit a small progress fact for UI (no chain-of-thought).
+        # Only do this for planners to avoid flooding the UI.
+        try:
+            if str(self.name).endswith("::planner") or str(self.name).endswith(":planner") or str(self.name).endswith("_planner"):
+                task = self.blackboard.get_state_value("task")
+                manager_name = ""
+                try:
+                    manager_name = getattr(self.parent, "name", "") if self.parent is not None else ""
+                except Exception:
+                    manager_name = ""
+
+                fact = {
+                    "kind": "planner_decision",
+                    "agent": self.name,
+                    "manager": manager_name,
+                    "task": task,
+                    "action": result_dict.get("action"),
+                    "action_input": result_dict.get("action_input"),
+                    # Avoid what_i_am_thinking; it is not for UI.
+                    "learned": (result_dict.get("summary") or "").strip() if isinstance(result_dict.get("summary"), str) else "",
+                    "action_count": self.blackboard.get_state_value("action_count"),
+                }
+                DI.event_hub.publish(
+                    Message(
+                        sender=self.name,
+                        receiver=None,
+                        event_topic="agent_progress_fact",
+                        data=fact,
+                    )
+                )
+        except Exception:
+            pass
 
         return ToolResult(
             result_type="llm_result",

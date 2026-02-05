@@ -1,0 +1,20 @@
+name: shared::vision_describe
+class_name: Agent
+color: "blue"
+llm_params:
+  llm_provider: "openai"
+  # Use a known vision-capable model for screenshot description.
+  engine: "gpt-5-mini"
+  temperature: 1
+
+# No tools: this agent only describes images already attached via history markers.
+allowed_tools: []
+except_tools: []
+
+system_context_items: []
+
+user_context_items:
+  - date_time
+  - task
+  - recent_history
+

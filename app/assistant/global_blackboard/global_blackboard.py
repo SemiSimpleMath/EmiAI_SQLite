@@ -331,7 +331,10 @@ class GlobalBlackBoard():
         current = self.state_dict.get(key)
         if current is None or not isinstance(current, list):
             self.state_dict[key] = []
-        self.state_dict[key].append(value)
+        if isinstance(value, list):
+            self.state_dict[key].extend(value)
+        else:
+            self.state_dict[key].append(value)
 
     def get_state_value(self, key, default=None):
         """Retrieve a value from the blackboard's state_dict safely."""

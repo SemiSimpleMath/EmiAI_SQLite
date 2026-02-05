@@ -1,0 +1,27 @@
+Today is {{ date_time }}.
+
+Task:
+{{ task }}
+
+{% if information %}
+Information:
+{{ information }}
+{% endif %}
+
+{% if recent_history %}
+Recent history:
+{{ recent_history }}
+{% endif %}
+
+{% if action_count is not none %}
+Action Count (actions already taken): {{ action_count }}
+Next action number will be: {{ action_count + 1 }}
+{% endif %}
+
+{% if critic_actionable_change %}
+Critic advice (fresh):
+- diagnosis: {{ critic_diagnosis }}
+- change_now: {{ critic_actionable_change }}
+- confidence: {{ critic_confidence }}
+{% endif %}
+

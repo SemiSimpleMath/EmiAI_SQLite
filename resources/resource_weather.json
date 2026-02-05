@@ -6,12 +6,12 @@
     "longitude": -117.8259819
   },
   "current": {
-    "temperature": 78.6,
+    "temperature": 61.7,
     "feels_like": null,
     "humidity": null,
-    "condition": "Overcast",
-    "wind_speed": 12.1
+    "condition": "Clear sky",
+    "wind_speed": 6.3
   },
   "forecast": [],
-  "last_updated": "2026-02-01 01:21 PM"
+  "last_updated": "2026-02-02 06:13 PM"
 }

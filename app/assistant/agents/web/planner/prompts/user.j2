@@ -7,6 +7,29 @@ Task you have been given: {{ task }}
 Additional information: {{ information }}
 {% endif %}
 
+{% if orchestrator_global_objective %}
+Orchestrator global objective:
+{{ orchestrator_global_objective }}
+{% endif %}
+
+{% if orchestrator_global_guidance %}
+Orchestrator global guidance (constraints/facts):
+{% for g in orchestrator_global_guidance %}
+- {{ g }}
+{% endfor %}
+{% endif %}
+
+{% if orchestrator_job_id or orchestrator_job_guidance %}
+Orchestrator job context:
+{% if orchestrator_job_id %}job_id: {{ orchestrator_job_id }}{% endif %}
+{% if orchestrator_job_guidance %}job_guidance: {{ orchestrator_job_guidance }}{% endif %}
+{% endif %}
+
+{% if progress_report %}
+Current accumulated progress_report (append-only; do NOT repeat items already listed here):
+{{ progress_report }}
+{% endif %}
+
 {% if checklist %}
 This is our previous checklist that you have to now update. You may also add sub-goals to the checklist. Do not get stuck thinking you must check off every single part. Often main goal can be achieved by abandoning some goals or sub-goals or deciding that a check item has been closely enough satisfied.
 {{ checklist }}

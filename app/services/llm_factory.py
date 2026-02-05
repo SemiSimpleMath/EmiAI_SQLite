@@ -1,4 +1,5 @@
 # llm_factory.py
+import threading
 from typing import List, Dict
 
 from pydantic import BaseModel
@@ -11,28 +12,36 @@ logger = get_logger(__name__)
 
 class LLMFactory:
     _llm_interfaces = {}  # Dict of provider_name -> LLMInterface singleton
+    _lock = threading.Lock()
 
     @staticmethod
     def get_llm_interface(**kwargs):
         provider_name = kwargs.get('llm_provider', 'openai')
         
         # Return cached interface if it exists for this provider
-        if provider_name in LLMFactory._llm_interfaces:
+        cached = LLMFactory._llm_interfaces.get(provider_name)
+        if cached is not None:
+            return cached
+
+        # Thread-safe lazy init so parallel workers don't create partial instances.
+        with LLMFactory._lock:
+            cached2 = LLMFactory._llm_interfaces.get(provider_name)
+            if cached2 is not None:
+                return cached2
+
+            # Create new singleton for this provider
+            LLM_class = get_llm_class(provider_name)
+            if not LLM_class:
+                raise ValueError(f"Unsupported LLM provider class: {provider_name}")
+
+            # Each provider class (OpenAILLM, GeminiLLM) is already a singleton
+            llm_provider_instance = LLM_class(**kwargs)
+
+            # Cache this provider's interface
+            LLMFactory._llm_interfaces[provider_name] = LLMInterface(llm_provider_instance)
+
+            logger.info(f"Created LLM interface for provider: {provider_name}")
             return LLMFactory._llm_interfaces[provider_name]
-        
-        # Create new singleton for this provider
-        LLM_class = get_llm_class(provider_name)
-        if not LLM_class:
-            raise ValueError(f"Unsupported LLM provider class: {provider_name}")
-
-        # Each provider class (OpenAILLM, GeminiLLM) is already a singleton
-        llm_provider_instance = LLM_class(**kwargs)
-
-        # Cache this provider's interface
-        LLMFactory._llm_interfaces[provider_name] = LLMInterface(llm_provider_instance)
-        
-        logger.info(f"Created LLM interface for provider: {provider_name}")
-        return LLMFactory._llm_interfaces[provider_name]
 
 class Link(BaseModel):
     key: str

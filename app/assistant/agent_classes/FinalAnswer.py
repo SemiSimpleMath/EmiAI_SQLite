@@ -1,4 +1,3 @@
-# Note to coding agents: This file should not be modified without user permission.
 import json
 
 from app.assistant.agent_classes.Agent import Agent  # Base Agent class
@@ -103,25 +102,47 @@ class FinalAnswer(Agent):
                 # Get messages from the current scope (root scope for final_answer)
                 current_scope_id = self.blackboard.get_current_scope_id()
                 agent_messages = self.blackboard.get_messages_for_scope(current_scope_id)
-                
-                # Build history of tool calls/results with intelligent summary preference
-                history_str = self.build_recent_history(agent_messages)
-                
-                # Append any agent/planner result messages (final conclusions before exit)
-                # Filter by tag "result" which marks final decisions
+
+                # IMPORTANT:
+                # FinalAnswer can become extremely slow/expensive if we dump the full tool trace.
+                # Prefer high-signal agent results only (planner/agent "result" messages), and fall back to a small,
+                # agent-only tail if no explicit results are present.
+                history_parts = []
+
+                # Append any agent/planner result messages (final conclusions before exit).
+                # Filter by tag "result" which marks final decisions.
                 result_messages = [
                     msg for msg in agent_messages
                     if "result" in (getattr(msg, "sub_data_type", []) or [])
                 ]
-                
+
+                def _truncate(text: str, max_chars: int = 8000) -> str:
+                    t = (text or "").strip()
+                    if len(t) <= max_chars:
+                        return t
+                    return t[:max_chars] + "\n\n[truncated]"
+
                 if result_messages:
-                    # Include all result messages (could be multiple agents)
                     for result_msg in result_messages:
-                        if hasattr(result_msg, 'content') and result_msg.content:
-                            sender = getattr(result_msg, 'sender', 'Agent')
-                            history_str += f"\n\n=== {sender.upper()} FINAL RESULT ===\n{result_msg.content}"
-                
-                context[key] = history_str
+                        content = getattr(result_msg, "content", None) or ""
+                        if content.strip():
+                            sender = getattr(result_msg, "sender", "Agent")
+                            history_parts.append(f"=== {str(sender).upper()} FINAL RESULT ===\n{_truncate(content)}")
+                else:
+                    # No explicit result messages: include a small tail of agent responses (exclude tool calls/results).
+                    # This still gives the final answer model enough context without huge prompt bloat.
+                    agent_only = [
+                        msg for msg in agent_messages
+                        if (getattr(msg, "data_type", None) or "") in {"agent_response", "agent_msg"}
+                    ]
+                    tail = agent_only[-12:]
+                    for msg in tail:
+                        sender = getattr(msg, "sender", "Agent")
+                        content = getattr(msg, "content", None) or ""
+                        if content.strip():
+                            history_parts.append(f"[{sender}] {_truncate(content, max_chars=2000)}")
+
+                context[key] = "\n\n".join([p for p in history_parts if p]).strip()
                 continue
 
 

@@ -44,10 +44,11 @@ class AgentFactory:
         # Dynamically register events from config using DI.event_hub
         agent_config = self.agent_registry.get_agent_config(agent_name)
         events = agent_config.get('events', [])
-        print("DEBUG EVENTS: ", events)
         for event in events:
             handler = getattr(agent, f"{event}_handler", None)
             if callable(handler):
+                # AgentFactory is used for system-wide, global event topics (e.g. emi_chat_request).
+                # Keep topics un-namespaced to match publishers (routes/services).
                 DI.event_hub.register_event(event, handler)
                 logger.info(f"✅ Registered event '{event}' for agent {agent_name}")
             else:

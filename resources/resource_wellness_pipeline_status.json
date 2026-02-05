@@ -1,46 +1,47 @@
 {
   "schema_version": 2,
-  "last_updated_utc": "2026-02-01T21:29:01.778519+00:00",
-  "boundary_date_local": "2026-02-01",
-  "last_daily_reset_utc": "2026-02-01T13:01:42.394839+00:00",
-  "last_daily_reset_boundary": "2026-02-01",
+  "last_updated_utc": "2026-02-05T00:17:57.536981+00:00",
+  "boundary_date_local": "2026-02-04",
+  "last_daily_reset_utc": "2026-02-04T13:02:22.508913+00:00",
+  "last_daily_reset_boundary": "2026-02-04",
   "day_started": true,
-  "day_start_time_utc": "2026-02-01T14:38:47.613857+00:00",
-  "day_start_time": "2026-02-01 06:38 AM PST",
-  "wake_time_today": "2026-02-01 06:38",
+  "day_start_time_utc": "2026-02-04T14:30:07.689650+00:00",
+  "day_start_time": "2026-02-04 06:30 AM PST",
+  "wake_time_today": "2026-02-04 06:30",
   "user_is_up": true,
   "cursors": {
     "chat_last_seen_utc": "2026-01-25T03:11:30.033555+00:00"
   },
   "stage_runs": {
     "sleep": {
-      "last_run_utc": "2026-02-01T21:26:45.262377+00:00",
+      "last_run_utc": "2026-02-05T00:17:57.522378+00:00",
       "last_reason": "ready",
       "last_debug": {
-        "total_sleep_minutes": 370.7,
+        "total_sleep_minutes": 368.4,
         "segment_count": 1,
-        "wake_time": "06:38",
+        "wake_time": "06:30",
         "user_is_up": true,
-        "day_start_time": "2026-02-01 06:38 AM PST"
+        "day_start_time": "2026-02-04 06:30 AM PST"
       }
     },
     "activity_tracker": {
-      "last_run_utc": "2026-02-01T21:26:45.262377+00:00",
+      "last_run_utc": "2026-02-05T00:17:57.522378+00:00",
       "last_reason": "ready",
       "last_debug": {
-        "last_run_utc": "2026-02-01T21:23:45.232744+00:00",
+        "last_run_utc": "2026-02-05T00:13:02.444149+00:00",
         "tickets_found": 0,
         "chat_messages": 0,
         "agent_called": false,
         "afk_reset_triggered": false
-      }
+      },
+      "last_afk_reset_utc": "2026-02-04T20:20:50.579661+00:00"
     },
     "daily_context_generator": {
-      "last_run_utc": "2026-02-01T21:26:45.262377+00:00",
+      "last_run_utc": "2026-02-05T00:13:02.444149+00:00",
       "last_reason": "ready",
       "last_debug": {
         "mode": "incremental",
-        "milestone_count": 5,
+        "milestone_count": 6,
         "output_keys": [
           "expected_schedule",
           "day_theme",
@@ -50,7 +51,7 @@
       }
     },
     "health_inference": {
-      "last_run_utc": "2026-02-01T21:26:45.262377+00:00",
+      "last_run_utc": "2026-02-05T00:13:02.444149+00:00",
       "last_reason": "ready",
       "last_debug": {
         "output_keys": [
@@ -64,14 +65,14 @@
       }
     },
     "day_flow_orchestrator": {
-      "last_run_utc": "2026-02-01T21:26:45.262377+00:00",
+      "last_run_utc": "2026-02-05T00:13:02.444149+00:00",
       "last_reason": "ready",
       "last_debug": {
         "output_keys": [
           "suggestions",
           "assessment"
         ],
-        "tickets_created": 0
+        "tickets_created": 1
       }
     },
     "wellness_ticket_processor": {
@@ -93,11 +94,11 @@
       }
     },
     "afk_statistics": {
-      "last_run_utc": "2026-02-01T21:26:45.262377+00:00",
+      "last_run_utc": "2026-02-05T00:17:57.522378+00:00",
       "last_reason": "ready",
       "last_debug": {
         "boundary_time_local_hm": "05:00",
-        "day_start_time_local_hm": "06:38",
+        "day_start_time_local_hm": "06:30",
         "has_realtime": true,
         "is_currently_active": true
       }
@@ -114,55 +115,55 @@
   "tracked_activities_state": {
     "activities": {
       "coffee": {
-        "last_occurrence_utc": "2026-02-01T14:41:24.511187+00:00",
-        "count_today": 1,
-        "count_date_local": "2026-02-01",
-        "last_reset_utc": "2026-02-01T20:50:04.570233+00:00",
+        "last_occurrence_utc": "2026-02-04T17:00:33.843435+00:00",
+        "count_today": 2,
+        "count_date_local": "2026-02-04",
+        "last_reset_utc": "2026-02-04T20:02:13.291404+00:00",
         "last_reset_reason": "init",
         "suppress_overdue_until_utc": null
       },
       "finger_stretch": {
-        "last_occurrence_utc": "2026-02-01T20:42:44.955591+00:00",
-        "count_today": 8,
-        "count_date_local": "2026-02-01",
-        "last_reset_utc": "2026-02-01T20:50:04.570233+00:00",
-        "last_reset_reason": "init",
+        "last_occurrence_utc": "2026-02-04T22:01:38.293249+00:00",
+        "count_today": 11,
+        "count_date_local": "2026-02-04",
+        "last_reset_utc": "2026-02-04T20:20:50.579661+00:00",
+        "last_reset_reason": "afk_return",
         "suppress_overdue_until_utc": null
       },
       "hydration": {
-        "last_occurrence_utc": "2026-02-01T19:09:25.679560+00:00",
+        "last_occurrence_utc": "2026-02-04T21:27:52.945248+00:00",
         "count_today": 3,
-        "count_date_local": "2026-02-01",
-        "last_reset_utc": "2026-02-01T20:50:04.570233+00:00",
+        "count_date_local": "2026-02-04",
+        "last_reset_utc": "2026-02-04T20:02:13.291404+00:00",
         "last_reset_reason": "init",
         "suppress_overdue_until_utc": null
       },
       "meal": {
-        "last_occurrence_utc": "2026-02-01T20:42:42.419730+00:00",
+        "last_occurrence_utc": "2026-02-04T21:27:55.355276+00:00",
         "count_today": 1,
-        "count_date_local": "2026-02-01",
-        "last_reset_utc": "2026-02-01T20:50:04.570233+00:00",
+        "count_date_local": "2026-02-04",
+        "last_reset_utc": "2026-02-04T20:02:13.291404+00:00",
         "last_reset_reason": "init",
         "suppress_overdue_until_utc": null
       },
       "snack": {
         "last_occurrence_utc": null,
         "count_today": 0,
-        "count_date_local": "2026-02-01",
-        "last_reset_utc": "2026-02-01T20:50:04.570233+00:00",
+        "count_date_local": "2026-02-04",
+        "last_reset_utc": "2026-02-04T20:02:13.291404+00:00",
         "last_reset_reason": "init",
         "suppress_overdue_until_utc": null
       },
       "standing_break": {
-        "last_occurrence_utc": "2026-02-01T20:42:46.397743+00:00",
-        "count_today": 6,
-        "count_date_local": "2026-02-01",
-        "last_reset_utc": "2026-02-01T20:50:04.570233+00:00",
-        "last_reset_reason": "init",
+        "last_occurrence_utc": "2026-02-04T22:10:17.918972+00:00",
+        "count_today": 7,
+        "count_date_local": "2026-02-04",
+        "last_reset_utc": "2026-02-04T20:20:50.579661+00:00",
+        "last_reset_reason": "afk_return",
         "suppress_overdue_until_utc": null
       }
     },
     "schema_version": 2,
-    "last_updated_utc": "2026-02-01T21:26:45.262377+00:00"
+    "last_updated_utc": "2026-02-05T00:17:57.522378+00:00"
   }
 }

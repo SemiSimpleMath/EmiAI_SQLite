@@ -197,16 +197,32 @@ class Blackboard:
         self.scopes[0][key] = value
 
     def append_state_value(self, key, value):
-        """Append a value to a list in the CURRENT (top) local scope."""
+        """
+        Append semantics for agent outputs.
+
+        - If the stored value is not a list, initialize it to [].
+        - If `value` is a list, EXTEND (so append_fields can return list deltas without nesting).
+        - Otherwise, APPEND a single item.
+        """
         if key not in self.scopes[-1] or not isinstance(self.scopes[-1].get(key), list):
             self.scopes[-1][key] = []
-        self.scopes[-1][key].append(value)
+        if isinstance(value, list):
+            self.scopes[-1][key].extend(value)
+        else:
+            self.scopes[-1][key].append(value)
 
     def append_global_state_value(self, key, value):
-        """Append a value to a list in the GLOBAL (bottom) scope."""
+        """
+        Append semantics for global outputs.
+
+        Behaves like append_state_value, but targets the GLOBAL (bottom) scope.
+        """
         if key not in self.scopes[0] or not isinstance(self.scopes[0].get(key), list):
             self.scopes[0][key] = []
-        self.scopes[0][key].append(value)
+        if isinstance(value, list):
+            self.scopes[0][key].extend(value)
+        else:
+            self.scopes[0][key].append(value)
 
     def add_msg(self, msg: Message):
         """Adds a message to the log, auto-tagging it with the current scope_id."""
