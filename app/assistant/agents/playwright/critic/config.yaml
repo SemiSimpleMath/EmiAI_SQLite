@@ -1,0 +1,22 @@
+name: playwright::critic
+class_name: PlaywrightCritic
+color: "blue"
+llm_params:
+  llm_provider: "openai"
+  engine: "gpt-4.1"
+  temperature: 0
+
+allowed_tools: []
+except_tools: []
+
+system_context_items: []
+
+user_context_items:
+  - date_time
+  - task
+  - recent_history
+  - selected_tool
+  - tool_arguments
+  - playwright_critic_image
+  - playwright_critic_trigger_reason
+

@@ -1,0 +1,37 @@
+version: "1"
+rules:
+  # Auto-follow a newly opened tab after click-like actions.
+  - name: auto_tab_follow
+    when: after
+    tools:
+      - mcp::npm/playwright-mcp::browser_click
+      - mcp::npm/playwright-mcp::browser_mouse_click_xy
+      - mcp::npm/playwright-mcp::browser_press_key
+    condition: new_tab_right_of_current
+    guard_key: playwright_auto_tab_follow_in_progress
+    action:
+      kind: tool_call
+      tool: mcp::npm/playwright-mcp::browser_tabs
+      arguments:
+        action: select
+        index: "$new_tab_index"
+
+  # Action + scan: always snapshot after action tools (including local action tools).
+  - name: auto_scan_after_actions
+    when: after
+    tools:
+      - mcp::npm/playwright-mcp::browser_*
+      - web_fill_xy
+      - web_type_focused
+    unless_tools:
+      - mcp::npm/playwright-mcp::browser_snapshot
+      - mcp::npm/playwright-mcp::browser_take_screenshot
+      - mcp::npm/playwright-mcp::browser_tabs
+      - web_page_coords
+      - web_spatial_snapshot
+      - web_visual_scout
+      - read_tool_result
+    guard_key: playwright_auto_scan_in_progress
+    action:
+      kind: control_node
+      node: post_action_scan_node

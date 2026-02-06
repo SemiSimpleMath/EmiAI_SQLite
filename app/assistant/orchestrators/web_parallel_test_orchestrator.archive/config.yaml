@@ -1,0 +1,21 @@
+name: web_parallel_test_orchestrator
+class_name: Orchestrator
+
+# Brain agents (3-agent design)
+architect_agent: shared::orchestrator_architect
+facts_curator_agent: shared::orchestrator_facts_curator
+router_agent: shared::orchestrator_router
+
+# Policy
+max_depth: 1
+max_children_total: 3
+max_children_concurrent: 3
+default_child_budget:
+  max_cycles: 15
+  timeout_seconds: 180
+
+# Allowlist for this orchestrator type
+allowed_child_managers:
+  - web_manager
+allowed_child_orchestrators: []
+
