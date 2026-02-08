@@ -1,0 +1,62 @@
+name: fast_tool::final_answer
+class_name: FinalAnswer
+color: "blue"
+llm_params:
+  llm_provider: "openai"
+  model: "gpt-5-nano"
+  temperature: 0.3
+
+structured_output:
+  type: object
+  additionalProperties: false
+  properties:
+    final_answer_task:
+      type: string
+    final_answer_answer:
+      type: string
+    final_answer_what_was_done:
+      type: string
+    final_answer_interesting_info:
+      type: string
+    final_answer_sources_used:
+      type: string
+    final_answer_data_list:
+      type: array
+      items:
+        type: object
+        additionalProperties: false
+        properties:
+          data_type:
+            type: string
+          key:
+            type: string
+          value:
+            type: string
+          url:
+            type: string
+          link:
+            type: string
+          title:
+            type: string
+          description:
+            type: string
+          source:
+            type: string
+          timestamp:
+            type: string
+  required:
+    - final_answer_task
+    - final_answer_answer
+    - final_answer_what_was_done
+    - final_answer_interesting_info
+    - final_answer_sources_used
+    - final_answer_data_list
+
+allowed_tools: []
+except_tools: []
+
+user_context_items:
+  - date_time
+  - task
+  - information
+  - recent_history

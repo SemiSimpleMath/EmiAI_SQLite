@@ -1,0 +1,22 @@
+tasks:
+  - id: timesheet
+    name: Timesheet narratives
+    task_file: tasks/timesheet/task_spec.md
+    description: Generate time-entry narratives from a dated timesheet log.
+    aliases:
+      - timesheet task
+      - timesheets task
+      - timesheet routine
+      - timesheets routine
+      - timesheet
+      - timesheets
+  - id: morning_routine
+    name: Morning routine
+    task_file: tasks/morning_routine/task_spec.md
+    description: Email, calendar, and news summary with HTML output.
+    aliases:
+      - morning routine
+      - daily routine
+      - run morning routine
+      - run my morning routine
+      - morning summary

@@ -1,0 +1,4 @@
+
+1/2/26 - Finished the quarterly report and met with the team to plan the next sprint. Also went for a run and cooked dinner with family.
+1/3/26 - Focused on bug triage and cleaned up backlog tickets; reviewed two PRs and wrote documentation updates.
+1/4/26 - Deep work on feature X, refactored a core module, and helped a teammate debug a flaky test.

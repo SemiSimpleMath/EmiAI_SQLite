@@ -1,0 +1,16 @@
+---
+description: Task spec format and runtime contract
+alwaysApply: true
+---
+
+# Task Spec Contract
+
+- Task specs are immutable once a run starts. Do not write status back into task files.
+- Use markdown with YAML frontmatter. Keep task body human-readable.
+- Required frontmatter keys: `task_id`, `manager`, `inputs`, `outputs`.
+- Optional keys: `includes`, `allowed_resources`, `acceptance_tests`, `idempotency`, `limits`, `parsing_rules`.
+- `includes` are resource IDs; load them into a single `task_includes` block for planner prompts.
+- Enforce allowlists:
+  - Only `inputs[].path` may be read.
+  - Only `outputs[].path` may be written.
+- Record run state under `tasks/runs/<run_id>/` (state.json, events.jsonl, outputs/).

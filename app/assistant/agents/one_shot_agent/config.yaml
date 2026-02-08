@@ -1,0 +1,17 @@
+name: one_shot_agent
+class_name: OneShotAgent
+color: "green"
+llm_params:
+  llm_provider: "openai"
+  engine: "gpt-5-nano"
+  temperature: 0.1
+
+allowed_tools: []
+
+user_context_items:
+  - date_time
+  - task
+  - information
+  - tools_text
+
+system_context_items: []

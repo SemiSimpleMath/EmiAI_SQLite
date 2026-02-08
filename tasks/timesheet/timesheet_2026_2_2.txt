@@ -1,0 +1,51 @@
+*2/3/26*
+
+Worked on Kerri's ask for extrapolating Merlin pay periods.
+
+Lunch
+
+back from lunch
+
+I downloaded fan duel data
+
+
+*2/4/26*
+
+Attend analytics team meeting
+https://seyfarth.zoom.us/j/4621099642?pwd=dxCpIRLvAglcx3eh1KFYaJkvhYZ41Q.1&omn=92726274582
+
+FANDUEL
+Orora
+
+Orora at 11.05
+
+Integrating the digital timecards into the framework.
+
+Perform meal analysis.
+
+Performed QC on the meal analsis compliance.
+
+Starting on Fanduel
+Going to sped 30 minutes understanding the problem
+
+*2/5/26*
+
+Fanduel
+
+Incorporated timecard data, cleaned it. incorporated payroll but it was lacking payperiod data so its not usable.
+
+. We estimated 6,582 pay periods from December 3, 2023 to August 20, 2025
+
+
+*2/6/25*
+
+Friday
+
+Attend analytics team meeting
+
+Fan duel get a new cross reference. Done. imported the new census and payroll to do this
+
+
+Orora at 3.07
+
+Switching to trevor's analysis code

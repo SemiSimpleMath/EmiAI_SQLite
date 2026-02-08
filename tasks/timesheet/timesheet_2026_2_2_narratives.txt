@@ -1,0 +1,12 @@
+2/3/26 Merlin: Prepare extrapolation of payroll pay period counts to support exposure and damages estimation. [ ]
+2/3/26 FanDuel: Prepare methodology for interpretation and integration of FanDuel data into the analysis framework. [ ]
+
+2/4/26 Seyfarth: Attend analytics team meeting. [ ]
+2/4/26 Orora: Integrate digital timecards into the analysis framework ( ); perform meal period compliance analysis ( ); perform quality control assessment of meal analysis results ( ).
+2/4/26 FanDuel: Determine assumptions, variables, and analytical framework for FanDuel analysis. [ ]
+
+2/5/26 FanDuel: Integrate timecard data into the analysis framework ( ); evaluate payroll data for completeness and determine absence of pay period identifiers, which limits direct use ( ); prepare extrapolation estimating 6,582 pay periods for December 3, 2023 through August 20, 2025 ( ).
+
+2/6/25 Seyfarth: Attend analytics team meeting. [ ]
+2/6/25 FanDuel: Prepare cross-reference to align census and payroll identifiers ( ); integrate updated census and payroll data into the analysis framework ( ).
+2/6/25 Orora: [Notes are lacking human assistance needed]
