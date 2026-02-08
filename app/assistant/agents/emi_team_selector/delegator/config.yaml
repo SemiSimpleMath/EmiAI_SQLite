@@ -3,7 +3,7 @@ class_name: EmiTeamSelectorDelegator
 color: "blue"
 llm_provider: "openai"
 llm_params:
-  engine: "gpt-5-mini"
+  engine: "gpt-5-nano"
   temperature: 1
 
 # No tools required for Delegator

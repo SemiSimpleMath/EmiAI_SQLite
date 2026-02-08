@@ -8,8 +8,8 @@ llm_params:
 
 user_context_items:
   - date_time
-  - selected_tool
+  - pending_tool_name
   - tool_args
-  - action_input
+  - pending_action_input
 
 system_context_items: []

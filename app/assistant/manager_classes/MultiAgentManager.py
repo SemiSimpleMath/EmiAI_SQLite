@@ -1,11 +1,11 @@
 import json
-import sys
-import traceback
 import uuid
 
 from app.assistant.ServiceLocator.service_locator import DI
 from app.assistant.agent_registry.agent_loader import AgentLoader
 from app.assistant.utils.pydantic_classes import Message, ToolResult
+from app.assistant.utils.task_spec_loader import load_task_spec
+from app.assistant.utils.pipeline_state import ensure_pipeline_state, set_pipeline_state
 from app.assistant.lib.blackboard.Blackboard import Blackboard
 from app.assistant.utils.logging_config import get_logger
 logger = get_logger(__name__)
@@ -29,6 +29,10 @@ class MultiAgentManager:
         self.agent_registry = agent_registry
         self.manager_config = manager_config
 
+        # Tool pipeline is required for all managers (no backward compatibility).
+        if not isinstance(self.manager_config.get("tool_pipeline"), dict):
+            raise ValueError(f"Manager '{self.name}' missing required tool_pipeline config.")
+
         # Load agents from config
         self.agent_loader = AgentLoader(
             config_source=self.manager_config,
@@ -41,7 +45,7 @@ class MultiAgentManager:
 
         self.busy = True  # Used to determine manager availability
 
-        self.flow_config = manager_config.get("flow_config")
+        self.flow_config = manager_config.get("flow_config") or {}
         self._register_configured_events()
         self.set_manager_role_binding()
 
@@ -66,14 +70,16 @@ class MultiAgentManager:
             event_hub = DI.event_hub
             try:
                 event_hub.register_event(event_name, handler)
-            except Exception as e:
+            except Exception:
                 # Duplicate registration or conflicting handler
-                print(f"❌ Event registration failed in manager '{self.name}'")
-                print(f"Event: {event_name}")
-                print(f"Handler: {handler} (ID: {id(handler)})")
-                print("🔍 Stack trace of registration attempt:")
-                traceback.print_stack(limit=10)
-                raise e
+                logger.exception(
+                    "Event registration failed in manager '%s' for event '%s' (handler=%r, id=%s)",
+                    self.name,
+                    event_name,
+                    handler,
+                    id(handler),
+                )
+                raise
 
     def request_handler(self, user_message: Message):
         """
@@ -81,10 +87,54 @@ class MultiAgentManager:
         """
         logger.info(f"🛠️ {self.name} received task: {user_message.content}")
 
+        root_scope_id = None
+        result = None
         try:
             self.blackboard.reset_blackboard()
-            self.blackboard.update_state_value('task', user_message.task)
-            self.blackboard.update_state_value('information', user_message.information)
+            resolved_task = user_message.task
+            resolved_info = user_message.information
+            resolved_data = user_message.data if isinstance(user_message.data, dict) else {}
+
+            task_file = resolved_data.get("task_file")
+            if isinstance(task_file, str) and task_file.strip():
+                try:
+                    spec = load_task_spec(task_file.strip())
+                    resolved_task = spec.task_body
+                    resolved_data = dict(resolved_data)
+                    resolved_data.update({
+                        "task_id": spec.task_id,
+                        "task_description": spec.description,
+                        "task_includes": spec.task_includes,
+                        "allowed_resources": spec.allowed_resources,
+                        "allowed_read_files": spec.allowed_read_files,
+                        "allowed_write_files": spec.allowed_write_files,
+                        "task_spec": spec.frontmatter,
+                    })
+                except Exception as e:
+                    logger.exception("[%s] Failed to load task spec '%s'", self.name, task_file)
+                    self.blackboard.update_state_value("error", f"Failed to load task spec: {e}")
+                    return self.handle_exit_error()
+
+            self.blackboard.update_state_value('task', resolved_task)
+            self.blackboard.update_state_value('information', resolved_info)
+            # Initialize pipeline state (global) for this request.
+            try:
+                ps = ensure_pipeline_state(self.blackboard)
+                ps["stage"] = None
+                ps["pending_tool"] = None
+                ps["last_tool_result_ref"] = None
+                ps["last_tool_result_meta"] = None
+                ps["resume_target"] = None
+                ps["flags"] = {}
+                ps["scratch"] = {}
+                set_pipeline_state(self.blackboard, ps)
+            except Exception:
+                logger.exception("[%s] Failed to initialize pipeline state", self.name)
+            # Expose per-manager tool pipeline (if any) to control nodes.
+            try:
+                self.blackboard.update_state_value("tool_pipeline", self.manager_config.get("tool_pipeline"))
+            except Exception:
+                logger.exception("[%s] Failed to set tool_pipeline on blackboard", self.name)
 
             # Manager loop counters (reset every request).
             # These are useful for delegator-gated behaviors (e.g., run critic every N loops).
@@ -98,20 +148,48 @@ class MultiAgentManager:
                 )
             except Exception:
                 # Keep request startup resilient; counters are optional.
-                pass
+                logger.exception("[%s] Failed to initialize manager loop counters", self.name)
 
 
-            if user_message.data is not None:
-                if isinstance(user_message.data, dict):
-                    for key, value in user_message.data.items():
-                        self.blackboard.update_state_value(key, value)
+            if resolved_data:
+                for key, value in resolved_data.items():
+                    self.blackboard.update_state_value(key, value)
             self.blackboard.add_request_id(user_message.request_id)
             self.set_manager_role_binding()  # put role bindings back
 
-            return self.run_agent_loop()
+            # Create a single root scope for this request.
+            root_scope_id = f"root_scope_{uuid.uuid4()}"
+            logger.info(f"[{self.name}] Creating root scope '{root_scope_id}' for request")
+            self.blackboard.push_call_context(self.name, self.name, root_scope_id)
+
+            result = self.run_agent_loop()
         except Exception as e:
-            logger.error(f"❌ Error in request_handler: {e}")
-            sys.exit(1)  # Hard exit on failure
+            logger.exception(f"❌ Error in request_handler: {e}")
+            try:
+                self.blackboard.update_state_value("error", str(e) or True)
+            except Exception:
+                pass
+            result = self.handle_exit_error()
+        finally:
+            # Always pop the root scope for this request.
+            if root_scope_id:
+                try:
+                    while True:
+                        ctx = self.blackboard.get_current_call_context()
+                        if not ctx:
+                            break
+                        if ctx[2] == root_scope_id:
+                            self.blackboard.pop_call_context()
+                            break
+                        logger.warning(
+                            "[%s] Non-root scope remained at request end; unwinding: %r",
+                            self.name,
+                            ctx,
+                        )
+                        self.blackboard.pop_call_context()
+                except Exception:
+                    logger.exception("[%s] Failed to pop root scope '%s'", self.name, root_scope_id)
+        return result
 
     def _run_loop(self, max_cycles, delegator, delegator_data):
         cycles = 0
@@ -123,13 +201,11 @@ class MultiAgentManager:
             # Expose current loop counters on the blackboard BEFORE delegator runs.
             # This makes them visible to delegator/planner logic without relying on local variables.
             try:
-                self.blackboard.update_state_value("manager_loop_count", cycles)       # 0-based completed loops so far
-                self.blackboard.update_state_value("manager_loop_number", cycles + 1) # 1-based current loop number
-                # Also update global so nested scopes can always read it.
+                # Update global so nested scopes can always read it.
                 self.blackboard.update_global_state_value("manager_loop_count", cycles)
                 self.blackboard.update_global_state_value("manager_loop_number", cycles + 1)
             except Exception:
-                pass
+                logger.exception("[%s] Failed to update manager loop counters", self.name)
 
             # Cooperative cancellation hook (used by orchestrators).
             if self.blackboard.get_state_value("cancelled", False) or self.blackboard.get_state_value("cancel", False):
@@ -154,22 +230,15 @@ class MultiAgentManager:
 
             if not next_agent_name:
                 logger.error("❌ Delegator did not determine a next agent. Exiting.")
-                sys.exit(1)
+                self.blackboard.update_state_value("error", "delegator returned no next_agent")
+                return "error"
 
             next_agent_name = self.resolve_role_binding(next_agent_name)
             next_agent = self.agent_registry.get_agent_instance(next_agent_name)
             if not next_agent:
                 logger.error(f"❌ Failed to retrieve agent: {next_agent_name}. Exiting.")
-                sys.exit(1)
-
-            # ---Root Scope Creation Logic ---
-            is_root_scope = False
-            if not self.blackboard.get_current_call_context():
-                # 2. If we are at the top level, create a temporary "root" scope.
-                is_root_scope = True
-                root_scope_id = f"root_scope_{uuid.uuid4()}"
-                logger.info(f"[{self.name}] Creating root scope '{root_scope_id}' for '{next_agent_name}'")
-                self.blackboard.push_call_context(self.name, next_agent_name, root_scope_id)
+                self.blackboard.update_state_value("error", f"missing agent instance: {next_agent_name}")
+                return "error"
 
             # 3. Activate the agent (it now runs within a guaranteed scope).
             next_agent.action_handler(Message(data_type='agent_activation'))
@@ -195,8 +264,12 @@ class MultiAgentManager:
             return self.handle_exit_reason(exit_reason)
 
         except Exception as e:
-            logger.error(f"❌ Fatal error in agent loop: {e}")
-            sys.exit(1)  # Exit on any unexpected failure
+            logger.exception(f"❌ Fatal error in agent loop: {e}")
+            try:
+                self.blackboard.update_state_value("error", str(e) or True)
+            except Exception:
+                pass
+            return self.handle_exit_error()
 
     def handle_exit_reason(self, exit_reason):
         if exit_reason == "success":
@@ -270,8 +343,12 @@ class MultiAgentManager:
             exit_reason = self._run_loop(max_cycles, delegator, {"flow_config": self.flow_config})
             return self.handle_graceful_exit_reason(exit_reason)
         except Exception as e:
-            logger.error(f"❌ Fatal error in graceful exit loop: {e}")
-            sys.exit(1)  # Exit on any unexpected failure
+            logger.exception(f"❌ Fatal error in graceful exit loop: {e}")
+            try:
+                self.blackboard.update_state_value("error", str(e) or True)
+            except Exception:
+                pass
+            return self.handle_default_error_exit()
 
     def handle_graceful_exit_reason(self, exit_reason):
         if exit_reason == "success":

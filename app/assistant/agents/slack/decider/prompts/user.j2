@@ -10,4 +10,9 @@ This is most current chat from Slack. Messages from oldest to newest:
 {{ task }}
 {% endif %}
 
+{% if recent_history %}
+Recent history (chronological, oldest to newest):
+{{ recent_history }}
+{% endif %}
+
 {{ allowed_nodes }}

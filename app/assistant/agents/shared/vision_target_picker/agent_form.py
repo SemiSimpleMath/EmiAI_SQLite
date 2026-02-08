@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import List, Literal
-
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -22,9 +20,21 @@ class AgentForm(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    action: Literal["done"] = Field(..., description="Always 'done' so control returns to the planner.")
-    targets: List[Target] = Field(
+    # NOTE: Avoid Literal[...] here because this repository uses Pydantic v2 with
+    # `from __future__ import annotations` and dynamic imports; Literal can require
+    # explicit model_rebuild() in some environments. Keep schema simple.
+    action: str = Field(..., description="Always 'done' so control returns to the caller.")
+    # Use built-in `list[...]` instead of typing.List to avoid "List not defined"
+    # under postponed annotations + dynamic imports.
+    targets: list[Target] = Field(
         ...,
         description="Proposed interaction targets in viewport coordinates (CSS pixels).",
     )
+
+
+# Defensive: force Pydantic to resolve postponed annotations in dynamic-import environments.
+try:
+    AgentForm.model_rebuild()
+except Exception:
+    pass
 

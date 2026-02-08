@@ -273,10 +273,11 @@ class EmiAgent(Agent):
         msg_for_agent = response.get("msg_for_agent")
         information_for_agent = response.get("information_for_agent")
 
-        print(
-            f"Think Carefully: {think_carefully}\n\nMSG for user: \n{msg_for_user} \n\n {reason}, "
-            f"\n\nMSG for Agent: \n{msg_for_agent}, \n\nHave all info: \n{have_all_info}\n\n{information_for_agent}, Call Team: \n{call_team}"
-        )
+        if self._resolve_llm_result_debug_flag():
+            print(
+                f"Think Carefully: {think_carefully}\n\nMSG for user: \n{msg_for_user} \n\n {reason}, "
+                f"\n\nMSG for Agent: \n{msg_for_agent}, \n\nHave all info: \n{have_all_info}\n\n{information_for_agent}, Call Team: \n{call_team}"
+            )
 
         id_str = str(uuid.uuid4())
         user_msg_bb = Message(

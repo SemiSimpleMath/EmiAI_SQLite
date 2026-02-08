@@ -11,15 +11,18 @@ agents:
     class: EmiTeamSelectorDelegator
   - name: emi_team_selector::tool_selector
     class: Agent
-  - name: emi_team_selector::tool_arguments
-    class: ToolArguments
 
 control_nodes:
+  - name: emi_team_selector_arguments_node
+    class: EmiTeamSelectorArgumentsNode
   - name: emi_team_selector_tool_caller
     class: EmiTeamSelectorToolCaller
 
 tools:
   allowed_tools:
+    - one_shot_tool_runner
+    - fast_tool_manager
+    - run_task_spec
     - emi_team_manager
     - event_manager
     - web_manager
@@ -31,7 +34,7 @@ events:
 flow_config:
   state_map:
     "emi_team_selector::delegator": "emi_team_selector::tool_selector"
-    "emi_team_selector::tool_selector": "emi_team_selector::tool_arguments"
-    "emi_team_selector::tool_arguments": "emi_team_selector_tool_caller"
+    "emi_team_selector::tool_selector": "emi_team_selector_arguments_node"
+    "emi_team_selector_arguments_node": "emi_team_selector_tool_caller"
     "emi_team_selector_tool_caller": "exit"
 

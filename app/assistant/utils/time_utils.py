@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone, timedelta
+import re
 from zoneinfo import ZoneInfo
 from typing import Any, Union
 
@@ -40,6 +41,11 @@ def _parse_iso_like(value: str) -> datetime:
     - '24:00:00' (midnight of next day - common LLM output)
     """
     text = value.strip()
+    # Normalize common LLM local-time strings like "YYYY-MM-DD HH:MM:SS PST"
+    # Strip trailing timezone abbreviations (PST, PDT, EST, etc.).
+    text = re.sub(r"\s+[A-Z]{2,5}$", "", text)
+    # Convert "YYYY-MM-DD HH:MM[:SS]" -> "YYYY-MM-DDTHH:MM[:SS]"
+    text = re.sub(r"^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}(?::\d{2})?)$", r"\1T\2", text)
     if text.endswith("Z"):
         text = text[:-1] + "+00:00"
     

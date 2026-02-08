@@ -28,8 +28,6 @@ control_nodes:
     class: ToolCaller
   - name: tool_result_handler
     class: ToolResultHandler
-  - name: exit_node
-    class: ExitNode
   - name: flow_exit_node
     class: FlowExitNode
   - name: manager_exit_node
@@ -40,6 +38,7 @@ control_nodes:
 flow_config:
   state_map:
     slack::delegator: slack::decider
+    slack::decider: manager_exit_node
     shared::tool_arguments: tool_caller
     slack::casual_chat_writer: manager_exit_node
     slack::expert_writer: manager_exit_node

@@ -14,13 +14,14 @@ user_context_items:
   - date_time
   - information
   - task
+  - recent_history
   - allowed_nodes
   - entity_summary
 
 allowed_nodes:
   - slack::casual_chat_writer
   - slack::mathematician
-  - web
-  - exit_node
+  - manager_exit_node
+  - flow_exit_node
 
 

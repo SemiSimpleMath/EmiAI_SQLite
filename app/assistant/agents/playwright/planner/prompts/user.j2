@@ -8,17 +8,24 @@ Additional information:
 {{ information }}
 {% endif %}
 
+{% if progress_report %}
+Current accumulated progress_report (append-only; do NOT repeat items already listed here):
+{{ progress_report }}
+{% endif %}
+
 {% if checklist %}
 Current checklist:
 {{ checklist }}
 {% endif %}
 
 {% if recent_history %}
+Recent history (chronological, oldest to newest). Each entry is one action or agent response.
+Tool calls are summarized in a single block with args, result id, and summary.
 Recent history:
 {{ recent_history }}
 {% endif %}
 
 {% if action_count %}
-Action Count: {{ action_count }}/15
+Action Count: {{ action_count }}/100
 {% endif %}
 

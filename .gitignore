@@ -106,4 +106,7 @@ app/assistant/lib/core_tools/credentials/
 *.db-journal
 
 # MCP (generated caches)
-/mcp/tool_cache/
+mcp/tool_cache/
+
+# Music data (large/generated/local)
+data/music_data/

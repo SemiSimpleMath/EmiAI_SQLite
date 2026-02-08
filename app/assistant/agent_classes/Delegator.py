@@ -21,7 +21,7 @@ class Delegator(Agent):
         """
         Determines the next agent to act.
         - If a strict mapping exists in `flow_config.yaml`, follow it.
-        - Otherwise, reason about the next step using the LLM.
+        - Otherwise, treat as a hard error (no LLM fallback).
         """
         self.flow_config = message.data.get('flow_config')
         assert self.flow_config is not None, f"Flow config is None in {self.name}"
@@ -47,18 +47,10 @@ class Delegator(Agent):
             self.blackboard.update_state_value('next_agent', next_node)
             return
 
-        # Step 2: No strict mapping? Use LLM reasoning.
-        logger.info(f"[{self.name}] No explicit mapping found. Using LLM to determine next agent...")
-        super().action_handler(message)  # Call base `Agent` action_handler()
-
-        # Step 3: Read next agent from state_dict (set by LLM output)
-        next_agent = self.blackboard.get_state_value("next_agent")
-        self.blackboard.update_state_value('last_agent', self.name)
-
-        if next_agent:
-            logger.info(f"[{self.name}] LLM selected next agent: {next_agent}")
-        else:
-            logger.error(f"[{self.name}] LLM reasoning failed to select an agent.")
+        logger.error(f"[{self.name}] No explicit mapping found in flow_config.state_map for last_agent={last_agent}")
+        self.blackboard.update_state_value("error_message", "Delegator routing failed: missing state_map entry")
+        self.blackboard.update_state_value("error", True)
+        self.blackboard.update_state_value("last_agent", self.name)
 
     def pick_next_agent(self, last_agent: str) -> str:
         """

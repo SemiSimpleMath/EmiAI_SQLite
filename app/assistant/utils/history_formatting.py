@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-import os
+import re
 from datetime import datetime
 from typing import Any, Iterable
+
+from app.assistant.utils.time_utils import utc_to_local
 
 
 def _safe_content(m: Any) -> str:
@@ -10,41 +12,14 @@ def _safe_content(m: Any) -> str:
     return "" if c is None else str(c).strip()
 
 
-def _attachment_markers(m: Any) -> str:
-    """
-    Preserve image attachment hints as plain text markers.
-    """
-    meta = getattr(m, "metadata", None)
-    if not isinstance(meta, dict):
-        return ""
-    atts = meta.get("attachments")
-    if not isinstance(atts, list) or not atts:
-        return ""
-    lines: list[str] = []
-    for att in atts:
-        if not isinstance(att, dict):
-            continue
-        if att.get("type") != "image":
-            continue
-        p = att.get("path")
-        if not isinstance(p, str) or not p.strip():
-            continue
-        fname = att.get("original_filename") or os.path.basename(p)
-        lines.append(f"[image attached: {fname}]")
-    return "\n".join(lines).strip()
-
-
 def _tool_result_ref_markers(m: Any) -> str:
     meta = getattr(m, "metadata", None)
     if not isinstance(meta, dict):
         return ""
     tool_result_id = meta.get("tool_result_id")
-    tool_result_path = meta.get("path")
     parts: list[str] = []
     if isinstance(tool_result_id, str) and tool_result_id.strip():
-        parts.append(f"[tool_result_id: {tool_result_id.strip()}]")
-    if isinstance(tool_result_path, str) and tool_result_path.strip():
-        parts.append(f"[tool_result_path: {tool_result_path.strip()}]")
+        parts.append(f"Result ID: {tool_result_id.strip()}")
     return "\n".join(parts).strip()
 
 def _tool_result_summary_link_markers(m: Any) -> str:
@@ -52,39 +27,31 @@ def _tool_result_summary_link_markers(m: Any) -> str:
     if not isinstance(meta, dict):
         return ""
     tid = meta.get("summarizes_tool_result_id")
-    tpath = meta.get("summarizes_tool_result_path")
     parts: list[str] = []
     if isinstance(tid, str) and tid.strip():
-        parts.append(f"[tool_result_id: {tid.strip()}]")
-    if isinstance(tpath, str) and tpath.strip():
-        parts.append(f"[tool_result_path: {tpath.strip()}]")
+        parts.append(f"Result ID: {tid.strip()}")
     if parts:
         return "\n".join(parts).strip()
     return ""
 
 
-def _fmt_header(m: Any, idx: int) -> str:
-    dt = getattr(m, "data_type", None) or "message"
-    sub = getattr(m, "sub_data_type", None)
-    sub_s = ""
-    if isinstance(sub, list) and sub:
-        sub_s = f" ({','.join(str(x) for x in sub if x)})"
-    sender = getattr(m, "sender", None) or "?"
-    receiver = getattr(m, "receiver", None) or "?"
-
+def _fmt_time(m: Any) -> str:
     ts = getattr(m, "timestamp", None)
-    ts_s = ""
-    if isinstance(ts, datetime):
-        # Keep as ISO string; user asked for timestamps and this is unambiguous.
-        ts_s = ts.isoformat()
-    elif ts:
-        ts_s = str(ts)
+    if not ts:
+        return ""
+    try:
+        local_ts = utc_to_local(ts)
+        return local_ts.strftime("%H:%M")
+    except Exception:
+        return ""
 
+
+def _fmt_header(idx: int, time_s: str, title: str) -> str:
     parts = [f"[{idx:02d}]"]
-    if ts_s:
-        parts.append(ts_s)
-    parts.append(f"{dt}{sub_s}")
-    parts.append(f"{sender}->{receiver}")
+    if time_s:
+        parts.append(time_s)
+    if title:
+        parts.append(f"- {title}")
     return " ".join(parts).strip()
 
 
@@ -107,104 +74,184 @@ def format_recent_history(agent_messages: Iterable[Any]) -> str:
     }
     msgs = [m for m in list(agent_messages or []) if getattr(m, "data_type", None) in ALLOWED]
 
-    # Build a set of tool_result_ids that have been summarized by a later summary message.
-    summarized_ids: set[str] = set()
-    for m in msgs:
-        if getattr(m, "data_type", None) != "tool_result_summary":
-            continue
-        meta = getattr(m, "metadata", None)
-        if not isinstance(meta, dict):
-            continue
-        tid = meta.get("summarizes_tool_result_id")
-        if isinstance(tid, str) and tid.strip():
-            summarized_ids.add(tid.strip())
-
-    # Identify the last tool_result_id in the window (we always keep it even if summarized_ids is weird).
-    last_tool_result_id: str | None = None
-    for m in reversed(msgs):
-        if getattr(m, "data_type", None) != "tool_result":
-            continue
-        meta = getattr(m, "metadata", None)
-        if isinstance(meta, dict) and isinstance(meta.get("tool_result_id"), str) and meta["tool_result_id"].strip():
-            last_tool_result_id = meta["tool_result_id"].strip()
-            break
-
-    def _emit(entry_m: Any, idx: int, body: str, *, attach_from: Any | None = None, ref_from: Any | None = None) -> str:
-        header = _fmt_header(entry_m, idx)
+    def _emit(idx: int, time_s: str, title: str, body_lines: list[str]) -> str:
+        header = _fmt_header(idx, time_s, title)
         extras: list[str] = []
-        if attach_from is not None:
-            extras.append(_attachment_markers(attach_from))
-        if ref_from is not None:
-            extras.append(_tool_result_ref_markers(ref_from))
-        # If this is a summary, show what it summarizes.
-        extras.append(_tool_result_summary_link_markers(entry_m))
         extra = "\n".join([x for x in extras if x]).strip()
-        combined = "\n".join([x for x in (header, body.strip() if body else "", extra) if x]).strip()
+        body = "\n".join([x for x in body_lines if x]).strip()
+        combined = "\n".join([x for x in (header, body, extra) if x]).strip()
         return combined
 
     pieces: list[str] = []
+    out_idx = 1
     i = 0
     n = len(msgs)
-    out_idx = 1
+    pending_request: dict[str, Any] | None = None
+    pending_agent_request: dict[str, Any] | None = None
+    by_tool_result_id: dict[str, dict[str, Any]] = {}
+    last_tool_result_id: str | None = None
+
+    def _parse_tool_request(content: str) -> tuple[str | None, str | None]:
+        m = re.match(r"Calling tool\\s+([^\\s]+)\\s+with arguments\\s+(.+)", content.strip())
+        if not m:
+            return None, content.strip() or None
+        return m.group(1), m.group(2)
+
+    def _parse_agent_request(content: str) -> tuple[str | None, str | None]:
+        m = re.match(r"Calling agent\\s+'([^']+)'\\s+with arguments:\\s+(.+)", content.strip())
+        if not m:
+            return None, None
+        return m.group(1), m.group(2)
+
+    def _finalize_pending_request() -> None:
+        nonlocal out_idx, pending_request
+        if not pending_request:
+            return
+        time_s = pending_request.get("time_s", "")
+        tool_name = pending_request.get("tool_name") or "tool"
+        args = pending_request.get("args")
+        lines = []
+        if args:
+            lines.append(f"Args: {args}")
+        combined = _emit(out_idx, time_s, tool_name, lines)
+        if combined:
+            pieces.append(combined)
+            out_idx += 1
+        pending_request = None
 
     while i < n:
         m = msgs[i]
         dt = getattr(m, "data_type", None)
 
-        if dt in ("tool_request", "agent_request"):
-            body = _safe_content(m)
-            combined = _emit(m, out_idx, body)
-            if combined:
-                pieces.append(combined)
-                out_idx += 1
+        if dt == "tool_request":
+            content = _safe_content(m)
+            agent_name, agent_args = _parse_agent_request(content)
+            if agent_name:
+                pending_agent_request = {
+                    "time_s": _fmt_time(m),
+                    "agent_name": agent_name,
+                    "args": agent_args,
+                }
+            else:
+                tool_name, args = _parse_tool_request(content)
+                pending_request = {
+                    "time_s": _fmt_time(m),
+                    "tool_name": tool_name or "tool",
+                    "args": args,
+                }
+            i += 1
+            continue
+
+        if dt == "tool_result":
+            meta = getattr(m, "metadata", None)
+            tid = meta.get("tool_result_id") if isinstance(meta, dict) else None
+            tid = tid.strip() if isinstance(tid, str) else None
+            if tid:
+                last_tool_result_id = tid
+            sub = getattr(m, "sub_data_type", None)
+            tool_name = None
+            if isinstance(sub, list) and sub:
+                tool_name = str(sub[0]) if sub[0] else None
+            content_str = _safe_content(m)
+            entry = {
+                "time_s": _fmt_time(m),
+                "tool_name": tool_name or (pending_request or {}).get("tool_name") or "tool",
+                "args": (pending_request or {}).get("args"),
+                "tool_result_id": tid,
+                "summary": None,
+                "content": content_str,
+            }
+            if pending_request and pending_request.get("time_s"):
+                entry["time_s"] = pending_request.get("time_s")
+            if tid:
+                by_tool_result_id[tid] = entry
+            # Emit immediately only if no summary will follow.
+            # We'll hold it and emit when summary arrives (or at end).
+            if pending_request:
+                pending_request = None
             i += 1
             continue
 
         if dt == "tool_result_summary":
-            # Summary is a first-class history message; include it as-is.
+            meta = getattr(m, "metadata", None)
+            tid = meta.get("summarizes_tool_result_id") if isinstance(meta, dict) else None
+            tid = tid.strip() if isinstance(tid, str) else None
+            summary = _safe_content(m)
+            entry = by_tool_result_id.get(tid) if tid else None
+            if entry is None:
+                entry = {
+                    "time_s": _fmt_time(m),
+                    "tool_name": "tool",
+                    "args": None,
+                    "tool_result_id": tid,
+                    "summary": summary,
+                }
+            else:
+                entry["summary"] = summary
+                if not entry.get("time_s"):
+                    entry["time_s"] = _fmt_time(m)
+
+            lines: list[str] = []
+            if entry.get("args"):
+                lines.append(f"Args: {entry['args']}")
+            if entry.get("tool_result_id"):
+                lines.append(f"Result ID: {entry['tool_result_id']}")
+            if entry.get("summary"):
+                lines.append(f"Summary: {entry['summary']}")
+            combined = _emit(out_idx, entry.get("time_s", ""), entry.get("tool_name") or "tool", lines)
+            if combined:
+                pieces.append(combined)
+                out_idx += 1
+            if tid and tid in by_tool_result_id:
+                del by_tool_result_id[tid]
+            i += 1
+            continue
+
+        if dt in ("agent_result", "agent_request"):
+            if dt == "agent_result" and pending_agent_request:
+                time_s = pending_agent_request.get("time_s", "") or _fmt_time(m)
+                agent_name = pending_agent_request.get("agent_name") or getattr(m, "sender", None) or "agent"
+                args = pending_agent_request.get("args")
+                lines: list[str] = []
+                if args:
+                    lines.append(f"Args: {args}")
+                result_body = _safe_content(m)
+                if result_body:
+                    lines.append(f"Result: {result_body}")
+                combined = _emit(out_idx, time_s, f"Calling agent {agent_name}", lines)
+                if combined:
+                    pieces.append(combined)
+                    out_idx += 1
+                pending_agent_request = None
+                i += 1
+                continue
+            time_s = _fmt_time(m)
+            title = getattr(m, "sender", None) or "agent"
             body = _safe_content(m)
-            combined = _emit(m, out_idx, body)
+            combined = _emit(out_idx, time_s, title, [body] if body else [])
             if combined:
                 pieces.append(combined)
                 out_idx += 1
             i += 1
             continue
 
-        if dt in ("tool_result", "agent_result"):
-            # Suppress tool_results that have been summarized, unless it's the latest tool_result in this window.
-            keep = True
-            if dt == "tool_result":
-                meta = getattr(m, "metadata", None)
-                tid = meta.get("tool_result_id") if isinstance(meta, dict) else None
-                if isinstance(tid, str) and tid.strip():
-                    tid = tid.strip()
-                    if tid in summarized_ids and (last_tool_result_id is None or tid != last_tool_result_id):
-                        keep = False
-                        # IMPORTANT UX:
-                        # Keep a small placeholder so the planner still "sees" that a tool_result happened,
-                        # and can follow the summary immediately below it.
-                        body = "(tool_result suppressed; see tool_result_summary below)"
-                        combined = _emit(m, out_idx, body, attach_from=m, ref_from=m)
-                        if combined:
-                            pieces.append(combined)
-                            out_idx += 1
-                        i += 1
-                        continue
-            if keep:
-                body = _safe_content(m)
-                combined = _emit(m, out_idx, body, attach_from=m, ref_from=m)
-                if combined:
-                    pieces.append(combined)
-                    out_idx += 1
-            i += 1
-            continue
+        i += 1
 
-        body = _safe_content(m)
-        combined = _emit(m, out_idx, body)
+    # Emit any held tool_results without summaries.
+    for tid, entry in list(by_tool_result_id.items()):
+        lines: list[str] = []
+        if entry.get("args"):
+            lines.append(f"Args: {entry['args']}")
+        if entry.get("tool_result_id"):
+            lines.append(f"Result ID: {entry['tool_result_id']}")
+        if tid == last_tool_result_id and entry.get("content"):
+            lines.append(f"Result: {entry['content']}")
+        combined = _emit(out_idx, entry.get("time_s", ""), entry.get("tool_name") or "tool", lines)
         if combined:
             pieces.append(combined)
             out_idx += 1
-        i += 1
+
+    _finalize_pending_request()
 
     return "\n\n".join(pieces).strip()
 

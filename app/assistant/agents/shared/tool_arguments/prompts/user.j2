@@ -1,6 +1,6 @@
 Today is {{ date_time }}
 
-You need to generate the arguments for the tool: {{ selected_tool }}.
+You need to generate the arguments for the tool: {{ pending_tool_name }}.
 
 Another agent supplies the data for these arguments and may not know the exact schema. Treat the content as correct. Do not change meaning. Only perform light normalization, for example:
 - Convert formats (for example, dates to YYYY-MM-DDTHH:MM:SS).
@@ -11,10 +11,10 @@ For calendar events, ALWAYS infer and set:
 - **flexibility**: Based on event type (meetings->"fixed", personal tasks->"flexible", focus time->"soft_block", "maybe"->"aspirational")
 - **show_as**: Default to "busy" unless aspirational or user says "doesn't block time"
 
-These are the details about {{ selected_tool }} arguments that you should fill based on provided arguments of the agent:
+These are the details about {{ pending_tool_name }} arguments that you should fill based on provided arguments of the agent:
 {{ tool_args }}
 
 These are arguments provided by the agent:
 ### BEGIN ARGUMENTS SECTION ###
-{{ action_input }}
+{{ pending_action_input }}
 ### END ARGUMENTS SECTION ###

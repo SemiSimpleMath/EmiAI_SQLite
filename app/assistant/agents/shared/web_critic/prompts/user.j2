@@ -13,8 +13,8 @@ Manager loop: {{ manager_loop_number }} (count={{ manager_loop_count }})
 {% endif %}
 
 Pending tool call proposed by planner (NOT executed yet):
-- selected_tool: {{ selected_tool }}
-- tool_arguments: {{ tool_arguments }}
+- pending_tool_name: {{ pending_tool_name }}
+- pending_tool_arguments: {{ pending_tool_arguments }}
 
 {% if web_critic_image %}
 Latest screenshot (if available):

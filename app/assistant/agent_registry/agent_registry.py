@@ -1,3 +1,7 @@
+# NOTE TO AI CODING AGENTS:
+# This file is fundamental to EmiAi’s agent loading and should NOT be modified
+# without explicit user permission.
+#
 # app/assistant/agent_registry/agent_registry.py
 import importlib.util
 from typing import List

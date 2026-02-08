@@ -1,15 +1,7 @@
 {
-  "suggestions": [
-    {
-      "suggestion_type": "task",
-      "title": "Workday wrap-up",
-      "message": "You're in the final stretch of your workday, Jukka! Once you wrap up at 4:30, it might be a good time for a quick dog break and a breath of fresh air to clear your head before family time starts at 6.",
-      "priority": 4,
-      "action_type": "notify",
-      "trigger_reason": "User is finishing work in 15 minutes and the dogs are due for a break since their morning walk."
-    }
-  ],
-  "assessment": "Jukka is concluding an early work shift while managing chronic pain and fatigue, with current wellness needs already addressed by active reminders.",
-  "last_updated": "2026-02-04 04:13 PM",
-  "tickets_created": 1
+  "suggestions": [],
+  "suggestion_type": null,
+  "last_updated": "2026-02-08 05:01 AM",
+  "last_updated_utc": "2026-02-08T13:01:08.344030+00:00",
+  "_reset_reason": "daily_boundary"
 }

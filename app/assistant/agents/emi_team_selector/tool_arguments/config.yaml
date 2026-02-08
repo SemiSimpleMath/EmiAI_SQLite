@@ -13,6 +13,6 @@ user_context_items:
   - date_time
   - task
   - information
-  - selected_tool
+  - pending_tool_name
 
 system_context_items: []

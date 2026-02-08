@@ -3,6 +3,7 @@ import sys
 import uuid  # Import the uuid library to generate unique scope IDs
 
 from app.assistant.utils.pydantic_classes import Message, ToolResult, ToolMessage
+from app.assistant.utils.pipeline_state import get_pending_tool
 from app.assistant.control_nodes.control_node import ControlNode
 from app.assistant.utils.logging_config import get_logger
 from app.assistant.ServiceLocator.service_locator import DI
@@ -25,8 +26,9 @@ class ToolCaller(ControlNode):
         for agent-to-agent calls.
         """
         # Read the desired action from the agent's local scope
-        selected_tool = self.blackboard.get_state_value("selected_tool")
-        tool_arguments = self.blackboard.get_state_value("tool_arguments")
+        pending = get_pending_tool(self.blackboard) or {}
+        selected_tool = pending.get("name")
+        tool_arguments = pending.get("arguments") if isinstance(pending.get("arguments"), dict) else {}
 
 
         self.blackboard.update_state_value("next_agent", None)
@@ -39,7 +41,7 @@ class ToolCaller(ControlNode):
         logger.info(f"[{self.name}] Executing: '{selected_tool}' with arguments: {tool_arguments}")
         # Emit a progress fact so UI can show "Now calling X".
         try:
-            calling_agent = self.blackboard.get_state_value('original_calling_agent')
+            calling_agent = pending.get("calling_agent")
             DI.event_hub.publish(
                 Message(
                     sender=self.name,
@@ -94,7 +96,7 @@ class ToolCaller(ControlNode):
 
         try:
             # This is read from the current local scope
-            calling_agent = self.blackboard.get_state_value('original_calling_agent')
+            calling_agent = pending.get("calling_agent")
 
             if is_agent:
                 self._execute_agent_call(calling_agent, selected_tool, tool_arguments)
@@ -200,12 +202,11 @@ class ToolCaller(ControlNode):
                 tool_config=tool_config,
                 arguments=arguments or {},
             )
-            self.blackboard.update_state_value("tool_result", tool_result)
             self.blackboard.update_state_value('last_agent', self.name)
 
             tool_result_handler = self.agent_registry.get_agent_instance('tool_result_handler')
             if tool_result_handler:
-                tool_result_handler.process_tool_result_direct()
+                tool_result_handler.process_tool_result_direct(tool_result)
             else:
                 logger.error(f"[{self.name}] Could not find tool_result_handler")
             return
@@ -217,10 +218,19 @@ class ToolCaller(ControlNode):
             return
 
         tool_instance = tool_class()
+        allowed_read_files = self.blackboard.get_state_value("allowed_read_files")
+        allowed_write_files = self.blackboard.get_state_value("allowed_write_files")
         # Wrap arguments in a ToolMessage for the tool
+        tool_data = arguments or {}
+        if isinstance(tool_data, dict):
+            tool_data = dict(tool_data)
+            if allowed_read_files is not None:
+                tool_data["allowed_read_files"] = allowed_read_files
+            if allowed_write_files is not None:
+                tool_data["allowed_write_files"] = allowed_write_files
         tool_message = ToolMessage(
             tool_name=tool_name,
-            tool_data=arguments or {}
+            tool_data=tool_data
         )
         # Use run() if available (goes through approval check), otherwise execute()
         if hasattr(tool_instance, 'run'):
@@ -228,15 +238,13 @@ class ToolCaller(ControlNode):
         else:
             tool_result = tool_instance.execute(tool_message)
 
-        # Store the tool result in blackboard
-        self.blackboard.update_state_value("tool_result", tool_result)
         self.blackboard.update_state_value('last_agent', self.name)
         
         # Directly call tool_result_handler to process the result
         # This keeps tool calls in the same scope (no delegator routing needed)
         tool_result_handler = self.agent_registry.get_agent_instance('tool_result_handler')
         if tool_result_handler:
-            tool_result_handler.process_tool_result_direct()
+            tool_result_handler.process_tool_result_direct(tool_result)
         else:
             logger.error(f"[{self.name}] Could not find tool_result_handler")
 

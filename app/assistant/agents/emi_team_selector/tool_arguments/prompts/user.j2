@@ -1,5 +1,5 @@
 Today is {{ date_time }}
-You need to generate the arguments for the tool: {{ selected_tool }}.
+You need to generate the arguments for the tool: {{ pending_tool_name }}.
 
 {% if task %}
 Current task: {{ task }}
@@ -10,6 +10,6 @@ Additional information:
 {{ information }}
 {% endif %}
 
-These are the details about {{ selected_tool }} arguments:
+These are the details about {{ pending_tool_name }} arguments:
 
 {{ tool_args }}

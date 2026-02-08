@@ -3,6 +3,11 @@ from __future__ import annotations
 import time
 
 from app.assistant.control_nodes.control_node import ControlNode
+from app.assistant.utils.pipeline_state import (
+    get_flag,
+    set_flag,
+    set_pending_tool,
+)
 from app.assistant.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -21,7 +26,7 @@ class PostActionScanNode(ControlNode):
     - ToolResultHandler schedules this node by setting:
         - next_agent = "post_action_scan_node"
         - playwright_auto_scan_in_progress = True
-      and leaving original_calling_agent intact.
+      and preserving the calling_agent in pipeline flags.
     - This node sets up the MCP snapshot tool call and routes to tool_caller.
     """
 
@@ -41,16 +46,12 @@ class PostActionScanNode(ControlNode):
         except Exception:
             tool_cfg = None
 
-        calling_agent = None
-        try:
-            calling_agent = self.blackboard.get_state_value("original_calling_agent")
-        except Exception:
-            calling_agent = None
+        calling_agent = get_flag(self.blackboard, "playwright_auto_scan_calling_agent", None)
 
         if not tool_cfg:
             logger.warning("[%s] Snapshot tool missing; skipping auto-scan.", self.name)
             try:
-                self.blackboard.update_state_value("playwright_auto_scan_in_progress", None)
+                set_flag(self.blackboard, "playwright_auto_scan_in_progress", None)
                 self.blackboard.update_state_value("next_agent", calling_agent)
                 self.blackboard.update_state_value("last_agent", self.name)
             except Exception:
@@ -60,10 +61,7 @@ class PostActionScanNode(ControlNode):
         # Small deterministic settle delay before snapshot.
         # DoorDash (and many JS-heavy sites) update UI asynchronously after actions;
         # taking a snapshot immediately can capture the "old" state.
-        try:
-            trigger_tool = self.blackboard.get_state_value("playwright_auto_scan_trigger_tool")
-        except Exception:
-            trigger_tool = None
+        trigger_tool = get_flag(self.blackboard, "playwright_auto_scan_trigger_tool", None)
 
         # Default delays (seconds). Keep short to preserve speed.
         delay_s = 0.25
@@ -71,6 +69,8 @@ class PostActionScanNode(ControlNode):
             delay_s = 0.8
         elif isinstance(trigger_tool, str) and trigger_tool.endswith("::browser_press_key"):
             delay_s = 0.6
+        elif isinstance(trigger_tool, str) and trigger_tool.endswith("::browser_navigate"):
+            delay_s = 0.8
         elif isinstance(trigger_tool, str) and trigger_tool.endswith("::browser_click"):
             delay_s = 0.4
 
@@ -82,15 +82,19 @@ class PostActionScanNode(ControlNode):
 
         # Set up the tool call deterministically (no ToolArguments LLM step).
         try:
-            prev = self.blackboard.get_state_value("selected_tool")
-            self.blackboard.update_state_value("playwright_auto_scan_prev_tool", prev)
+            set_flag(self.blackboard, "playwright_auto_scan_prev_tool", trigger_tool)
         except Exception:
             pass
 
         try:
-            self.blackboard.update_state_value("selected_tool", self.SNAPSHOT_TOOL)
-            # `browser_snapshot` has optional {filename}; default is fine.
-            self.blackboard.update_state_value("tool_arguments", {})
+            set_pending_tool(
+                self.blackboard,
+                name=self.SNAPSHOT_TOOL,
+                calling_agent=calling_agent,
+                action_input=None,
+                arguments={},
+                kind="tool",
+            )
             self.blackboard.update_state_value("next_agent", "tool_caller")
             self.blackboard.update_state_value("last_agent", self.name)
         except Exception as e:

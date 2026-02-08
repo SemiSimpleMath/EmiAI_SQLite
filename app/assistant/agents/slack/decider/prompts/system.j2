@@ -20,8 +20,8 @@ conversation with each other in a way that does not require your input, then you
 - If you do not have anything useful to add.
 - If the discussion is personal or does not need outside input.
 
-If you decide to contribute leave action as blank.
-If you decide not to contribute set action to manager_exit_node.
+If you decide to contribute, set next_agent to the best agent to write the reply.
+If you decide not to contribute, set next_agent to manager_exit_node.
 
 Remember deciding not to contribute is equally valuable to contributing.
 
@@ -39,5 +39,4 @@ Agents:
 
 Output:
 what_i_am_thinking: str output here your reasoning on whether or not to participate.
-action: str This is name of one of the agents. Set to manager_exit_node if you are choosing not to participate.
-action_input: This is the suggestion you want to give to the agent that will write the answer.
+next_agent: str This is name of one of the agents or manager_exit_node.

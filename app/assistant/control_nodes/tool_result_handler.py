@@ -2,9 +2,19 @@ import json
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+import fnmatch
+import importlib
 
 from app.assistant.ServiceLocator.service_locator import DI
-from app.assistant.utils.pydantic_classes import Message
+from app.assistant.utils.pydantic_classes import Message, ToolResult
+from app.assistant.utils.pipeline_state import (
+    get_pending_tool,
+    set_pending_tool,
+    clear_pending_tool,
+    set_last_tool_result_ref,
+    get_flag,
+    set_flag,
+)
 from app.assistant.control_nodes.control_node import ControlNode
 
 from app.assistant.utils.logging_config import get_logger
@@ -58,7 +68,18 @@ class ToolResultHandler(ControlNode):
         For tool results, tool_caller should call process_tool_result_direct() instead.
         """
         print(f"\n📬 [TOOL_RESULT_HANDLER] action_handler called")
-        self.blackboard.update_state_value('next_agent', None)
+        
+        # Defensive: if a tool_result is present, handle it directly.
+        # Some managers still route through this node via state_map after tool_caller,
+        # but ToolCaller may also call process_tool_result_direct() inline. In that case
+        # tool_result will be None and this block is a no-op.
+        try:
+            tr = self.blackboard.get_state_value("tool_result")
+            if tr is not None:
+                self._process_tool_result(tr)
+                return
+        except Exception:
+            pass
         
         # This should only be called for agent results now
         # Tool results should use process_tool_result_direct()
@@ -73,20 +94,47 @@ class ToolResultHandler(ControlNode):
             # get_state_value searches from current scope down to global, so it will find it
             result = self.blackboard.get_state_value(f"{called_agent}_result")
             print(f"   Found result: {result is not None}")
-            if result:
+            if result is not None:
                 print(f"   Result preview: {str(result)[:200]}...")
+            # If there is no agent result and no scope-level `result`, do NOT pop the call context.
+            # This situation can happen if this handler is reached via state_map after a tool call.
+            # Popping the root scope will corrupt the manager loop and can cause attempts to route
+            # back to the manager name as if it were an agent.
+            try:
+                scope_result = self.blackboard.get_state_value("result")
+            except Exception:
+                scope_result = None
+
+            if result is None and scope_result is None:
+                # Route back to a real agent without mutating scopes.
+                # Prefer calling_agent from the call context, otherwise fall back to called_agent.
+                nxt = calling_agent if isinstance(calling_agent, str) else None
+                if not isinstance(nxt, str) or not nxt.strip() or not self.agent_registry.get_agent_config(nxt.strip()):
+                    nxt = called_agent if isinstance(called_agent, str) else None
+                self.blackboard.update_state_value("last_agent", self.name)
+                self.blackboard.update_state_value("next_agent", nxt)
+                logger.warning(
+                    "[%s] action_handler reached with call_context=%r but no agent result; "
+                    "skipping pop_call_context and returning to %r",
+                    self.name,
+                    current_context,
+                    nxt,
+                )
+                return
+
             self._process_agent_result(result, current_context)
         else:
             logger.warning(f"[{self.name}] action_handler called with no call context")
+            # Clear next_agent to avoid stale routing when we cannot resolve a context.
+            self.blackboard.update_state_value("next_agent", None)
     
-    def process_tool_result_direct(self):
+    def process_tool_result_direct(self, tool_result: ToolResult | None = None):
         """
         Called directly by tool_caller after a tool executes.
         Handles tool results without needing to check call context.
         """
         self.blackboard.update_state_value('next_agent', None)
-        
-        tool_result = self.blackboard.get_state_value("tool_result")
+
         if tool_result:
             self._process_tool_result(tool_result)
         else:
@@ -129,7 +177,8 @@ class ToolResultHandler(ControlNode):
         logger.debug(f"Summarized tool result: {content_str}")
 
         # For tool calls, get the calling agent from blackboard
-        calling_agent = self.blackboard.get_state_value('original_calling_agent')
+        pending = get_pending_tool(self.blackboard) or {}
+        calling_agent = pending.get("calling_agent")
         scope_id = None
         try:
             scope_id = self.blackboard.get_current_scope_id()
@@ -193,7 +242,7 @@ class ToolResultHandler(ControlNode):
                     data={
                         "kind": "tool_result",
                         "agent": calling_agent,
-                        "tool": self.blackboard.get_state_value("selected_tool"),
+                        "tool": pending.get("name"),
                         "result_type": getattr(tool_result, "result_type", None),
                         "tool_result_id": (artifact_ref or {}).get("tool_result_id") if isinstance(artifact_ref, dict) else None,
                         "preview": preview,
@@ -203,16 +252,192 @@ class ToolResultHandler(ControlNode):
         except Exception:
             pass
 
+        # Update pipeline state with the latest tool_result reference.
+        try:
+            set_last_tool_result_ref(
+                self.blackboard,
+                artifact_ref if isinstance(artifact_ref, dict) else None,
+                meta={
+                    "tool_name": pending.get("name"),
+                    "result_type": getattr(tool_result, "result_type", None),
+                    "calling_agent": calling_agent,
+                },
+            )
+        except Exception:
+            pass
+
+        # Clear pending tool now that its result has been processed.
+        try:
+            clear_pending_tool(self.blackboard)
+        except Exception:
+            pass
+
         # Update last agent to track execution
         self.blackboard.update_state_value('last_agent', self.name)
 
-        # Return control to the calling agent
+        # ------------------------------------------------------------
+        # Tool pipeline (configurable): after-tool hooks (auto-scan, tab-follow, etc.)
+        # ------------------------------------------------------------
+        selected_tool = pending.get("name")
+        def _tool_matches(name: str | None, patterns: list[str] | None) -> bool:
+            if not isinstance(name, str) or not name:
+                return False
+            if not patterns:
+                return False
+            for pat in patterns:
+                if not isinstance(pat, str) or not pat.strip():
+                    continue
+                if "*" in pat:
+                    try:
+                        if fnmatch.fnmatch(name, pat):
+                            return True
+                    except Exception:
+                        pass
+                else:
+                    if name == pat:
+                        return True
+            return False
+
+        def _sub_vars(obj, ctx: dict) -> object:
+            if isinstance(obj, str) and obj.startswith("$"):
+                key = obj[1:]
+                return ctx.get(key, obj)
+            if isinstance(obj, list):
+                return [_sub_vars(x, ctx) for x in obj]
+            if isinstance(obj, dict):
+                return {k: _sub_vars(v, ctx) for k, v in obj.items()}
+            return obj
+
+        def _resolve_condition_handler(handler_path: str | None):
+            if not isinstance(handler_path, str) or not handler_path.strip():
+                return None
+            try:
+                mod_path, func_name = handler_path.rsplit(".", 1)
+                mod = importlib.import_module(mod_path)
+                fn = getattr(mod, func_name, None)
+                if callable(fn):
+                    return fn
+            except Exception:
+                return None
+            return None
+
+        def _apply_set_flags(flag_map: dict | None, ctx: dict):
+            if not isinstance(flag_map, dict):
+                return
+            for key, val in flag_map.items():
+                if not isinstance(key, str) or not key.strip():
+                    continue
+                resolved = _sub_vars(val, ctx)
+                try:
+                    set_flag(self.blackboard, key, resolved)
+                except Exception:
+                    continue
+
+        def _run_tool_pipeline(raw_content: str) -> bool:
+            try:
+                pipeline = self.blackboard.get_state_value("tool_pipeline")
+            except Exception:
+                pipeline = None
+            if not pipeline:
+                return False
+            rules = None
+            if isinstance(pipeline, dict):
+                rules = pipeline.get("rules")
+            elif isinstance(pipeline, list):
+                rules = pipeline
+            if not isinstance(rules, list):
+                return False
+
+            for rule in rules:
+                if not isinstance(rule, dict):
+                    continue
+                if rule.get("when") != "after":
+                    continue
+                tools = rule.get("tools") or []
+                unless_tools = rule.get("unless_tools") or []
+                if not _tool_matches(selected_tool, tools):
+                    continue
+                if _tool_matches(selected_tool, unless_tools):
+                    continue
+
+                guard_key = rule.get("guard_key")
+                if isinstance(guard_key, str) and guard_key.strip():
+                    if bool(get_flag(self.blackboard, guard_key, False)):
+                        continue
+                ctx: dict = {"selected_tool": selected_tool, "calling_agent": calling_agent}
+                handler_path = rule.get("condition_handler")
+                if isinstance(handler_path, str) and handler_path.strip():
+                    handler = _resolve_condition_handler(handler_path)
+                    if not handler:
+                        continue
+                    try:
+                        handler_ctx = handler(raw_content, self.blackboard)
+                    except Exception:
+                        handler_ctx = None
+                    if handler_ctx is None:
+                        continue
+                    if isinstance(handler_ctx, dict):
+                        ctx.update(handler_ctx)
+
+                action = rule.get("action") or {}
+                kind = action.get("kind")
+                if kind == "control_node":
+                    node = action.get("node")
+                    if isinstance(node, str) and node.strip():
+                        try:
+                            if isinstance(guard_key, str) and guard_key.strip():
+                                set_flag(self.blackboard, guard_key, True)
+                            _apply_set_flags(action.get("set_flags"), ctx)
+                            self.blackboard.update_state_value("next_agent", node)
+                            # Clear tool_result so the follow-up node doesn't reprocess this same result.
+                            self.blackboard.update_state_value("tool_result", None)
+                            clear_pending_tool(self.blackboard)
+                            return True
+                        except Exception:
+                            return False
+                elif kind == "tool_call":
+                    tool_name = action.get("tool")
+                    args = action.get("arguments") or {}
+                    if isinstance(tool_name, str) and tool_name.strip():
+                        try:
+                            if isinstance(guard_key, str) and guard_key.strip():
+                                set_flag(self.blackboard, guard_key, True)
+                            _apply_set_flags(action.get("set_flags"), ctx)
+
+                            resolved_args = _sub_vars(args, ctx if isinstance(ctx, dict) else {})
+                            set_pending_tool(
+                                self.blackboard,
+                                name=tool_name,
+                                calling_agent=calling_agent,
+                                action_input=None,
+                                arguments=resolved_args if isinstance(resolved_args, dict) else {},
+                                kind="tool",
+                            )
+                            self.blackboard.update_state_value("next_agent", "tool_caller")
+                            # Clear tool_result so the follow-up call doesn't reprocess this same result.
+                            self.blackboard.update_state_value("tool_result", None)
+                            return True
+                        except Exception:
+                            return False
+                else:
+                    continue
+            return False
+
+        # If we just processed a click-like action tool result that opened a new tab, follow it now.
+        try:
+            raw_content = (getattr(tool_result, "content", "") or "").strip()
+        except Exception:
+            raw_content = ""
+        if _run_tool_pipeline(raw_content):
+            return
+
+        # Default behavior: Return control to the calling agent
         self.blackboard.update_state_value('next_agent', calling_agent)
         logger.debug(f"[{self.name}] Returning control to calling agent: {calling_agent}")
 
-        # Clear tool_result and original_calling_agent from blackboard
+        # Clear tool_result from blackboard
         self.blackboard.update_state_value("tool_result", None)
-        self.blackboard.update_state_value("original_calling_agent", None)
+        clear_pending_tool(self.blackboard)
         
         # DO NOT pop call context - tool calls stay in the same scope
 
@@ -221,6 +446,13 @@ class ToolResultHandler(ControlNode):
         # current_context is a tuple: (calling_agent, called_agent, scope_id)
         calling_agent, called_agent, scope_id = current_context if current_context else (None, None, None)
         logger.debug(f"Processing agent response from {called_agent}")
+
+        # Capture callee-selected next_agent BEFORE popping scope.
+        callee_next_agent = None
+        try:
+            callee_next_agent = self.blackboard.get_state_value("next_agent")
+        except Exception:
+            callee_next_agent = None
 
         # IMPORTANT: Retrieve 'result' from the current scope BEFORE popping
         # This allows any agent in the flow (not just the originally called agent) to set the result
@@ -259,8 +491,25 @@ class ToolResultHandler(ControlNode):
         # Update last agent to track execution (in parent scope)
         self.blackboard.update_state_value('last_agent', self.name)
         
-        # Set next_agent in the parent scope (so delegator will see it)
+        # Set next_agent in the parent scope (so delegator will see it).
+        # If the callee explicitly selected a next agent, respect it.
         logger.debug(f"[{self.name}] Current call context: {current_context}")
-        self.blackboard.update_state_value('next_agent', calling_agent)
-        print(f"   ✅ Returning control: next_agent = '{calling_agent}' (set in parent scope)")
-        logger.debug(f"[{self.name}] Setting next_agent to calling agent: {calling_agent}")
+        next_agent = None
+        if isinstance(callee_next_agent, str) and callee_next_agent.strip():
+            # Validate that the target exists in this runtime.
+            if self.agent_registry.get_agent_config(callee_next_agent.strip()):
+                next_agent = callee_next_agent.strip()
+            else:
+                logger.warning(
+                    "[%s] Callee requested next_agent '%s' but it is not available; "
+                    "falling back to caller '%s'",
+                    self.name,
+                    callee_next_agent,
+                    calling_agent,
+                )
+        if next_agent is None:
+            next_agent = calling_agent
+
+        self.blackboard.update_state_value("next_agent", next_agent)
+        print(f"   ✅ Returning control: next_agent = '{next_agent}' (set in parent scope)")
+        logger.debug(f"[{self.name}] Setting next_agent to: {next_agent}")

@@ -17,6 +17,11 @@ Allowed managers (manager_type must be one of these):
 Allowed manager catalog (name -> description):
 {{ orchestrator_allowed_manager_catalog }}
 
+{% if orchestrator_job_bundle %}
+Job bundle (authoritative tasks list):
+{{ orchestrator_job_bundle }}
+{% endif %}
+
 Recent child results:
 {{ orchestrator_results }}
 

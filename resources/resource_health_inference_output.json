@@ -1,32 +1,28 @@
 {
   "mental": {
     "mood": "neutral",
-    "stress_load": "elevated",
+    "stress_load": "neutral",
     "anxiety": "neutral",
-    "mental_energy": "low",
-    "social_capacity": "low"
+    "mental_energy": "normal",
+    "social_capacity": "normal"
   },
   "cognitive": {
-    "load": "Medium",
-    "interruption_tolerance": "Low",
+    "load": "Low",
+    "interruption_tolerance": "High",
     "focus_depth": "Normal"
   },
   "physical": {
-    "energy_level": "Low",
-    "pain_level": "mild"
+    "energy_level": "Normal",
+    "pain_level": "none"
   },
   "physiology": {
-    "hunger_probability": "Medium",
-    "hydration_need": "High",
-    "caffeine_state": "Cutoff-Reached"
+    "hunger_probability": "Low",
+    "hydration_need": "Low",
+    "caffeine_state": "Optimal"
   },
-  "health_concerns_today": [
-    "Finger pain management overdue",
-    "Back pain management overdue",
-    "Hydration overdue",
-    "Suboptimal sleep (6.1 hours)"
-  ],
-  "general_health_assessment": "User is finishing the workday with several overdue physical maintenance tasks, increasing the risk of chronic back and finger pain flares. Energy is low due to suboptimal sleep and the late afternoon waning period.",
-  "last_updated": "2026-02-04 04:20 PM",
-  "last_updated_utc": "2026-02-05T00:20:57.538926+00:00"
+  "health_concerns_today": [],
+  "general_health_assessment": "Initial state - health status not yet assessed",
+  "last_updated": "2026-02-08 05:01 AM",
+  "last_updated_utc": "2026-02-08T13:01:08.344030+00:00",
+  "_reset_reason": "daily_boundary"
 }

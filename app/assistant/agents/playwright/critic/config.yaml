@@ -15,8 +15,8 @@ user_context_items:
   - date_time
   - task
   - recent_history
-  - selected_tool
-  - tool_arguments
+  - pending_tool_name
+  - pending_tool_arguments
   - playwright_critic_image
   - playwright_critic_trigger_reason
 

@@ -1,16 +1,13 @@
 name: playwright::delegator
-class_name: Delegator
+class_name: PlaywrightCriticDelegator
 color: "green"
-llm_params:
-  llm_provider: "openai"
-  engine: "gpt-5-mini"
-  temperature: 1
+llm_params: {}
 
 user_context_items:
   - last_agent
-  - selected_tool
+  - pending_tool_name
   - next_agent
-  - tool_result
+  - pipeline_stage
   - result
 
 system_context_items: []

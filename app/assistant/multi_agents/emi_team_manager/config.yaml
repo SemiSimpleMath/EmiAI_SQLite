@@ -53,6 +53,9 @@ tools:
     - ask_user
     - notify_user
     - kg_team_manager
+    - read_text_file
+    - append_text_file
+    - write_text_file
   except_tools: []
 
 flow_config:

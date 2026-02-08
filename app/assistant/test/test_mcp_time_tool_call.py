@@ -1,11 +1,17 @@
 import sys
 from pathlib import Path
 
+# Ensure repo root is on sys.path (when running directly).
+REPO_ROOT = Path(__file__).resolve().parents[3]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 from app.assistant.agent_classes.ToolArguments import ToolArguments
 from app.assistant.control_nodes.tool_caller import ToolCaller
 from app.assistant.lib.blackboard.Blackboard import Blackboard
 from app.assistant.lib.tool_registry.tool_registry import ToolRegistry
 from app.assistant.utils.pydantic_classes import Message
+from app.assistant.utils.pipeline_state import set_pending_tool, get_pending_tool
 
 
 class _StubLLMInterface:
@@ -48,8 +54,11 @@ class _AgentRegistryStub:
 
 
 class _ToolResultHandlerStub:
-    def process_tool_result_direct(self):
-        # no-op for tests
+    def __init__(self):
+        self.last_tool_result = None
+
+    def process_tool_result_direct(self, tool_result=None):
+        self.last_tool_result = tool_result
         return
 
 
@@ -119,9 +128,10 @@ def test_mcp_time_tool_appears_in_tool_descriptions_and_executes():
     assert "current time" in (descs[namespaced] or "").lower()
 
     # --- ToolArguments agent generates correct arguments (stubbed LLM) ---
-    bb.update_state_value("selected_tool", namespaced)
+    set_pending_tool(bb, name=namespaced, calling_agent="test_agent", action_input=None, arguments=None, kind="tool")
 
-    agent_registry = _AgentRegistryStub(tool_result_handler=_ToolResultHandlerStub())
+    handler_stub = _ToolResultHandlerStub()
+    agent_registry = _AgentRegistryStub(tool_result_handler=handler_stub)
     tool_args_agent = ToolArguments(
         name="shared::tool_arguments",
         blackboard=bb,
@@ -133,12 +143,11 @@ def test_mcp_time_tool_appears_in_tool_descriptions_and_executes():
     )
     tool_args_agent.action_handler(Message(data_type="agent_activation"))
 
-    tool_args = bb.get_state_value("tool_arguments")
+    tool_args = get_pending_tool(bb)
     assert isinstance(tool_args, dict)
     assert tool_args.get("arguments", {}).get("timezone") == "UTC"
 
     # --- ToolCaller executes MCP tool ---
-    bb.update_state_value("original_calling_agent", "test_agent")
     tool_caller = ToolCaller(
         name="tool_caller",
         blackboard=bb,
@@ -147,7 +156,7 @@ def test_mcp_time_tool_appears_in_tool_descriptions_and_executes():
     )
     tool_caller.action_handler(Message(data_type="agent_activation"))
 
-    tool_result = bb.get_state_value("tool_result")
+    tool_result = handler_stub.last_tool_result
     assert tool_result is not None
     assert "2026-01-01" in (tool_result.content or "")
 

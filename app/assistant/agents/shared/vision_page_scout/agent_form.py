@@ -1,6 +1,3 @@
-
-from typing import List
-
 from pydantic import BaseModel, Field
 
 
@@ -20,21 +17,28 @@ class AgentForm(BaseModel):
 
     page_overview: str = Field(..., description="2-6 sentences describing the dominant UI elements and layout.")
 
-    suggested_next_steps: List[str] = Field(
+    suggested_next_steps: list[str] = Field(
         default_factory=list,
         description="Possible steps available for the planner (click button, scroll, write text into a box, toggle, etc).",
     )
 
-    things_to_look_for_in_snapshot: List[str] = Field(
+    things_to_look_for_in_snapshot: list[str] = Field(
         ...,
         description="Strings/UI targets the planner should search for in the next browser_snapshot.",
     )
 
-    targets: List[Target] = Field(
+    targets: list[Target] = Field(
         default_factory=list,
         description=(
             "Optional coordinate targets (x,y) for obvious UI controls (cookie accept, close modal, primary CTA). "
             "Only include targets you can actually see and are reasonably confident about. Leave empty if unsure."
         ),
     )
+
+
+# Defensive: resolve postponed annotations in dynamic-import environments.
+try:
+    AgentForm.model_rebuild()
+except Exception:
+    pass
 

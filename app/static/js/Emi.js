@@ -165,10 +165,63 @@ let soundLib = {
 
 // at top of emi.js
 let audioPlayer;  // declare in outer scope
+function updateSpeakModeUi(isOn) {
+    const menuSpeakBtn = document.getElementById('menu-speak-mode');
+    if (menuSpeakBtn) {
+        const span = menuSpeakBtn.querySelector('span');
+        if (span) {
+            span.textContent = isOn ? 'Speak Mode: On' : 'Speak Mode: Off';
+        }
+        menuSpeakBtn.setAttribute('aria-pressed', isOn);
+    }
+}
+
+function syncTtsUi() {
+    const muteIcon = document.getElementById('mute-icon');
+    const unmuteIcon = document.getElementById('unmute-icon');
+    if (muteIcon && unmuteIcon) {
+        muteIcon.classList.toggle('hidden', !speakingMode);
+        unmuteIcon.classList.toggle('hidden', speakingMode);
+    }
+}
+
+function setupTtsToggle() {
+    const audioPlaybackBtn = document.getElementById('mute-btn-container');
+    if (!audioPlaybackBtn) {
+        console.error("Audio playback button container with ID 'mute-btn-container' not found.");
+        return;
+    }
+    if (audioPlaybackBtn.dataset.bound === "true") {
+        return;
+    }
+    audioPlaybackBtn.dataset.bound = "true";
+    audioPlaybackBtn.addEventListener('click', () => {
+        speakingMode = !speakingMode;
+        syncTtsUi();
+        updateSpeakModeUi(speakingMode);
+        if (!speakingMode) {
+            ttsAudioQueue = [];
+            isTTSPlaying = false;
+            if (audioPlayer) {
+                try {
+                    audioPlayer.pause();
+                    audioPlayer.src = "";
+                } catch (e) {
+                    console.warn("Failed to stop audio on mute", e);
+                }
+            }
+        }
+    });
+}
 
 document.addEventListener('DOMContentLoaded', () => {
   const speakBtn = document.getElementById('speak-mode-btn');
   audioPlayer = document.getElementById('chat-bot-audio');
+
+  // Sync TTS UI to current speaking mode.
+  updateSpeakModeUi(speakingMode);
+  syncTtsUi();
+  setupTtsToggle();
 
   let audioUnlocked = false;
   const SILENT = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=";
@@ -196,6 +249,7 @@ document.addEventListener('DOMContentLoaded', () => {
         : 'Speak Mode Off';
       speakBtn.setAttribute('aria-pressed', speakingMode);
       speakBtn.classList.toggle('active', speakingMode);
+      updateSpeakModeUi(speakingMode);
 
       // Try unlocking on button click (works on iOS)
       if (/iP(hone|ad|od)/.test(navigator.userAgent)) {
@@ -582,6 +636,10 @@ function playNextAudio() {
  */
 function playNextTTSAudio() {
     if (ttsAudioQueue.length > 0) {
+        if (mute || !speakingMode) {
+            isTTSPlaying = false;
+            return;
+        }
         isTTSPlaying = true;
         const audioUrl = ttsAudioQueue.shift();
         audioPlayer.src = audioUrl;
@@ -962,6 +1020,9 @@ function startRecording(stream) {
  * @param {string} audioUrl - The URL of the TTS audio.
  */
 function playTTSAudio(audioUrl) {
+    if (mute || !speakingMode) {
+        return;
+    }
     ttsAudioQueue.push(audioUrl);
     if (!isTTSPlaying) {
         playNextTTSAudio();
@@ -2164,24 +2225,8 @@ function setupEventListeners() {
         console.error("Chat form element with class 'chat-form' not found.");
     }
 
-    // Handle audio playback toggle
-    const audioPlaybackBtn = document.getElementById('mute-btn-container');
-    if (audioPlaybackBtn) {
-        audioPlaybackBtn.addEventListener('click', () => {
-            const muteIcon = document.getElementById('mute-icon');
-            const unmuteIcon = document.getElementById('unmute-icon');
-            if (muteIcon && unmuteIcon) {
-                muteIcon.classList.toggle('hidden');
-                unmuteIcon.classList.toggle('hidden');
-                mute = !mute; // Ensure 'mute' is defined in the appropriate scope
-            } else {
-                console.error("Mute or Unmute icon elements not found.");
-            }
-        });
-    } else {
-        // Corrected the ID in the error message to match the selected element
-        console.error("Audio playback button container with ID 'mute-btn-container' not found.");
-    }
+    // Handle TTS toggle
+    setupTtsToggle();
 
     // Toggle audio recording
     const recordBtnIcon = document.getElementById("record-btn-icon");

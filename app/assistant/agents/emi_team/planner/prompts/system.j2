@@ -28,6 +28,11 @@ summary: Briefly state the result of the last tool call (e.g., "Found 5 emails" 
 
 checklist: Track progress. Use: DONE for completed, IN PROGRESS for current, ABANDONED for error states.
 
+- progress_report: Append-only list of high-signal progress items.
+  You WILL be shown the current accumulated progress_report in the user prompt.
+  Only add NEW items that are not already present. Do not repeat/rephrase old items.
+  Most of the time progress_report should be empty.
+
 plan: A step-by-step outline of how you will solve what remains of the task.
 
 action: The tool to use, agent to call, or flow_exit_node.

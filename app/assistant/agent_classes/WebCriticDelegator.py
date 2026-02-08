@@ -8,6 +8,15 @@ from typing import Optional
 
 from app.assistant.agent_classes.Agent import Agent
 from app.assistant.utils.pydantic_classes import Message
+from app.assistant.utils.pipeline_state import (
+    get_pending_tool,
+    set_pending_tool,
+    clear_pending_tool,
+    set_scratch,
+    get_scratch,
+    set_resume_target,
+    get_resume_target,
+)
 from app.assistant.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -54,27 +63,44 @@ class WebCriticDelegator(Agent):
         # ------------------------------------------------------------
         if last_agent == self.CRITIC_AGENT:
             must_revise = bool(self.blackboard.get_state_value("critic_must_revise_plan", False))
-            resume = self.blackboard.get_state_value("web_critic_resume_next_agent")
+            resume = get_resume_target(self.blackboard)
             if not isinstance(resume, str) or not resume:
                 resume = "mcp_playwright_interactive_test::planner"
 
             # Clear the resume marker either way.
             try:
-                self.blackboard.update_state_value("web_critic_resume_next_agent", None)
+                set_resume_target(self.blackboard, None)
             except Exception:
                 pass
 
             if must_revise:
                 # Cancel the pending tool call and send control back to planner.
-                for k in ("selected_tool", "tool_arguments", "original_calling_agent"):
-                    try:
-                        self.blackboard.update_state_value(k, None)
-                    except Exception:
-                        pass
-
+                try:
+                    clear_pending_tool(self.blackboard)
+                except Exception:
+                    pass
+                try:
+                    set_scratch(self.blackboard, "web_critic_pending_tool_snapshot", None)
+                except Exception:
+                    pass
                 self.blackboard.update_state_value("next_agent", "mcp_playwright_interactive_test::planner")
             else:
                 # Resume the pending tool flow (typically shared::tool_arguments).
+                try:
+                    pending = get_pending_tool(self.blackboard) or {}
+                    if not pending:
+                        snap = get_scratch(self.blackboard, "web_critic_pending_tool_snapshot")
+                        if isinstance(snap, dict):
+                            set_pending_tool(
+                                self.blackboard,
+                                name=snap.get("name"),
+                                calling_agent=snap.get("calling_agent"),
+                                action_input=snap.get("action_input"),
+                                arguments=snap.get("arguments") if isinstance(snap.get("arguments"), dict) else {},
+                                kind=snap.get("kind"),
+                            )
+                except Exception:
+                    pass
                 self.blackboard.update_state_value("next_agent", resume)
 
             self.blackboard.update_state_value("last_agent", self.name)
@@ -99,7 +125,12 @@ class WebCriticDelegator(Agent):
 
                 # Remember what we were about to do, so we can resume if critic approves.
                 try:
-                    self.blackboard.update_state_value("web_critic_resume_next_agent", next_agent)
+                    pending = get_pending_tool(self.blackboard) or {}
+                    set_scratch(self.blackboard, "web_critic_pending_tool_snapshot", pending)
+                except Exception:
+                    pass
+                try:
+                    set_resume_target(self.blackboard, next_agent)
                 except Exception:
                     pass
 

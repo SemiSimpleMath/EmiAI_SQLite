@@ -1,12 +1,12 @@
 import json
 import re
-import os
-from pathlib import Path
+import importlib
 from typing import List, Dict
 
 from jinja2 import Template
 
 from app.assistant.agent_classes.Agent import Agent
+from app.assistant.utils.pipeline_state import get_pending_tool, set_pending_tool_arguments
 from app.assistant.utils.pydantic_classes import Message
 
 from app.assistant.utils.logging_config import get_logger
@@ -28,7 +28,8 @@ class ToolArguments(Agent):
 
             logger.debug(f"[{self.name}] Handling tool/agent argument selection.")
 
-            selected_node = self.blackboard.get_state_value("selected_tool")
+            pending = get_pending_tool(self.blackboard) or {}
+            selected_node = pending.get("name")
             if not selected_node:
                 logger.error(f"[{self.name}] No tool or agent selected to generate arguments for.")
                 return
@@ -49,7 +50,7 @@ class ToolArguments(Agent):
                 if agent_config.get("type") == "control_node":
                     # It's a control node - no arguments needed, just pass it through
                     logger.info(f"[{self.name}] '{selected_node}' is a control node, no arguments needed.")
-                    self.blackboard.update_state_value("tool_arguments", {})
+                    set_pending_tool_arguments(self.blackboard, {})
                     return
                 else:
                     # It's a local agent - check if it has an input schema
@@ -61,7 +62,7 @@ class ToolArguments(Agent):
                     else:
                         # Agent has no input schema - no arguments needed
                         logger.info(f"[{self.name}] '{selected_node}' is a local agent without input schema, no arguments needed.")
-                        self.blackboard.update_state_value("tool_arguments", {})
+                        set_pending_tool_arguments(self.blackboard, {})
                         return
             else:
                 logger.error(f"[{self.name}] '{selected_node}' is neither a tool nor a registered agent.")
@@ -168,9 +169,7 @@ class ToolArguments(Agent):
 
     def process_llm_result(self, result):
         logger.debug(f"[{self.name}] Processing LLM Result: {result}")
-        print(f"\n\n\n -------------LLM RESULT {self.name}------------")
-        print(result)
-        print("\n -----------------------------------")
+        self._maybe_print_llm_result(result)
 
         # Handle case where result is a string (error message)
         if isinstance(result, str):
@@ -194,21 +193,23 @@ class ToolArguments(Agent):
                 "content": f"Invalid result type: {type(result_dict)}"
             }
 
-        # Heuristic normalizations for specific tools where units are easy to confuse.
-        # Example: Playwright MCP `browser_wait_for.time` is in SECONDS, but agents sometimes
-        # provide milliseconds (e.g. 2000 meaning 2 seconds). If it looks like milliseconds,
-        # convert to seconds.
+        # Apply manager-specific argument normalizers (if configured).
+        result_dict = self._apply_argument_normalizers(result_dict)
+
+        # Deterministic normalization for `web_page_coords` in dev:
+        # We want strict failures (no silent fallbacks).
         try:
-            selected_tool = self.blackboard.get_state_value("selected_tool")
+            pending = get_pending_tool(self.blackboard) or {}
+            selected_tool = pending.get("name")
             if (
                 isinstance(result_dict, dict)
-                and selected_tool == "mcp::npm/playwright-mcp::browser_wait_for"
-                and isinstance(result_dict.get("time"), (int, float))
+                and isinstance(selected_tool, str)
+                and selected_tool == "web_page_coords"
+                and isinstance(result_dict.get("arguments"), dict)
             ):
-                t = result_dict.get("time")
-                # Only apply when it strongly looks like ms (>=1000 and divisible by 1000).
-                if isinstance(t, (int, float)) and t >= 1000 and float(t).is_integer() and int(t) % 1000 == 0:
-                    result_dict["time"] = int(t) // 1000
+                a = result_dict["arguments"]
+                if a.get("strict") is not True:
+                    a["strict"] = True
         except Exception:
             pass
 
@@ -224,7 +225,8 @@ class ToolArguments(Agent):
         #
         # Fail loudly if the resulting file does not exist.
         try:
-            selected_node = self.blackboard.get_state_value("selected_tool")
+            pending = get_pending_tool(self.blackboard) or {}
+            selected_node = pending.get("name")
             if (
                 isinstance(result_dict, dict)
                 and isinstance(result_dict.get("image"), str)
@@ -264,7 +266,7 @@ class ToolArguments(Agent):
             logger.error(f"[{self.name}] Vision image normalization failed: {e}")
             raise
 
-        self.blackboard.update_state_value("tool_arguments", result_dict)
+        set_pending_tool_arguments(self.blackboard, result_dict)
 
         response_message = Message(
             data_type="agent_response",
@@ -276,3 +278,36 @@ class ToolArguments(Agent):
         logger.info(f"[{self.name}] Recorded response in blackboard history.")
 
         return result
+
+    def _apply_argument_normalizers(self, result_dict: dict) -> dict:
+        if not isinstance(result_dict, dict):
+            return result_dict
+        manager_config = {}
+        try:
+            manager_config = getattr(self.parent, "manager_config", {}) if self.parent is not None else {}
+        except Exception:
+            manager_config = {}
+        normalizers = []
+        if isinstance(manager_config, dict):
+            normalizers = manager_config.get("tool_argument_normalizers") or []
+        if not isinstance(normalizers, list) or not normalizers:
+            return result_dict
+
+        pending = get_pending_tool(self.blackboard) or {}
+        for path in normalizers:
+            if not isinstance(path, str) or not path.strip():
+                continue
+            try:
+                mod_path, func_name = path.rsplit(".", 1)
+                mod = importlib.import_module(mod_path)
+                fn = getattr(mod, func_name, None)
+                if not callable(fn):
+                    raise RuntimeError(f"Normalizer '{path}' is not callable.")
+                updated = fn(result_dict, pending, self.blackboard)
+                if isinstance(updated, dict):
+                    result_dict = updated
+            except Exception as e:
+                logger.error(f"[{self.name}] Argument normalizer failed ({path}): {e}")
+                raise
+
+        return result_dict

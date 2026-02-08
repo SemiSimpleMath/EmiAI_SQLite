@@ -1,16 +1,20 @@
 name: playwright_manager
 class_name: MultiAgentManager
-description: "A manager that orchestrates Playwright-based browsing (JS-heavy pages) via a planner loop."
-max_cycles: 30
+description: "A manager that drives a real browser via Playwright MCP (npm/playwright-mcp)."
+max_cycles: 200
+tool_argument_normalizers:
+  - app.assistant.multi_agents.playwright_manager.argument_normalizers.normalize_playwright_tool_args
 
 role_bindings:
   delegator: playwright::delegator
 
 agents:
   - name: playwright::delegator
-    class: Delegator
+    class: PlaywrightCriticDelegator
   - name: playwright::planner
     class: Planner
+  - name: playwright::critic
+    class: PlaywrightCritic
   - name: shared::tool_arguments
     class: ToolArguments
   - name: shared::final_answer
@@ -21,6 +25,12 @@ control_nodes:
     class: ToolCaller
   - name: tool_result_handler
     class: ToolResultHandler
+  - name: post_action_scan_node
+    class: PostActionScanNode
+  - name: playwright_auto_scan_complete_node
+    class: PlaywrightAutoScanCompleteNode
+  - name: critic_capture_node
+    class: CriticCaptureNode
   - name: flow_exit_node
     class: FlowExitNode
   - name: manager_exit_node
@@ -28,7 +38,30 @@ control_nodes:
 
 tools:
   allowed_tools:
-    - playwright_browse
+    # --- Playwright MCP tools (namespaced) ---
+    - mcp::npm/playwright-mcp::browser_navigate
+    - mcp::npm/playwright-mcp::browser_navigate_back
+    - mcp::npm/playwright-mcp::browser_snapshot
+    - mcp::npm/playwright-mcp::browser_take_screenshot
+    - mcp::npm/playwright-mcp::browser_wait_for
+    - mcp::npm/playwright-mcp::browser_click
+    - mcp::npm/playwright-mcp::browser_type
+    - mcp::npm/playwright-mcp::browser_press_key
+    - mcp::npm/playwright-mcp::browser_tabs
+    - mcp::npm/playwright-mcp::browser_hover
+    - mcp::npm/playwright-mcp::browser_select_option
+    - mcp::npm/playwright-mcp::browser_drag
+    - mcp::npm/playwright-mcp::browser_mouse_click_xy
+    - mcp::npm/playwright-mcp::browser_mouse_wheel
+    - mcp::npm/playwright-mcp::browser_run_code
+
+    # --- Local tools for recovery / inspection ---
+    - web_page_coords
+    - web_spatial_snapshot
+    - web_visual_scout
+    - web_type_focused
+    - web_fill_xy
+    - read_tool_result
     - search_web
     - scrape_url
   except_tools: []
@@ -39,6 +72,7 @@ flow_config:
     "shared::tool_arguments": "tool_caller"
     "tool_caller": "tool_result_handler"
     "tool_result_handler": "playwright::planner"
+    "post_action_scan_node": "tool_caller"
     "playwright::planner_flow_exit_node": "shared::final_answer"
     "shared::final_answer": "manager_exit_node"
 

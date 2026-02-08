@@ -1,6 +1,8 @@
 import json
 from app.assistant.agent_classes.Agent import Agent  # Base Agent class
 from app.assistant.utils.pydantic_classes import Message, ToolResult
+from app.assistant.utils.history_formatting import format_recent_history
+from app.assistant.utils.pipeline_state import get_last_tool_result_ref
 
 from app.assistant.utils.logging_config import get_logger
 from app.assistant.utils.time_utils import get_local_time_str
@@ -13,8 +15,31 @@ logger = get_logger(__name__)
 # 2) resets critique variables if any exist
 # 3) Specifically references action variables to set next_agent or tool_call
 class Planner(Agent):
+    # Limit `recent_history` injection to keep prompts bounded.
+    # This does NOT delete history; it only limits what is injected into the LLM context.
+    HISTORY_LIMIT = 20
+
     def __init__(self, name, blackboard, agent_registry, tool_registry, llm_params=None, parent=None):
         super().__init__(name, blackboard, agent_registry, tool_registry, llm_params, parent)
+
+    def build_recent_history(self, agent_messages):
+        """
+        Planner override:
+        - keep only the last N messages for context
+        - format them as a numbered, timestamped chronological log
+        """
+        try:
+            msgs = list(agent_messages or [])
+        except Exception:
+            msgs = agent_messages
+
+        try:
+            if isinstance(msgs, list) and len(msgs) > self.HISTORY_LIMIT:
+                msgs = msgs[-self.HISTORY_LIMIT :]
+        except Exception:
+            pass
+
+        return format_recent_history(msgs)
 
     def _create_response_message(self, result_dict: dict):
         """
@@ -50,12 +75,33 @@ class Planner(Agent):
                     logger.debug(f"[{self.name}] Could not JSON serialize summary, using str(): {e}")
                     summary_val = str(summary_val)
 
+            # Link this summary to the most recent tool_result reference from pipeline state.
+            summarizes_tool_result_id = None
+            summarizes_tool_result_path = None
+            try:
+                ref = get_last_tool_result_ref(self.blackboard) or {}
+                if isinstance(ref.get("tool_result_id"), str) and ref["tool_result_id"].strip():
+                    summarizes_tool_result_id = ref["tool_result_id"].strip()
+                if isinstance(ref.get("path"), str) and ref["path"].strip():
+                    summarizes_tool_result_path = ref["path"].strip()
+            except Exception:
+                summarizes_tool_result_id = None
+                summarizes_tool_result_path = None
+
             summary_msg = Message(
                 data_type="tool_result_summary",
                 sub_data_type=["result_summary"],
                 sender=self.name,
                 receiver="Blackboard",
-                content=summary_val.strip()
+                content=summary_val.strip(),
+                metadata=(
+                    {
+                        "summarizes_tool_result_id": summarizes_tool_result_id,
+                        "summarizes_tool_result_path": summarizes_tool_result_path,
+                    }
+                    if summarizes_tool_result_id
+                    else None
+                ),
             )
             self.blackboard.add_msg(summary_msg)
 
@@ -66,9 +112,7 @@ class Planner(Agent):
 
 
         # ---  DEBUG Logging ---
-        print(f"\n\n--- LLM RESULT for {self.name} ---")
-        print(json.dumps(result, indent=2) if isinstance(result, dict) else result)
-        print("---------------------------------\n")
+        self._maybe_print_llm_result(result)
         # --- End of New Code --
 
 
@@ -110,11 +154,12 @@ class Planner(Agent):
         if not isinstance(result_dict, dict):
             return
 
-        # Gate: only publish if this manager was spawned by an orchestrator.
+        # Gate: only publish if a progress token is provided by the orchestrator.
+        token = self.blackboard.get_state_value("orchestrator_progress_token", None)
+        if not isinstance(token, str) or not token.strip():
+            return
         orch_name = self.blackboard.get_state_value("orchestrator_name", None)
         job_id = self.blackboard.get_state_value("orchestrator_job_id", None)
-        if not isinstance(orch_name, str) or not orch_name.strip():
-            return
         if not isinstance(job_id, str) or not job_id.strip():
             return
 
@@ -132,10 +177,10 @@ class Planner(Agent):
         DI.event_hub.publish(
             Message(
                 sender=self.name,
-                receiver=str(orch_name),
-                event_topic="orchestrator_progress",
+                receiver=str(orch_name) if isinstance(orch_name, str) and orch_name.strip() else None,
+                event_topic=str(token),
                 data={
-                    "orchestrator": str(orch_name),
+                    "orchestrator": str(orch_name) if isinstance(orch_name, str) else None,
                     "job_id": str(job_id),
                     "manager_name": mgr_name,
                     "agent": self.name,

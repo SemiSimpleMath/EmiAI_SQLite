@@ -13,6 +13,14 @@ class ManagerRegistry:
                 name = subdir.name
                 config_path = subdir / "config.yaml"
                 config = load_config(config_path)
+                # Mandatory per-manager tool pipeline config (kept separate from config.yaml).
+                pipeline_path = subdir / "tool_pipeline.yaml"
+                if not pipeline_path.exists():
+                    raise FileNotFoundError(
+                        f"Missing tool_pipeline.yaml for manager '{name}'. "
+                        f"Expected at: {pipeline_path}"
+                    )
+                config["tool_pipeline"] = load_config(pipeline_path)
                 self._configs[name] = config
 
     def get(self, name: str):

@@ -85,6 +85,7 @@ class Orchestrator:
         self._last_curator_run_at: float = 0.0
         self._progress_since_last_curator: int = 0
         self._progress_threshold: int = int(self.config.get("progress_threshold", 3) or 3)
+        self._progress_token: str | None = None
 
     def _on_orchestrator_progress(self, msg: Message) -> None:
         """
@@ -97,7 +98,8 @@ class Orchestrator:
         try:
             if msg is None:
                 return
-            if (msg.receiver or "") != self.name:
+            # Optional receiver check: if provided, it must match this orchestrator.
+            if isinstance(msg.receiver, str) and msg.receiver.strip() and (msg.receiver or "") != self.name:
                 return
             data = msg.data or {}
             if not isinstance(data, dict):
@@ -213,6 +215,9 @@ class Orchestrator:
             # Orchestrator -> child shared context (planners can inject these keys easily).
             self.blackboard.update_state_value("orchestrator_global_objective", user_message.task or user_message.content or "")
             self.blackboard.update_state_value("orchestrator_global_guidance", self.config.get("global_guidance") or [])
+            if isinstance(user_message.data, dict):
+                for key, value in user_message.data.items():
+                    self.blackboard.update_state_value(key, value)
 
             self._facts = FactsState(version=0, facts={})
             self._results = []
@@ -339,7 +344,10 @@ class Orchestrator:
 
             # Subscribe to progress events from child managers.
             try:
-                DI.event_hub.register_event("orchestrator_progress", self._on_orchestrator_progress)
+                if not isinstance(self._progress_token, str) or not self._progress_token.strip():
+                    self._progress_token = f"orchestrator_progress::{self.name}::{uuid.uuid4().hex}"
+                DI.event_hub.register_event(self._progress_token, self._on_orchestrator_progress)
+                self.blackboard.update_state_value("orchestrator_progress_token", self._progress_token)
             except Exception:
                 pass
 
@@ -703,7 +711,8 @@ class Orchestrator:
             try:
                 # Unsubscribe progress handler to avoid leaking subscriptions.
                 try:
-                    DI.event_hub.unregister_event("orchestrator_progress", self._on_orchestrator_progress)
+                    if isinstance(self._progress_token, str) and self._progress_token.strip():
+                        DI.event_hub.unregister_event(self._progress_token, self._on_orchestrator_progress)
                 except Exception:
                     pass
                 # Best-effort cascade cancel on exit.
@@ -852,6 +861,11 @@ class Orchestrator:
         raw = spawn_out.get("spawn") or spawn_out.get("spawns") or []
         if not isinstance(raw, list):
             return []
+        job_task_map = {}
+        try:
+            job_task_map = self.blackboard.get_state_value("orchestrator_job_task_map") or {}
+        except Exception:
+            job_task_map = {}
         out: list[SpawnSpec] = []
         for item in raw:
             if not isinstance(item, dict):
@@ -913,19 +927,47 @@ class Orchestrator:
                     ts = int(getattr(self.default_child_budget, "timeout_seconds", 180))
                 budget_obj = ChildBudget(max_cycles=mc, timeout_seconds=ts)
             out.append(
-                SpawnSpec(
-                    job_id=str(job_id).strip(),
-                    depends_on=tuple(depends_on),
-                    child_kind=kind,
-                    child_type=ctype.strip(),
-                    task=task.strip(),
-                    information=str(item.get("information") or ""),
-                    inputs=item.get("inputs") if isinstance(item.get("inputs"), dict) else None,
-                    budget=budget_obj,
-                    success_criteria=str(item.get("success_criteria") or ""),
+                self._apply_job_task_map(
+                    SpawnSpec(
+                        job_id=str(job_id).strip(),
+                        depends_on=tuple(depends_on),
+                        child_kind=kind,
+                        child_type=ctype.strip(),
+                        task=task.strip(),
+                        information=str(item.get("information") or ""),
+                        inputs=item.get("inputs") if isinstance(item.get("inputs"), dict) else None,
+                        budget=budget_obj,
+                        success_criteria=str(item.get("success_criteria") or ""),
+                    ),
+                    job_task_map,
                 )
             )
         return out
+
+    def _apply_job_task_map(self, spec: SpawnSpec, job_task_map: dict) -> SpawnSpec:
+        if not isinstance(job_task_map, dict) or not isinstance(spec, SpawnSpec):
+            return spec
+        override = job_task_map.get(spec.job_id)
+        if not isinstance(override, dict):
+            return spec
+        task = override.get("task") or spec.task
+        information = override.get("information") or spec.information
+        inputs = override.get("inputs") if isinstance(override.get("inputs"), dict) else spec.inputs
+        success_criteria = override.get("success_criteria") or spec.success_criteria
+        depends_on = override.get("depends_on")
+        if not isinstance(depends_on, list):
+            depends_on = list(spec.depends_on or ())
+        return SpawnSpec(
+            job_id=spec.job_id,
+            depends_on=tuple(depends_on),
+            child_kind=spec.child_kind,
+            child_type=spec.child_type,
+            task=str(task or ""),
+            information=str(information or ""),
+            inputs=inputs,
+            budget=spec.budget,
+            success_criteria=str(success_criteria or ""),
+        )
 
     def _schedule_children(self, specs: list[SpawnSpec], *, depth: int) -> None:
         if not specs:
@@ -1304,6 +1346,8 @@ class Orchestrator:
             # Job-level guidance: prefer explicit spec.information.
             child_inputs.setdefault("orchestrator_job_id", str(spec.job_id))
             child_inputs.setdefault("orchestrator_job_guidance", str(spec.information or ""))
+            if isinstance(self._progress_token, str) and self._progress_token.strip():
+                child_inputs.setdefault("orchestrator_progress_token", self._progress_token)
 
             if spec.child_kind == "manager":
                 info = str(spec.information or "")

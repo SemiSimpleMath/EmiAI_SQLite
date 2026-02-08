@@ -2,9 +2,9 @@ name: emi_team_selector::tool_selector
 class_name: Agent
 color: "blue"
 llm_params:
-  llm_provider: "openai"
-  engine: "gpt-4.1"
-  temperature: 0.1
+  llm_provider: "gemini"
+  engine: "gemini-3-flash-preview"
+  temperature: 1
 
 allowed_tools: "all"
 except_tools: []

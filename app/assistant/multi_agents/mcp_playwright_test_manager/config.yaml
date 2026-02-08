@@ -1,7 +1,7 @@
 name: mcp_playwright_test_manager
 class_name: MultiAgentManager
 description: "Manager test: Playwright MCP end-to-end (navigate -> snapshot)."
-max_cycles: 10
+max_cycles: 60
 
 role_bindings:
   delegator: shared::delegator

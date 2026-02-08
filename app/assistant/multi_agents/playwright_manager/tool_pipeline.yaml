@@ -7,7 +7,7 @@ rules:
       - mcp::npm/playwright-mcp::browser_click
       - mcp::npm/playwright-mcp::browser_mouse_click_xy
       - mcp::npm/playwright-mcp::browser_press_key
-    condition: new_tab_right_of_current
+    condition_handler: app.assistant.multi_agents.playwright_manager.pipeline_conditions.new_tab_right_of_current
     guard_key: playwright_auto_tab_follow_in_progress
     action:
       kind: tool_call
@@ -15,6 +15,9 @@ rules:
       arguments:
         action: select
         index: "$new_tab_index"
+      set_flags:
+        playwright_auto_tab_follow_from: "$selected_tool"
+        playwright_auto_tab_follow_to_index: "$new_tab_index"
 
   # Action + scan: always snapshot after action tools (including local action tools).
   - name: auto_scan_after_actions
@@ -35,3 +38,17 @@ rules:
     action:
       kind: control_node
       node: post_action_scan_node
+      set_flags:
+        playwright_auto_scan_in_progress: true
+        playwright_auto_scan_trigger_tool: "$selected_tool"
+        playwright_auto_scan_calling_agent: "$calling_agent"
+
+  # Complete the auto-scan cycle after the snapshot tool returns.
+  - name: auto_scan_complete
+    when: after
+    tools:
+      - mcp::npm/playwright-mcp::browser_snapshot
+    condition_handler: app.assistant.multi_agents.playwright_manager.pipeline_conditions.auto_scan_in_progress
+    action:
+      kind: control_node
+      node: playwright_auto_scan_complete_node

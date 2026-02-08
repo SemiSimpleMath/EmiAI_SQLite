@@ -431,7 +431,7 @@ class OpenAILLM(BaseLLMProvider):
 
         print("json response format is", json_schema)
 
-        model = send_params.get('model', "gpt-4o-2024-08-06")
+        model = send_params.get('model', "gpt-4.1")
         temperature = send_params.get('temperature')
         timeout = send_params.get('timeout', 120)
 

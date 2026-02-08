@@ -14,7 +14,7 @@ class FinalAnswer(Agent):
 
 
     def process_llm_result(self, result):
-        print(f"At process_llm_result {self.name}")
+        self._maybe_print_llm_result(result)
         logger.info(f"[{self.name}] Processing LLM Result: {result}")
 
         # Update last acting agent
@@ -48,7 +48,7 @@ class FinalAnswer(Agent):
         self.blackboard.add_msg(response_message)
         logger.info(f"[{self.name}] Recorded final answer.")
 
-        print("result dict at FinalAnswer: ", result_dict)
+        # optional debug print handled by _maybe_print_llm_result
 
 
 
@@ -102,6 +102,14 @@ class FinalAnswer(Agent):
                 # Get messages from the current scope (root scope for final_answer)
                 current_scope_id = self.blackboard.get_current_scope_id()
                 agent_messages = self.blackboard.get_messages_for_scope(current_scope_id)
+                # Strip raw tool traffic to avoid huge prompts, but keep summaries and planner results.
+                agent_messages = [
+                    msg for msg in agent_messages
+                    if (getattr(msg, "data_type", None) or "") not in {
+                        "tool_result",
+                        "tool_request",
+                    }
+                ]
 
                 # IMPORTANT:
                 # FinalAnswer can become extremely slow/expensive if we dump the full tool trace.
@@ -114,6 +122,13 @@ class FinalAnswer(Agent):
                 result_messages = [
                     msg for msg in agent_messages
                     if "result" in (getattr(msg, "sub_data_type", []) or [])
+                    and (getattr(msg, "data_type", None) or "") in {
+                        "agent_result",
+                        "agent_response",
+                        "agent_msg",
+                        "planner_result",
+                        "tool_result_summary",
+                    }
                 ]
 
                 def _truncate(text: str, max_chars: int = 8000) -> str:

@@ -7,6 +7,11 @@ Task you have been given: {{ task }}
 Additional information: {{ information }}
 {% endif %}
 
+{% if task_includes %}
+Included rules and context:
+{{ task_includes }}
+{% endif %}
+
 {{ entity_info }}
 
 {% if checklist %}
@@ -14,6 +19,12 @@ This is our previous checklist that you have to now update. You may also add sub
 {{ checklist }}
 {% else %}
 This is our first action. We have not done anything yet. So summary will be blank. We just need to come up with a plan and action.
+{% endif %}
+
+
+{% if progress_report %}
+Current accumulated progress_report (append-only; do NOT repeat items already listed here):
+{{ progress_report }}
 {% endif %}
 
 {% if recent_history %}

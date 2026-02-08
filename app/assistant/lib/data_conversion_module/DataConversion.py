@@ -23,7 +23,8 @@ class DataConversionModule:
         snapshot_yaml: str,
         *,
         max_items: int = 40,
-        max_chars: int = 1800,
+        # Default was ~2k; increased to keep more page context in history.
+        max_chars: int = 10000,
     ) -> str:
         """
         Deterministically reduce a large Playwright accessibility snapshot to a compact,
@@ -238,6 +239,9 @@ class DataConversionModule:
             "node_description": DataConversionModule._convert_node_description,
             "search_web": DataConversionModule._convert_search_web,
             "taxonomy_paths": DataConversionModule._convert_taxonomy_paths,
+            "web_page_coords": DataConversionModule._convert_web_page_coords,
+            "web_spatial_snapshot": DataConversionModule._convert_web_spatial_snapshot,
+            "web_visual_scout": DataConversionModule._convert_web_visual_scout,
             # Generic wrapper results (e.g., MCP tools return result_type="tool_result")
             "tool_result": DataConversionModule._convert_generic_tool_result,
             "error": DataConversionModule._convert_generic_tool_result,
@@ -265,6 +269,145 @@ class DataConversionModule:
             readable_output = f"Tool '{result_type}' returned:\n{json.dumps(result_data, indent=2, default=str)}"
             
             return {"tool_result": readable_output}
+
+    @staticmethod
+    def _convert_web_page_coords(tool_result: ToolResult, level: str = "summary") -> Dict:
+        """
+        Compact summary for `web_page_coords` that keeps prompts readable.
+        """
+        data = tool_result.data if isinstance(tool_result.data, dict) else {}
+        image_path = data.get("image_path") if isinstance(data.get("image_path"), str) else None
+        marked = bool(data.get("marked", False))
+        marks = data.get("marks")
+        marks_count = len(marks) if isinstance(marks, list) else 0
+        targets = data.get("targets")
+        if not isinstance(targets, list):
+            targets = []
+
+        lines = ["web_page_coords:"]
+        if image_path:
+            lines.append(f"- image_path: {image_path}")
+        lines.append(f"- marked_overlay: {marked} (marks={marks_count})")
+
+        if targets:
+            lines.append("- targets:")
+            for t in targets[:3]:
+                if not isinstance(t, dict):
+                    continue
+                x = t.get("x")
+                y = t.get("y")
+                purpose = t.get("purpose") or "target"
+                mid = t.get("mark_id")
+                label = t.get("label")
+                extra = []
+                if mid is not None:
+                    extra.append(f"mark_id={mid}")
+                if isinstance(label, str) and label.strip():
+                    extra.append(f"label={label.strip()!r}")
+                extra_s = (" " + " ".join(extra)) if extra else ""
+                lines.append(f"  - {purpose}: x={x}, y={y}{extra_s}")
+        else:
+            lines.append("- targets: []")
+
+        return {"tool_result": "\n".join(lines).strip()}
+
+    @staticmethod
+    def _convert_web_spatial_snapshot(tool_result: ToolResult, level: str = "summary") -> Dict:
+        """
+        Compact summary for `web_spatial_snapshot` so it can replace huge snapshots.
+        """
+        data = tool_result.data if isinstance(tool_result.data, dict) else {}
+        meta = data.get("meta") if isinstance(data.get("meta"), dict) else {}
+        url = meta.get("url") if isinstance(meta.get("url"), str) else None
+        title = meta.get("title") if isinstance(meta.get("title"), str) else None
+        stats = data.get("stats") if isinstance(data.get("stats"), dict) else {}
+        anchors = data.get("anchors")
+        if not isinstance(anchors, list):
+            anchors = []
+
+        parts: List[str] = ["web_spatial_snapshot:"]
+        if url:
+            parts.append(f"- url: {url}")
+        if title:
+            parts.append(f"- title: {title}")
+
+        try:
+            at = int(stats.get("anchors_total")) if stats.get("anchors_total") is not None else None
+        except Exception:
+            at = None
+        try:
+            tc = int(stats.get("text_candidates")) if stats.get("text_candidates") is not None else None
+        except Exception:
+            tc = None
+
+        parts.append(f"- anchors_returned: {len(anchors)}")
+        if at is not None:
+            parts.append(f"- anchors_total_seen: {at}")
+        if tc is not None:
+            parts.append(f"- text_candidates_scanned: {tc}")
+
+        # Print only a small index of anchors; the agent can read_tool_result for full data if needed.
+        if anchors:
+            parts.append("- top_anchors:")
+            for a in anchors[:12]:
+                if not isinstance(a, dict):
+                    continue
+                aid = a.get("anchor_id")
+                label = a.get("label") if isinstance(a.get("label"), str) else ""
+                tag = a.get("tag") if isinstance(a.get("tag"), str) else ""
+                role = a.get("role") if isinstance(a.get("role"), str) else ""
+                cx = a.get("cx")
+                cy = a.get("cy")
+                score = a.get("score")
+                nearby = a.get("nearby_text")
+                if not isinstance(nearby, list):
+                    nearby = []
+
+                safe_label = label.strip().encode("ascii", "ignore").decode("ascii")
+                if len(safe_label) > 90:
+                    safe_label = safe_label[:87] + "..."
+                rr = (role.strip() or tag or "anchor").strip()
+                parts.append(f"  - id={aid} {rr} score={score} at=({cx},{cy}) label={safe_label!r}")
+                if nearby:
+                    # Show up to 2 snippets per anchor for locality context.
+                    snips = []
+                    for t in nearby[:2]:
+                        if isinstance(t, str) and t.strip():
+                            s = t.strip().encode("ascii", "ignore").decode("ascii")
+                            if len(s) > 90:
+                                s = s[:87] + "..."
+                            snips.append(s)
+                    if snips:
+                        parts.append(f"    nearby: {snips}")
+        else:
+            parts.append("- top_anchors: []")
+
+        return {"tool_result": "\n".join(parts).strip()}
+
+    @staticmethod
+    def _convert_web_visual_scout(tool_result: ToolResult, level: str = "summary") -> Dict:
+        """
+        Compact summary for `web_visual_scout` (prose-only vision scout).
+        """
+        data = tool_result.data if isinstance(tool_result.data, dict) else {}
+        image_path = data.get("image_path") if isinstance(data.get("image_path"), str) else None
+        scout = data.get("scout") if isinstance(data.get("scout"), dict) else {}
+        overview = scout.get("page_overview") if isinstance(scout.get("page_overview"), str) else ""
+        blockers = scout.get("blockers") if isinstance(scout.get("blockers"), list) else []
+
+        parts: List[str] = ["web_visual_scout:"]
+        if image_path:
+            parts.append(f"- image_path: {image_path}")
+        if blockers:
+            parts.append(f"- blockers: {blockers[:5]}")
+        if overview:
+            # Keep history readable; allow bigger snapshot digest elsewhere.
+            ov = overview.strip().encode("ascii", "ignore").decode("ascii")
+            if len(ov) > 900:
+                ov = ov[:900] + "\n\n[truncated]"
+            parts.append("- page_overview:")
+            parts.append(ov)
+        return {"tool_result": "\n".join(parts).strip()}
 
     @staticmethod
     def _convert_generic_tool_result(tool_result: ToolResult, level: str = "summary") -> Dict:
@@ -390,16 +533,21 @@ class DataConversionModule:
         Extract page URL/title from Playwright MCP markdown.
         Returns (url, title).
         """
-        url = None
-        title = None
+        # IMPORTANT: some Playwright MCP tool outputs include multiple "### Page" sections
+        # (e.g., after tab selection, retries, or embedded snapshots). We want the *latest*
+        # URL/title, not the first one in the text blob.
+        url: Optional[str] = None
+        title: Optional[str] = None
         for line in (text or "").splitlines():
-            line = line.strip()
-            if line.startswith("- Page URL:"):
-                url = line.split(":", 2)[-1].strip()
-            elif line.startswith("- Page Title:"):
-                title = line.split(":", 2)[-1].strip()
-            if url and title:
-                break
+            s = (line or "").strip()
+            if s.startswith("- Page URL:"):
+                v = s.split(":", 2)[-1].strip()
+                if v:
+                    url = v
+            elif s.startswith("- Page Title:"):
+                v = s.split(":", 2)[-1].strip()
+                if v:
+                    title = v
         return url, title
 
     @staticmethod

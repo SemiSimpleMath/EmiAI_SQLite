@@ -55,6 +55,24 @@ class ToolMessage(Message):  # Assuming Message is similar to BaseModel
     request_id: Optional[str] = None
 
 
+class PipelineToolOp(BaseModel):
+    name: Optional[str] = None
+    arguments: Optional[Dict[str, Any]] = None
+    action_input: Optional[Any] = None
+    calling_agent: Optional[str] = None
+    kind: Optional[str] = None  # tool | agent | control_node
+
+
+class PipelineState(BaseModel):
+    stage: Optional[str] = None
+    pending_tool: Optional[PipelineToolOp] = None
+    last_tool_result_ref: Optional[Dict[str, str]] = None
+    last_tool_result_meta: Optional[Dict[str, Any]] = None
+    resume_target: Optional[str] = None
+    flags: Dict[str, Any] = Field(default_factory=dict)
+    scratch: Dict[str, Any] = Field(default_factory=dict)
+
+
 RESULT_TYPE_HANDLERS = {
     "fetch_email": "handle_fetch_email_result",
     "SearchResult": "handle_search_result",

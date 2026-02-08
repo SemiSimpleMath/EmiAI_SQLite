@@ -5,10 +5,21 @@ from __future__ import annotations
 # routes back to tool execution or forces planner revision based on critic output.
 
 from typing import Optional
+import json
 import uuid
 
 from app.assistant.agent_classes.Agent import Agent
 from app.assistant.utils.pydantic_classes import Message
+from app.assistant.utils.pipeline_state import (
+    get_pending_tool,
+    set_pending_tool,
+    clear_pending_tool,
+    set_scratch,
+    get_scratch,
+    set_resume_target,
+    get_resume_target,
+    ensure_pipeline_state,
+)
 from app.assistant.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -34,9 +45,10 @@ class PlaywrightCriticDelegator(Agent):
     TOOL_ARGUMENTS = "shared::tool_arguments"
     CRITIC_CAPTURE_NODE = "critic_capture_node"
 
-    RESUME_KEY = "playwright_critic_resume_next_agent"
     CRITIC_HISTORY_TOOL_RESULT_ID_KEY = "playwright_last_critic_tool_result_id"
-    PENDING_TOOL_SNAPSHOT_KEY = "playwright_critic_pending_tool_snapshot"
+    PENDING_TOOL_SNAPSHOT_KEY = "critic_pending_tool_snapshot"
+    CRITIC_LAST_PENDING_FP_KEY = "critic_last_pending_fingerprint"
+    CRITIC_LAST_ACTION_COUNT_KEY = "critic_last_action_count"
 
     def action_handler(self, message: Message):
         flow_config = (message.data or {}).get("flow_config")
@@ -73,12 +85,13 @@ class PlaywrightCriticDelegator(Agent):
                 pass
 
             must_revise = bool(self.blackboard.get_state_value("critic_must_revise_plan", False))
-            resume = self.blackboard.get_state_value(self.RESUME_KEY)
+            resume = get_resume_target(self.blackboard)
 
             # If there is no explicit resume marker, infer it from pending tool state.
             if not isinstance(resume, str) or not resume:
-                pending_tool = self.blackboard.get_state_value("selected_tool", None)
-                pending_args = self.blackboard.get_state_value("tool_arguments", None)
+                pending = get_pending_tool(self.blackboard) or {}
+                pending_tool = pending.get("name")
+                pending_args = pending.get("arguments")
                 if isinstance(pending_tool, str) and pending_tool.strip() and isinstance(pending_args, dict):
                     resume = "tool_caller"
                 else:
@@ -86,39 +99,40 @@ class PlaywrightCriticDelegator(Agent):
 
             # Clear resume marker either way.
             try:
-                self.blackboard.update_state_value(self.RESUME_KEY, None)
+                set_resume_target(self.blackboard, None)
             except Exception:
                 pass
 
             if must_revise:
                 # Cancel the pending tool call and send control back to planner.
-                for k in ("selected_tool", "tool_arguments", "original_calling_agent", self.PENDING_TOOL_SNAPSHOT_KEY):
-                    try:
-                        self.blackboard.update_state_value(k, None)
-                    except Exception:
-                        pass
+                try:
+                    clear_pending_tool(self.blackboard)
+                except Exception:
+                    pass
+                try:
+                    set_scratch(self.blackboard, self.PENDING_TOOL_SNAPSHOT_KEY, None)
+                except Exception:
+                    pass
                 self.blackboard.update_state_value("next_agent", self.PLANNER_AGENT)
             else:
                 # Resume the pending flow.
                 # If pending tool state was lost mid-critic, restore it from snapshot.
-                try:
-                    snapshot = self.blackboard.get_state_value(self.PENDING_TOOL_SNAPSHOT_KEY)
-                except Exception:
-                    snapshot = None
-
+                snapshot = get_scratch(self.blackboard, self.PENDING_TOOL_SNAPSHOT_KEY)
                 if isinstance(snapshot, dict):
-                    try:
-                        if not self.blackboard.get_state_value("selected_tool") and isinstance(snapshot.get("selected_tool"), str):
-                            self.blackboard.update_state_value("selected_tool", snapshot.get("selected_tool"))
-                        if not self.blackboard.get_state_value("tool_arguments") and isinstance(snapshot.get("tool_arguments"), dict):
-                            self.blackboard.update_state_value("tool_arguments", snapshot.get("tool_arguments"))
-                        if not self.blackboard.get_state_value("original_calling_agent") and isinstance(snapshot.get("original_calling_agent"), str):
-                            self.blackboard.update_state_value("original_calling_agent", snapshot.get("original_calling_agent"))
-                    except Exception:
-                        pass
+                    pending = get_pending_tool(self.blackboard) or {}
+                    if not pending:
+                        set_pending_tool(
+                            self.blackboard,
+                            name=snapshot.get("name"),
+                            calling_agent=snapshot.get("calling_agent"),
+                            action_input=snapshot.get("action_input"),
+                            arguments=snapshot.get("arguments") if isinstance(snapshot.get("arguments"), dict) else {},
+                            kind=snapshot.get("kind"),
+                        )
 
-                pending_tool = self.blackboard.get_state_value("selected_tool", None)
-                pending_args = self.blackboard.get_state_value("tool_arguments", None)
+                pending = get_pending_tool(self.blackboard) or {}
+                pending_tool = pending.get("name")
+                pending_args = pending.get("arguments")
                 if isinstance(pending_tool, str) and pending_tool.strip() and isinstance(pending_args, dict):
                     self.blackboard.update_state_value("next_agent", resume)
                 else:
@@ -152,22 +166,24 @@ class PlaywrightCriticDelegator(Agent):
         ):
             # Snapshot pending tool state so we can reliably resume after critic.
             try:
-                self.blackboard.update_state_value(
-                    self.PENDING_TOOL_SNAPSHOT_KEY,
-                    {
-                        "selected_tool": self.blackboard.get_state_value("selected_tool"),
-                        "tool_arguments": self.blackboard.get_state_value("tool_arguments"),
-                        "original_calling_agent": self.blackboard.get_state_value("original_calling_agent"),
-                    },
-                )
+                pending = get_pending_tool(self.blackboard) or {}
+                set_scratch(self.blackboard, self.PENDING_TOOL_SNAPSHOT_KEY, pending)
             except Exception:
                 pass
             try:
-                self.blackboard.update_state_value(self.RESUME_KEY, picked)
+                set_resume_target(self.blackboard, picked)
             except Exception:
                 pass
             try:
                 self.blackboard.update_state_value("playwright_critic_trigger_reason", "pre_tool_exec_gate")
+            except Exception:
+                pass
+            try:
+                fingerprint = self._pending_tool_fingerprint()
+                if fingerprint:
+                    set_scratch(self.blackboard, self.CRITIC_LAST_PENDING_FP_KEY, fingerprint)
+                steps = int(self.blackboard.get_state_value(f"{self.PLANNER_AGENT}_action_count", 0) or 0)
+                set_scratch(self.blackboard, self.CRITIC_LAST_ACTION_COUNT_KEY, steps)
             except Exception:
                 pass
             self.blackboard.update_state_value("next_agent", self.CRITIC_CAPTURE_NODE)
@@ -201,16 +217,41 @@ class PlaywrightCriticDelegator(Agent):
         if steps <= 0:
             return False
 
+        # Dedupe: avoid re-running critic on the exact same pending tool in back-to-back loops.
+        try:
+            fingerprint = self._pending_tool_fingerprint()
+            last_fp = get_scratch(self.blackboard, self.CRITIC_LAST_PENDING_FP_KEY)
+            last_steps = get_scratch(self.blackboard, self.CRITIC_LAST_ACTION_COUNT_KEY)
+            if (
+                fingerprint
+                and last_fp == fingerprint
+                and isinstance(last_steps, int)
+                and (steps - last_steps) < 2
+            ):
+                return False
+        except Exception:
+            pass
+
         # If last tool result was an error, run critic on the next pre-exec gate.
         try:
-            tr = self.blackboard.get_state_value("tool_result", None)
-            if hasattr(tr, "result_type") and getattr(tr, "result_type", None) == "error":
+            ps = ensure_pipeline_state(self.blackboard)
+            meta = ps.get("last_tool_result_meta") if isinstance(ps, dict) else None
+            if isinstance(meta, dict) and meta.get("result_type") == "error":
                 return True
         except Exception:
             pass
 
         # Otherwise, cadence.
         return (steps % 5) == 0
+
+    def _pending_tool_fingerprint(self) -> Optional[str]:
+        try:
+            pending = get_pending_tool(self.blackboard) or {}
+            if not isinstance(pending, dict) or not pending:
+                return None
+            return json.dumps(pending, sort_keys=True, default=str)
+        except Exception:
+            return None
 
     def _append_critic_history_message(self) -> None:
         """

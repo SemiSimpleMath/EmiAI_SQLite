@@ -168,6 +168,15 @@ class UserSettingsManager:
                 "console_level": "WARNING",
                 "overrides": {}
             },
+            "prompt_debug": {
+                "_comment": "Per-agent prompt printing controls (system/user).",
+                "default": {
+                    "system": False,
+                    "user": False,
+                    "results": False
+                },
+                "agents": {}
+            },
             "system": {
                 "first_run": True,
                 "setup_complete": False,

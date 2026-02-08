@@ -123,6 +123,8 @@ def create_app(config_class="config.DevelopmentConfig"):
     app.register_blueprint(debug_status_bp)
     app.register_blueprint(debug_orchestrator_bp)
     app.register_blueprint(debug_logging_bp)
+    from app.routes.agent_prompt_debug import agent_prompt_debug_bp
+    app.register_blueprint(agent_prompt_debug_bp)
     app.register_blueprint(ticket_api_bp)
     
     # Wellness management

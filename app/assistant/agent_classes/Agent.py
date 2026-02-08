@@ -15,6 +15,11 @@ if TYPE_CHECKING:
     from app.assistant.agent_registry.agent_registry import AgentRegistry
 
 from app.assistant.utils.pydantic_classes import Message, ToolResult
+from app.assistant.utils.pipeline_state import (
+    ensure_pipeline_state,
+    get_pending_tool,
+    set_pending_tool,
+)
 from app.services.llm_factory import LLMFactory
 
 from app.assistant.rag.rag_utils import (
@@ -125,8 +130,6 @@ class Agent:
 
     def _update_blackboard_state(self, message: Message):
         self.blackboard.update_state_value('next_agent', None)
-        self.blackboard.update_state_value('tool_call', None)
-        self.blackboard.update_state_value('tool_arguments', None)
 
         ai = message.agent_input
         if isinstance(ai, dict):
@@ -257,7 +260,8 @@ class Agent:
 
             # Debug print prompts (disabled by default; parallel agents interleave stdout).
             # To enable temporarily, set: EMI_PRINT_PROMPTS=1
-            if os.environ.get("EMI_PRINT_PROMPTS", "0") == "1":
+            print_system, print_user = self._resolve_prompt_debug_flags()
+            if print_system or print_user:
                 for msg in messages:
                     role = msg.get("role")
                     content = msg.get("content", "")
@@ -278,13 +282,13 @@ class Agent:
                             else:
                                 parts.append(f"[{ptype or 'block'}]")
                         content = "\n".join([p for p in parts if p])
-                    if role == "system":
+                    if role == "system" and print_system:
                         print(f"\n{'=' * 60}")
                         print(f"SYSTEM PROMPT {self.name}")
                         print(f"{'=' * 60}")
                         print(content)
                         print(f"{'=' * 60}\n")
-                    elif role == "user":
+                    elif role == "user" and print_user:
                         print(f"\n{'=' * 60}")
                         print(f"USER PROMPT {self.name}")
                         print(f"{'=' * 60}")
@@ -309,6 +313,86 @@ class Agent:
             self._check_for_quota_error(str(e))
 
             return "An error occurred while processing the request."
+
+    def _resolve_prompt_debug_flags(self) -> tuple[bool, bool]:
+        # Global override for emergency debugging.
+        if os.environ.get("EMI_PRINT_PROMPTS", "0") == "1":
+            return True, True
+
+        config_flags = {}
+        try:
+            cfg = self.config.get("prompt_debug", {}) if isinstance(self.config, dict) else {}
+            if isinstance(cfg, dict):
+                config_flags = cfg
+        except Exception:
+            config_flags = {}
+
+        system_flag = None
+        user_flag = None
+        if "system" in config_flags or "print_system" in config_flags:
+            system_flag = bool(config_flags.get("system", config_flags.get("print_system")))
+        if "user" in config_flags or "print_user" in config_flags:
+            user_flag = bool(config_flags.get("user", config_flags.get("print_user")))
+
+        # User settings can override config flags.
+        try:
+            from app.assistant.user_settings_manager.user_settings import get_settings_manager
+            settings_mgr = get_settings_manager()
+            pd = settings_mgr.get("prompt_debug", {}) if settings_mgr else {}
+            if isinstance(pd, dict):
+                default_cfg = pd.get("default", {}) if isinstance(pd.get("default"), dict) else {}
+                agents_cfg = pd.get("agents", {}) if isinstance(pd.get("agents"), dict) else {}
+                agent_cfg = agents_cfg.get(self.name, {}) if isinstance(agents_cfg.get(self.name), dict) else {}
+                if "system" in agent_cfg:
+                    system_flag = bool(agent_cfg.get("system"))
+                elif "system" in default_cfg and system_flag is None:
+                    system_flag = bool(default_cfg.get("system"))
+                if "user" in agent_cfg:
+                    user_flag = bool(agent_cfg.get("user"))
+                elif "user" in default_cfg and user_flag is None:
+                    user_flag = bool(default_cfg.get("user"))
+        except Exception:
+            pass
+
+        return bool(system_flag), bool(user_flag)
+
+    def _resolve_llm_result_debug_flag(self) -> bool:
+        # Global override for emergency debugging.
+        if os.environ.get("EMI_PRINT_LLM_RESULTS", "0") == "1":
+            return True
+
+        config_flag = None
+        try:
+            cfg = self.config.get("prompt_debug", {}) if isinstance(self.config, dict) else {}
+            if isinstance(cfg, dict) and "results" in cfg:
+                config_flag = bool(cfg.get("results"))
+        except Exception:
+            config_flag = None
+
+        # User settings can override config flags.
+        try:
+            from app.assistant.user_settings_manager.user_settings import get_settings_manager
+            settings_mgr = get_settings_manager()
+            pd = settings_mgr.get("prompt_debug", {}) if settings_mgr else {}
+            if isinstance(pd, dict):
+                default_cfg = pd.get("default", {}) if isinstance(pd.get("default"), dict) else {}
+                agents_cfg = pd.get("agents", {}) if isinstance(pd.get("agents"), dict) else {}
+                agent_cfg = agents_cfg.get(self.name, {}) if isinstance(agents_cfg.get(self.name), dict) else {}
+                if "results" in agent_cfg:
+                    config_flag = bool(agent_cfg.get("results"))
+                elif "results" in default_cfg and config_flag is None:
+                    config_flag = bool(default_cfg.get("results"))
+        except Exception:
+            pass
+
+        return bool(config_flag)
+
+    def _maybe_print_llm_result(self, result: Any) -> None:
+        if not self._resolve_llm_result_debug_flag():
+            return
+        print(f"\n\n--- LLM RESULT for {self.name} ---")
+        print(json.dumps(result, indent=2) if isinstance(result, dict) else result)
+        print("---------------------------------\n")
 
     def construct_prompt(self, message: Message = None) -> List[Dict[str, str]]:
         system_prompt = self.get_system_prompt(message).replace('\n\n', '\n')
@@ -856,6 +940,31 @@ class Agent:
                 # Already set (date_time, action_count, incoming_message, etc.)
                 continue
 
+            # Pipeline state injections (no legacy blackboard keys).
+            if key in {
+                "selected_tool",
+                "pending_tool_name",
+                "tool_arguments",
+                "pending_tool_arguments",
+                "action_input",
+                "pending_action_input",
+                "pending_tool_calling_agent",
+                "pipeline_stage",
+            }:
+                ps = ensure_pipeline_state(self.blackboard)
+                pending = get_pending_tool(self.blackboard) or {}
+                if key in ("selected_tool", "pending_tool_name"):
+                    context[key] = pending.get("name")
+                elif key in ("tool_arguments", "pending_tool_arguments"):
+                    context[key] = pending.get("arguments")
+                elif key in ("action_input", "pending_action_input"):
+                    context[key] = pending.get("action_input")
+                elif key == "pending_tool_calling_agent":
+                    context[key] = pending.get("calling_agent")
+                elif key == "pipeline_stage":
+                    context[key] = ps.get("stage")
+                continue
+
             # Resource injection: keys starting with "resource_"
             # Example:
             #   system_context_items: ["resource_daily_schedule"]
@@ -1031,8 +1140,6 @@ class Agent:
         and exiting the flow. This is a core part of the template.
         """
         action = result_dict.get('action')
-        # All control variables are written to the local scope
-        self.blackboard.update_state_value("selected_tool", action)
 
         assert action != "error", f"[{self.name}] Invalid action 'error' leaked into flow control."
 
@@ -1060,7 +1167,14 @@ class Agent:
                     print(f"📦 [{self.name}] Storing result in current scope")
                     self.blackboard.update_state_value("result", result_dict.get('result'))
             else:
-                self.blackboard.update_state_value("original_calling_agent", self.name)
+                set_pending_tool(
+                    self.blackboard,
+                    name=action,
+                    calling_agent=self.name,
+                    action_input=result_dict.get("action_input"),
+                    arguments=None,
+                    kind=None,
+                )
                 self.blackboard.update_state_value("next_agent", "shared::tool_arguments")
 
     def process_llm_result(self, result):
@@ -1069,9 +1183,7 @@ class Agent:
         It orchestrates the validation, state updates, messaging, and flow control.
         """
 
-        print(f"\n\n--- LLM RESULT for {self.name} ---")
-        print(json.dumps(result, indent=2) if isinstance(result, dict) else result)
-        print("---------------------------------\n")
+        self._maybe_print_llm_result(result)
 
         # Step 1: Validate input
         if isinstance(result, str):

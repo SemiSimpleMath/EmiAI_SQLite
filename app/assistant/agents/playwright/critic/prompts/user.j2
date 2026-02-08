@@ -4,10 +4,12 @@ Task:
 {{ task }}
 
 Pending tool call (what the planner is about to execute):
-selected_tool={{ selected_tool }}
-tool_arguments={{ tool_arguments }}
+pending_tool_name={{ pending_tool_name }}
+pending_tool_arguments={{ pending_tool_arguments }}
 
-Recent history (chronological):
+Recent history (chronological, oldest to newest). Each entry is one action or agent response.
+Tool calls are summarized in a single block with args, result id, and summary.
+Recent history:
 {{ recent_history }}
 
 {% if playwright_critic_image %}

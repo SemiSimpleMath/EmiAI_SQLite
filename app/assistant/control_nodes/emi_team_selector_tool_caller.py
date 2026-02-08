@@ -3,6 +3,7 @@ import threading
 
 
 from app.assistant.utils.pydantic_classes import Message, ToolMessage
+from app.assistant.utils.pipeline_state import get_pending_tool
 from app.assistant.control_nodes.control_node import ControlNode
 from app.assistant.entity_management.entity_card_injector import entity_card_injector
 
@@ -16,9 +17,9 @@ class EmiTeamSelectorToolCaller(ControlNode):
     def action_handler(self, message):
         """Executes the selected tool asynchronously and moves on."""
         self.blackboard.update_state_value('next_agent', None) ## all agents start by setting this to None so the only way this will ever be not None at delegator is if some agent just set it.
-        selected_tool = self.blackboard.get_state_value("selected_tool")
-
-        arguments = {"arguments":self.blackboard.get_state_value("tool_arguments")}
+        pending = get_pending_tool(self.blackboard) or {}
+        selected_tool = pending.get("name")
+        arguments = pending.get("arguments") if isinstance(pending.get("arguments"), dict) else {}
         if not selected_tool or not isinstance(arguments, dict):
             logger.error("ToolCaller: Missing or invalid tool selection or arguments.")
             return
@@ -37,18 +38,20 @@ class EmiTeamSelectorToolCaller(ControlNode):
         )
         self.blackboard.add_msg(tool_call_msg)
 
-        arguments = arguments.get('arguments', None)
-        tool_data = {'tool_name':selected_tool, **arguments}
+        # Apply entity card injection to arguments if they contain text content
+        enhanced_arguments = self._enhance_tool_data_with_entity_cards(arguments)
 
-        # Apply entity card injection to tool data if it contains text content
-        enhanced_tool_data = self._enhance_tool_data_with_entity_cards(tool_data)
+        tool_data = {
+            "tool_name": selected_tool,
+            "arguments": enhanced_arguments,
+        }
 
         tool_request_message = ToolMessage(
             data_type='tool_request',
             sender=self.name,
             receiver='ToolManager',
             tool_name=selected_tool,
-            tool_data=enhanced_tool_data,
+            tool_data=tool_data,
             content=f"Arguments for tool {selected_tool} are ready.",
             request_id= "42222"  # request id is used as a flag to do this async elsewhere.
         )

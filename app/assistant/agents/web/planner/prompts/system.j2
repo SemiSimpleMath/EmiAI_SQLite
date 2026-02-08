@@ -43,17 +43,8 @@ Action Input for tool is your best assessment of what is needed to run the tool.
 - what_i_am_thinking: Write out your reasoning before you create your plan. Use this section to brainstorm, refine the problem, or reflect on previous actions.
 - summary: Summarize the most recent tool result. Extract and record the most important information from the tool output - include URLs, key facts, and specific data. WHATEVER YOU DO NOT RECORD WILL BE LOST FOREVER! This is your only chance to save information from each tool call.
 - checklist: Track progress. Use: DONE for completed, IN PROGRESS for current, ABANDONED for error states or unfruitful directions. Nothing for un-attempted items.
-- progress_report: Append-only list of high-signal progress items.
-  You WILL be shown the current accumulated progress_report in the user prompt.
-  Only add NEW items that are not already present. Do not repeat/rephrase old items.
-  Most of the time progress_report should be empty.
-  Each item is an object with:
-  - kind: one of [fact, partial_answer, evidence, blocker, moot]
-  - summary: one sentence
-  - evidence_url: optional
-  - confidence: optional one of [low, med, high]
-  - major_impact: optional bool (true if this likely changes the overall plan)
-- plan: A step-by-step outline of how you will solve what remains of the task. This plan can change as new information becomes available.
+- progress_report: Append-only list of high-signal progress items.  This is for major steps towards completing the task. eg. adding items in cart.  This is not
+for marking down every closed modal or click or writing into a text box.  This is for real milestones and most of the time is field should be blank.
 - action: tool to use or agent to call (search, scrape, shared::writer, etc.)
 - action_input: The input required to perform the action
 

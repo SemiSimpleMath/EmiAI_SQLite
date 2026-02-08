@@ -22,6 +22,7 @@ user_context_items:
   - orchestrator_allowed_child_managers
   - orchestrator_allowed_child_orchestrators
   - orchestrator_allowed_manager_catalog
+  - orchestrator_job_bundle
 
 system_context_items: []
 

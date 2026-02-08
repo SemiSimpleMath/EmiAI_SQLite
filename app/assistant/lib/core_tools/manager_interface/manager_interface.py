@@ -53,9 +53,16 @@ class ManagerInterface:
         except Exception as e:
             raise RuntimeError(f"Failed to create a manager for {self.manager_name}: {e}")
 
-        task = tool_message.tool_data.get('arguments', {}).get('task')
-        information = tool_message.tool_data.get('arguments', {}).get('information')
-        data = tool_message.tool_data.get('data')
+        tool_data = tool_message.tool_data or {}
+        args = tool_data.get('arguments', {}) if isinstance(tool_data.get('arguments'), dict) else {}
+        task = args.get('task')
+        information = args.get('information')
+        data = tool_data.get('data') if isinstance(tool_data.get('data'), dict) else {}
+
+        task_file = args.get('task_file')
+        if isinstance(task_file, str) and task_file.strip():
+            data = dict(data)
+            data["task_file"] = task_file.strip()
         request_id = tool_message.request_id
 
         # Determine the content for the manager message
